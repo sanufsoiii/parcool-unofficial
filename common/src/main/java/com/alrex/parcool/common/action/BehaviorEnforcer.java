@@ -8,6 +8,35 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Supplier;
 
 public class BehaviorEnforcer {
+
+    /**
+     * Re-entrancy guard for the movement enforcer, set while a move is being applied on the enforcer's
+     * behalf.
+     *
+     * <p>It lives here, in a plain mod class, rather than as a {@code @Unique} field on the mixin that
+     * needs it: Mixin does not carry a {@code @Unique static} field over from a mixin class that does
+     * not extend its target. Verified by exporting the mixed class with {@code -Dmixin.debug.export}:
+     * {@code LocalPlayer.handler$…$parcool$onMove} came out with no {@code getstatic}/{@code putstatic}
+     * for the flag at all, so the guard silently did nothing and {@code ((Entity) player).move(…)} -
+     * a virtual dispatch back into {@code LocalPlayer#move}, which {@code LocalPlayer} does override -
+     * recursed until the stack blew. This class is never merged into anything, so plain Java
+     * semantics apply and the flag is guaranteed to be seen by the recursive pass.
+     *
+     * <p>A {@link ThreadLocal} rather than a plain boolean: the enforcers are per-player and the flag
+     * must not leak between the render thread and the server thread.
+     */
+    private static final ThreadLocal<Boolean> APPLYING_ENFORCED_MOVE = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /** @return whether a move is currently being applied on an enforcer's behalf. */
+    public static boolean isApplyingEnforcedMove() {
+        return APPLYING_ENFORCED_MOVE.get();
+    }
+
+    /** Opens or closes the re-entrancy window opened by {@link #isApplyingEnforcedMove()}. */
+    public static void setApplyingEnforcedMove(boolean applying) {
+        APPLYING_ENFORCED_MOVE.set(applying);
+    }
+
     /**
      * A jump-suppressing marker, plus how long it has been alive.
      *
