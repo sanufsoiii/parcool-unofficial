@@ -3,6 +3,7 @@ package com.alrex.parcool.common.event;
 import com.alrex.parcool.client.hud.HUDManager;
 import com.alrex.parcool.client.hud.HUDRegistry;
 import com.alrex.parcool.client.input.KeyRecorder;
+import com.alrex.parcool.client.action.ClientActionProcessor;
 import com.alrex.parcool.common.action.ActionProcessor;
 import com.alrex.parcool.common.handlers.EnableOrDisableParCoolHandler;
 import com.alrex.parcool.common.handlers.LoginLogoutHandler;
@@ -97,6 +98,18 @@ public final class ParCoolEvents {
         ClientTickEvent.CLIENT_POST.register(client -> EnableOrDisableParCoolHandler.onTick());
         // Was: HUDManager on ClientTickEvent.Post
         ClientTickEvent.CLIENT_POST.register(client -> HUDManager.getInstance().onTick());
+        // Animators of *other* players. Their Animator#getTick() used to advance only from
+        // TickEvent.PLAYER_POST, which on a client fires for the local player alone - so an action
+        // started on a remote player (Dodge, Roll, ClimbUp, Tap, Vault, VerticalWallRun, JumpFromBar,
+        // Dive) never left getTick() == 0, shouldRemoved() never fired, and the remote player was
+        // stuck in the action's first frame until they repeated it.
+        //
+        // This has to be a *tick* hook, not the per-frame render hook: ClientActionProcessor
+        // #onRenderFrame fires from GameRenderer#renderLevel, i.e. once per rendered frame. Advancing
+        // the counters there made every animator run at the frame rate instead of the tick rate - at
+        // 200 fps the local player's animators were advanced 200 times a second on top of the 20 real
+        // ticks, so the whole mod played roughly 10x too fast.
+        ClientTickEvent.CLIENT_PRE.register(ClientActionProcessor::tickRemoteAnimations);
 
         // Was: PlayerJoinHandler on EntityJoinLevelEvent (client)
         ClientPlayerEvent.CLIENT_PLAYER_JOIN.register(PlayerJoinHandler::onClientPlayerJoin);

@@ -7,6 +7,16 @@ plugins {
 // both loader modules reference them below, so :common has to be evaluated first.
 evaluationDependsOn(':common')
 
+// Gradle leaves an undeclared project version at "unspecified", and processResources expands
+// ${version} into fabric.mod.json from it - so the shipped mod metadata said `"version": "unspecified"`
+// and Fabric Loader warned on every launch:
+//   Mod parcool uses the version unspecified which isn't compatible with Loader's extended semantic
+//   version format
+// :common sets the same value; mirror it so the loader metadata, the jar manifest and the module all
+// agree with gradle.properties.
+version = "${project.minecraft_version}-${project.mod_version}"
+group = project.maven_group
+
 architectury {
 	platformSetupLoomIde()
 	fabric()
@@ -129,11 +139,36 @@ tasks.register('distJar', Jar) {
 	// Reading the archive inside a `from { }` closure gives Gradle no way to order the two tasks, so
 	// the dependency is declared explicitly.
 	dependsOn ':common:remapJar'
+	dependsOn ':fabric:remapJar'
 
+	// zipTree, not a plain file copy, so the remapped code is expanded into the output jar.
+	//
+	// Order matters, and not only for readability: duplicatesStrategy is EXCLUDE, so the first `from`
+	// that contributes an entry wins.
+	//
+	// This module goes first on purpose. :fabric:remapJar carries the four loader-side classes already
+	// remapped to intermediary (ParCoolFabric, ParCoolFabricClient, FabricParCoolPlatform,
+	// FabricParCoolNetwork) - `sourceSets.main.output` is the raw mojmap output, and shipping it as-is
+	// left FabricParCoolPlatform referencing net.minecraft.core.BlockPos and FabricParCoolNetwork
+	// referencing net.minecraft.network.codec.StreamCodec in a jar meant for an intermediary client.
+	//
+	// It also carries the authoritative access widener, remapped to `v2 intermediary`. :common:remapJar
+	// leaves the access widener in `v2 named` (its namespacesMatch() is true, so Loom copies it
+	// verbatim), and Fabric Loader 0.19.5 refuses that outright on a production client:
+	//     ClassTweakerFormatException: line 1: Namespace (named) does not match current runtime
+	//     namespace (intermediary)
+	// which aborts the boot before the game window exists. So the common copy is dropped below.
+	from({
+		zipTree(tasks.named('remapJar').get().archiveFile.get().asFile)
+	})
+
+	// The remapped :common code, which :fabric:remapJar does not contain (the module compiles against
+	// it with `compileOnly project(':common')`, so the common classes are not in its own output).
 	from({
 		zipTree(project(':common').tasks.named('remapJar').get().archiveFile.get().asFile)
-	})
-	from(sourceSets.main.output)
+	}) {
+		exclude 'parcool.accesswidener'
+	}
 	from(configurations.runtimeClasspath.findAll { it.name.endsWith('.jar') }.collect { zipTree(it) }) {
 		include 'META-INF/services/com.alrex.parcool.platform.ParCoolPlatform'
 	}

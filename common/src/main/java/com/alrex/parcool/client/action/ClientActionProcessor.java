@@ -10,6 +10,7 @@ import com.alrex.parcool.common.event.CompatEvents;
 import com.alrex.parcool.config.ParCoolConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -77,6 +78,30 @@ public final class ClientActionProcessor {
         LocalStamina.get(localPlayer).consume(localPlayer, value);
     }
 
+    /**
+     * Advances the animators of every visible player except the local one.
+     *
+     * <p>Registered on {@code ClientTickEvent.CLIENT_PRE}, i.e. exactly once per game tick - the same
+     * rate at which {@link #preprocess} advances the local player's. It must stay a tick hook: an
+     * earlier revision did this from {@link #onRenderFrame}, which runs once per rendered frame, and
+     * that advanced the local player's animators a second time at the frame rate, so with a 200 fps
+     * display the entire mod ran roughly ten times too fast.
+     *
+     * <p>Remote-only, because the local player already gets its tick from {@code preprocess}.
+     */
+    public static void tickRemoteAnimations(Minecraft client) {
+        Player localPlayer = client.player;
+        if (localPlayer == null || !(localPlayer.level() instanceof ClientLevel level)) return;
+        for (Player player : level.players()) {
+            if (player.isLocalPlayer() || !(player instanceof AbstractClientPlayer avatarPlayer)) continue;
+            Parkourability parkourability = Parkourability.get(player);
+            if (parkourability == null) continue;
+            Animation animation = Animation.get(avatarPlayer);
+            if (animation == null) continue;
+            animation.tick(avatarPlayer, parkourability);
+        }
+    }
+
     public static void onRenderFrame(CompatEvents.RenderFrameEvent.Pre event) {
         Player clientPlayer = Minecraft.getInstance().player;
         if (clientPlayer == null) return;
@@ -91,15 +116,10 @@ public final class ClientActionProcessor {
             }
             Animation animation = Animation.get(player);
             if (animation == null) continue;
-            // Animator#getTick() only advances through Animation#tick, which upstream reached solely
-            // through the local player's TickEvent.PLAYER_POST. Every animator that is started by
-            // onStartInOtherClient - Dodge, Roll, ClimbUp, Tap, Vault, VerticalWallRun, JumpFromBar,
-            // Dive - therefore froze at getTick() == 0 on every *other* client, shouldRemoved() never
-            // fired, and the remote player was stuck in the first frame of the action forever. Ticking
-            // here is what makes an action play out to completion for everyone who can see it.
-            if (player instanceof AbstractClientPlayer avatarPlayer) {
-                animation.tick(avatarPlayer, parkourability);
-            }
+            // Animation#tick is deliberately NOT called here. This hook fires once per rendered frame
+            // (GameRenderer#renderLevel), not once per tick, so advancing the counters here ran every
+            // animator at the frame rate. Their tick lives in #tickRemoteAnimations (client tick) and
+            // in #preprocess (local player) instead.
             animation.onRenderTick(event, player, parkourability);
         }
     }
