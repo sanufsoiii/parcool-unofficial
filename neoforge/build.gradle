@@ -14,12 +14,14 @@ evaluationDependsOn(':common')
 // the distributable below is assembled explicitly instead.
 //
 // The step architectury-plugin would have done is a mojmap -> SRG remap, and it is not needed: the
-// NeoForge production runtime loads mojmap-named vanilla members. Verified against a shipped NeoForge
-// 1.21.11 mod (Paraglider 21.11.0-beta.6), whose own bytecode references
-// `net/minecraft/resources/Identifier` and whose own accesstransformer.cfg ships
-// `aboveGroundTickCount` rather than an `f_110147_` token. So the mojmap-named artifact this module
+// NeoForge production runtime loads mojmap-named vanilla members. Verified twice for 21.3.97 - the
+// neoforge-21.3.97-sources.jar ModDevGradle compiles against is mojmap throughout, and a shipped
+// NeoForge mod's own accesstransformer.cfg (Paraglider-neoforge-21.1.5) lists
+// `aboveGroundTickCount`, not an `f_110147_` token. So the mojmap-named artifact this module
 // produces is already what NeoForge loads, and the access transformer in
-// neoforge/src/main/resources/META-INF/accesstransformer.cfg is written in the same naming.
+// neoforge/src/main/resources/META-INF/accesstransformer.cfg is written in the same naming. The
+// 1.21.1 tree's AT had six `f_...`-style entries that therefore never matched anything; see
+// NOTES.md §4.
 
 repositories {
 	maven { url = 'https://www.cursemaven.com' }
