@@ -1,0 +1,89 @@
+package com.alrex.parcool.utilities;
+
+public class Easing {
+	float phase;
+	float result;
+	boolean calculated = false;
+
+	public Easing(float phase) {
+		this.phase = phase;
+	}
+
+    public static Easing with(float phase) {
+        return new Easing(phase);
+    }
+
+	/**
+	 * Closed at the upper bound on purpose. The chains below end in a fade-out whose `until` is the last
+	 * frame of the action, so with a half-open interval phase == until matched no segment at all and
+	 * {@link #get()} handed back the raw phase - the action flashed back to its start value for one frame
+	 * instead of finishing. A closed upper bound keeps the first-match-wins ordering: when two segments
+	 * touch, the earlier (the "hold" one) still wins, which is what the chains expect.
+	 */
+	public boolean isInRange(float start, float until) {
+		return start <= phase && phase <= until;
+	}
+
+	public Easing sinInOut(float start, float until, float from, float to) {
+		if (calculated) return this;
+		if (!isInRange(start, until)) return this;
+		float offset = phase - start;
+		result = MathUtil.lerp(from, to, EasingFunctions.SinInOutBySquare(offset / (until - start)));
+		calculated = true;
+		return this;
+	}
+
+	public Easing cubicInOut(float start, float until, float from, float to) {
+		if (calculated) return this;
+		if (!isInRange(start, until)) return this;
+		float offset = phase - start;
+		result = MathUtil.lerp(from, to, EasingFunctions.CubicInOut(offset / (until - start)));
+		calculated = true;
+		return this;
+	}
+
+	public Easing squareIn(float start, float until, float from, float to) {
+		if (calculated) return this;
+		if (!isInRange(start, until)) return this;
+		float offset = phase - start;
+		float inPhase = offset / (until - start);
+		result = MathUtil.lerp(from, to, inPhase * inPhase);
+		calculated = true;
+		return this;
+	}
+
+	public Easing squareOut(float start, float until, float from, float to) {
+		if (calculated) return this;
+		if (!isInRange(start, until)) return this;
+		float offset = phase - start;
+		float inPhase = 1 - offset / (until - start);
+		result = MathUtil.lerp(from, to, 1 - inPhase * inPhase);
+		calculated = true;
+		return this;
+	}
+
+	public Easing linear(float start, float until, float from, float to) {
+		if (calculated) return this;
+		if (!isInRange(start, until)) return this;
+		float offset = phase - start;
+		float inPhase = offset / (until - start);
+		result = MathUtil.lerp(from, to, inPhase);
+		calculated = true;
+		return this;
+	}
+
+    public Easing noChange(float start, float until, float value) {
+        if (calculated) return this;
+        if (!isInRange(start, until)) return this;
+        result = value;
+        calculated = true;
+        return this;
+    }
+
+	public float get() {
+		if (calculated) {
+			return result;
+		}
+		return phase;
+	}
+}
