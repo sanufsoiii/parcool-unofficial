@@ -65,9 +65,10 @@ dependencies {
 
 	// ShoulderSurfing is genuinely multiloader, so its plugin API stays in :common.
 	// runtimeOnly in the loader modules so an absent ShoulderSurfing is not a hard dependency.
-	// 6543497 is ShoulderSurfing-NeoForge-1.21.4-4.12.0: a build made for this Minecraft version, and
-	// the NeoForge one because it ships mojmap names (the Fabric build is intermediary-named, and a
-	// plain `compileOnly` Maven dependency is not remapped by Loom).
+	// 6543497 is ShoulderSurfing-NeoForge-1.21.4-4.12.0 - the newest NeoForge build ShoulderSurfing
+	// publishes for any 1.21.x, there being no 1.21.5 one. It is the NeoForge build because that one
+	// ships mojmap names: the Fabric build is intermediary-named, and a plain `compileOnly` Maven
+	// dependency is not remapped by Loom, so compiling against the Fabric jar fails outright.
 	compileOnly "curse.maven:ShoulderSurfing-243190:6543497"
 }
 

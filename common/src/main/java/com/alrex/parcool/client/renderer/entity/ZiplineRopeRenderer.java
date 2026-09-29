@@ -25,15 +25,15 @@ import javax.annotation.Nullable;
 /**
  * The rope between two zipline hooks.
  *
- * <h2>What 1.21.4 requires</h2>
+ * <h2>What 1.21.5 requires</h2>
  * {@code EntityRenderer} is already generic in the render state: it is
  * {@code EntityRenderer<T extends Entity, S extends EntityRenderState>}, it hands the geometry a
  * {@link RopeRenderState} instead of the entity, and {@code getBoundingBoxForCulling} has moved off
  * {@code Entity} onto the renderer. The rope therefore copies its data out of the entity in
- * {@link #extractRenderState} and draws from that state in {@link #render}. What 1.21.4 does <i>not</i>
- * have yet is {@code submit(...)} and {@code SubmitNodeCollector} (both arrive in 1.21.6), so the
- * buffers are still taken from the {@link MultiBufferSource} argument exactly as in 1.21.1. The vertex
- * maths is untouched.
+ * {@link #extractRenderState} and draws from that state in {@link #render}. 1.21.5 has neither
+ * {@code submit(...)} nor {@code SubmitNodeCollector} - those arrive several versions later - so the
+ * buffers are still taken from the {@link MultiBufferSource} argument of {@code render(...)} exactly
+ * as in 1.21.1. The vertex maths is untouched.
  */
 public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity, ZiplineRopeRenderer.RopeRenderState> {
 
@@ -56,8 +56,8 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity, Zipli
         state.color = entity.getColor();
         state.zipline = entity.getZipline();
         state.render3d = ParCoolConfig.Client.Booleans.Enable3DRenderingForZipline.get();
-        // The light has to be sampled while the entity is still around: 1.21.4's submit() only sees
-        // the render state, so the four levels the vertex maths needs are resolved here, exactly the
+        // The light has to be sampled while the entity is still around: render(...) only sees the
+        // render state, so the four levels the vertex maths needs are resolved here, exactly the
         // values 1.21.1 read inside render().
         state.startBlockLight = getBlockLightLevel(entity, start);
         state.endBlockLight = getBlockLightLevel(entity, end);
@@ -288,9 +288,9 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity, Zipli
     }
 
     /**
-     * The rope's per-frame data. 1.21.4 entity renderers already take the render state instead of the
-     * entity, and the renderer instance is shared between frames, so everything the geometry needs is
-     * copied out of the entity first.
+     * The rope's per-frame data. 1.21.5 entity renderers take the render state instead of the entity,
+     * and the renderer instance is shared between frames, so everything the geometry needs is copied
+     * out of the entity first.
      */
     public static class RopeRenderState extends net.minecraft.client.renderer.entity.state.EntityRenderState {
         @Nullable
