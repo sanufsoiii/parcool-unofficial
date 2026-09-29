@@ -14,6 +14,8 @@
     "client.MinecraftInputMixin",
     "client.OptionsMixin",
     "client.PlayerModelMixin",
+    "client.PlayerRenderStateEntityMixin",
+    "client.PlayerRenderStateExtractorMixin",
     "client.PlayerRendererMixin"
   ],
   "injectors": {
@@ -21,9 +23,11 @@
   },
   "mixins": [
     "common.ArgumentTypeInfosMixin",
+    "common.BlockEntityTypeInvoker",
     "common.EntityMixin",
     "common.LevelChunkMixin",
     "common.LivingEntityFallMixin",
+    "common.LivingEntityJumpMixin",
     "common.LivingEntityMixin",
     "common.ParCoolDataHolderMixin",
     "common.ParCoolDataPersistenceMixin",

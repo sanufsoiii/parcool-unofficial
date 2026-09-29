@@ -2,7 +2,6 @@ package com.alrex.parcool.mixin.common;
 
 import com.alrex.parcool.common.action.impl.FastRun;
 import com.alrex.parcool.common.data.Parkourability;
-import com.alrex.parcool.common.handlers.PlayerJumpHandler;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -11,7 +10,6 @@ import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Player.class)
@@ -30,36 +28,9 @@ public abstract class PlayerMixin extends LivingEntity {
         }
     }
 
-    @Inject(method = "jumpFromGround", at = @At("HEAD"), cancellable = true)
-    public void onJumpFromGround(CallbackInfo ci) {
-        Parkourability parkourability = Parkourability.get((Player) (Object) this);
-        if (parkourability == null) return;
-        if (parkourability.getBehaviorEnforcer().cancelJump()) {
-            ci.cancel();
-        }
-    }
-
-    /**
-     * Was {@code LivingEvent.LivingJumpEvent}, which NeoForge fires from {@code LivingEntity#jumpFromGround}
-     * HEAD. It has to run at <b>TAIL</b> of {@code Player#jumpFromGround} instead, because NeoForge
-     * 21.1 made the vanilla jump absolute while vanilla made it relative:
-     *
-     * <pre>
-     * vanilla 1.21.1:  setDeltaMovement(getDeltaMovement().add(0, 0.42, 0))
-     * NeoForge 21.1:   setDeltaMovement(vec3.x, getJumpPower(), vec3.z)
-     * </pre>
-     *
-     * <p>So an impulse added before {@code super.jumpFromGround()} is silently overwritten on NeoForge
-     * and only survives on Fabric. Measured on NeoForge: the charge jump set
-     * {@code dy -0.0784 -> 0.0816} and the first airborne tick still reported the untouched vanilla
-     * {@code dy 0.3332} - i.e. the {@code +0.16 * power} boost was discarded and the jump was the
-     * normal one block. TAIL also gives {@code Dive#onJump} the real launch velocity instead of the
-     * resting {@code -0.0784}.
-     */
-    @Inject(method = "jumpFromGround", at = @At("TAIL"))
-    public void onJumpFromGroundTail(CallbackInfo ci) {
-        PlayerJumpHandler.onJump((Player) (Object) this);
-    }
+    // The two jumpFromGround hooks moved to mixin/common/LivingEntityJumpMixin: the 1.21.2 rework
+    // moved the method up from Player to LivingEntity, so Player no longer declares it and an
+    // @Inject(method = "jumpFromGround") here would not match anything.
 
     @Inject(method = "isStayingOnGroundSurface", at = @At("HEAD"), cancellable = true)
     public void onIsStayingOnGroundSurface(CallbackInfoReturnable<Boolean> cir) {
