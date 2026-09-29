@@ -75,24 +75,30 @@ curl -s https://maven.architectury.dev/dev/architectury/architectury-fabric/mave
 # NeoForge
 curl -s https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml
 
-# Architectury Loom + ModDevGradle plugin versions
-curl -s https://maven.architectury.dev/dev/architectury/loom/maven-metadata.xml
-curl -s https://maven.neoforged.net/releases/net/neoforged/moddev-gradle/net.neoforged.moddev.gradle.plugin/maven-metadata.xml
+# Architectury Loom + ModDevGradle plugin versions. BOTH of the obvious URLs are 404:
+# Loom is published as a Gradle *plugin marker*, and ModDevGradle has no plugin-marker path at all.
+curl -s https://maven.architectury.dev/dev/architectury/loom/dev.architectury.loom.gradle.plugin/maven-metadata.xml
+curl -s https://maven.neoforged.net/releases/net/neoforged/moddev-gradle/maven-metadata.xml
 ```
 
 Known-good reference values, for calibration only:
 
-| | 1.21.1 port | 1.21.11 port |
-|---|---|---|
-| `minecraft_version` | `1.21.1` | `1.21.11` |
-| `neo_version` | `21.1.217` | `21.11.45` |
-| `loader_version` (Fabric) | `0.16.5` | `0.19.5` |
-| `fabric_api_version` | `0.116.15+1.21.1` | `0.141.6+1.21.11` |
-| `architectury_api_version` | `13.0.11` | `19.0.1` |
-| `dev.architectury.loom` | `1.7.435` | `1.17.493` |
-| `net.neoforged.moddev` | `1.0.9` | `2.0.147` |
-| Gradle wrapper | `8.10.2` | `9.4.1` |
-| Java toolchain | 21 | 21 |
+| | 1.21.1 port | 1.21.2 port (resolved) | 1.21.11 port |
+|---|---|---|---|
+| `minecraft_version` | `1.21.1` | `1.21.2` | `1.21.11` |
+| `neo_version` | `21.1.217` | `21.2.1-beta` | `21.11.45` |
+| `loader_version` (Fabric) | `0.16.5` | `0.16.10` | `0.19.5` |
+| `fabric_api_version` | `0.116.15+1.21.1` | `0.106.1+1.21.2` | `0.141.6+1.21.11` |
+| `architectury_api_version` | `13.0.11` | `14.0.4` | `19.0.1` |
+| `dev.architectury.loom` | `1.7.435` | `1.7.435` | `1.17.493` |
+| `net.neoforged.moddev` | `1.0.9` | `1.0.24` | `2.0.147` |
+| Gradle wrapper | `8.10.2` | `8.10.2` | `9.4.1` |
+| Java toolchain | 21 | 21 | 21 |
+
+Two traps that cost real time on this version: **NeoForge's 1.21.2 line is only `21.2.0-beta` and
+`21.2.1-beta`** - two builds in the whole maven metadata - and **fabric-api's 1.21.2 line stops at
+`0.106.1+1.21.2`**, because 0.107.0 already moved to 1.21.3. Do not assume the version number follows
+the Minecraft number.
 
 Write the resolved values into `gradle.properties` and `settings.gradle`, and record in `NOTES.md`
 where each came from. If Loom 1.7 warns that it is unsupported, that is expected for old MC targets;
@@ -136,6 +142,15 @@ still old-side, in which case copy the 1.21.1 side.
 
 | Area | 1.21.1 (old side) | 1.21.11 (new side) |
 |---|---|---|
+| **Entity render states** | absent | `EntityRenderer<T, S>`, `extractRenderState`, `LivingEntityRenderer<T, S, M>`, `PlayerRenderState`, no `PlayerModel` type parameter. **Already present in 1.21.2** - but `render(...)` still draws, `SubmitNodeCollector` does not exist. |
+| **`jumpFromGround`** | on `Player` | moved to `LivingEntity`. **Already moved in 1.21.2**, so a `Player`-targeted injection silently stops resolving. |
+| **`Entity#hurt`** | `boolean hurt(DamageSource, float)` | `final void hurt(...)` + `abstract boolean hurtServer(...)`. **Already the 1.21.11 shape in 1.21.2.** |
+| **`Registry#get`** | returns the value | returns an `Optional` | **Already new-side in 1.21.2.** |
+| **`BlockEntityType.Builder`** | present | deleted, construction private | **Already deleted in 1.21.2.** |
+| **`ClientInput`** | boolean fields | `keyPresses` `Input` record | **1.21.2 has the record *and* still has `leftImpulse`/`forwardImpulse`.** |
+| **`GuiGraphics#blit`** | no pipeline argument | `RenderPipelines.GUI_TEXTURED` first, `u`/`v` floats | **1.21.2 needs a `Function<ResourceLocation, RenderType>` first too, but the factory is `RenderType::guiTextured`.** |
+| **`Minecraft#getTimer`** | present | `getDeltaTracker()` | **Already new-side in 1.21.2.** |
+| **`ItemInteractionResult` / `FastColor` / `SimpleCraftingRecipeSerializer`** | present | `InteractionResult` / `ARGB` / `CustomRecipe.Serializer` | **All three already deleted in 1.21.2.** |
 | `ResourceLocation` vs `Identifier` | `net.minecraft.resources.ResourceLocation` | `net.minecraft.resources.Identifier` |
 | Attribute registration on NeoForge | direct `Registry.registerForHolder` from the common entry point | `BuiltInRegistries` is frozen before mod constructors ⇒ `:neoforge`'s `NeoForgeAttributes` (NeoForge `DeferredRegister` on the mod event bus) and `Attributes` *resolves* the holder instead of writing it; `ParCoolNeoForge` takes a `ModContainer` to get that bus; `Attributes.registerAll()` is called only from the Fabric entry point |
 | Attribute holder lookup | `Registry#get` returns the value, not an `Optional` | `Registry#get` returns an `Optional` |
@@ -146,8 +161,8 @@ still old-side, in which case copy the 1.21.1 side.
 | Key mappings | category is a `String`; `KeyMapping.MAP` is `Map<Key, KeyMapping>` — **one mapping per physical key** | `KeyMapping.Category` record; `KeyMapping.MAP` is `Map<Key, List<KeyMapping>>` |
 | The one-mapping-per-key conflict | 1.21.1 needs `KeyBindings#restoreVanillaBindings()` (reflection into `KeyMapping.MAP`/`ALL`) because ParCool binds 16 keys that vanilla also owns, and the last registration evicts vanilla's mapping | the table allows several mappings per key, so the repair is dead code and 1.21.11 deleted it |
 | Recipe ingredients (changed in 1.21.5) | string form, e.g. `"minecraft:chain"` | object form, e.g. `{"item": "minecraft:iron_chain"}` |
-| `pack.mcmeta` | `pack_format: 34` | `pack_format: 81` plus `min_format`/`max_format`/`supported_formats` |
-| `Entity#isInWaterOrBubble` | present | removed; the 1.21.11 port reimplements it in `utilities/EntityUtil` |
+| `pack.mcmeta` | `pack_format: 34` | `pack_format: 81` plus `min_format`/`max_format`/`supported_formats`. **Neither works for 1.21.2**: 1.21.2's `PackMetadataSection` only knows `description`, `pack_format` and a `supported_formats` range (and discards the range unless `pack_format` is inside it). 1.21.2's `DetectedVersion` says `resourcePackVersion = 42`, `dataPackVersion = 57`, so the port ships `pack_format: 34` with `supported_formats: [34, 57]`, which covers both checks. |
+| `Entity#isInWaterOrBubble` | present | removed; the 1.21.11 port reimplements it in `utilities/EntityUtil` (**still present in 1.21.2, so the reimplementation is dead weight there - use the vanilla accessor**) |
 | `Player#canInteractWithEntity` | present | removed; the port targets `LivingEntity#getVisibilityPercent` instead |
 | `jumpFromGround` | on `Player` | moved to `LivingEntity`; the port's hooks moved to a new `mixin.common.LivingEntityJumpMixin` |
 | `Item` description id | `BlockItem#getDescriptionId` delegates to the block | stored field set at construction ⇒ item models moved to `assets/parcool/items/*.json` |
@@ -211,14 +226,22 @@ record why in `NOTES.md`.
 silently behaves like the old code, that cache is stale:
 
 ```bash
-./gradlew --stop
 rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
+
+Do **not** run `./gradlew --stop`: several ports are built in parallel from one Gradle home and
+`--stop` kills every daemon, including the other jobs'. Deleting the cache directories is enough and
+has the same effect on the stale remap.
 
 Do this whenever you add a class to `:common`. It will otherwise make you debug a build that is not
 the one you are looking at.
 
 ## 9. Phase 6 — actually run both loaders
+
+> **For the 1.21.2 port this whole phase's *run* part was cancelled by the task brief, and the
+> acceptance was `./gradlew build` + artifact inspection instead.** The checklist below was therefore
+> *not* executed; NOTES.md §8 lists it as untested. If you are reading this on another version, the
+> checklist is still the right thing to do.
 
 A port that only compiles is not a port.
 

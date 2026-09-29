@@ -1,18 +1,25 @@
-# Building ParCool (Architectury, Minecraft 1.21.11)
+# Building ParCool (Architectury, Minecraft 1.21.2)
 
 Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
 `build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` and
 no machine-specific path anywhere in the build.
 
-Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.11, Architectury API 19.0.1,
-NeoForge 21.11.45, Fabric Loader 0.19.5, Fabric API 0.141.6+1.21.11, Architectury Loom 1.17.493,
-ModDevGradle 2.0.147, Gradle 9.4.1.
+Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.2, Architectury API 14.0.4,
+NeoForge 21.2.1-beta, Fabric Loader 0.16.10, Fabric API 0.106.1+1.21.2, Architectury Loom 1.7.435,
+architectury-plugin 3.5.170, ModDevGradle 1.0.24, Gradle 8.10.2.
+Where each number was resolved from is written down in [NOTES.md](NOTES.md) §1 — do not re-guess them.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
 | `common`    | `dev.architectury.loom` | The whole mod, loader agnostic: registries (Architectury `DeferredRegister`), the `ParCoolData` player-data subsystem, the payload plumbing, the JSON `ConfigSpec`, the Architectury event bridge, the vanilla mixins and the `platform` seam. |
 | `fabric`    | `dev.architectury.loom` | `ParCoolFabric` / `ParCoolFabricClient` entrypoints, `FabricParCoolPlatform`, `FabricParCoolNetwork`. |
-| `neoforge`  | `net.neoforged.moddev` | `ParCoolNeoForge` / `ParCoolNeoForgeClient` entrypoints, `NeoForgeParCoolPlatform`, `NeoForgeParCoolNetwork`, and the Paraglider / EpicFight / BetterThirdPerson integrations. |
+| `neoforge`  | `net.neoforged.moddev` | `ParCoolNeoForge` / `ParCoolNeoForgeClient` entrypoints, `NeoForgeParCoolPlatform`, `NeoForgeParCoolNetwork`, `NeoForgeAttributes`, and the Paraglider / EpicFight / BetterThirdPerson integrations. |
+
+`common` uses Loom 1.7, which defaults to the **legacy** mixin annotation processor. That default is
+wrong for this mod — it leaves the `@Mixin` targets in mojmap inside the constant pool and expects a
+refmap that nothing reads — so `common/build.gradle` sets `useLegacyMixinAp = false`. Loom 1.7 prints
+"You are using an outdated version of Architectury Loom!" on every configuration; that is expected for
+a Minecraft this old and is not an error.
 
 ## Building
 
@@ -29,18 +36,21 @@ fresh checkout.
 `cannot find symbol` for it, Loom's cached remap of `:common` is stale.** Clear it once:
 
 ```bash
-rm -rf common/build/devlibs common/build/loom-cache fabric/build/loom-cache .gradle/loom-cache
+rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
 
 `.gradle/loom-cache/remapped_mods` holds the per-consumer remapped copy of `:common` that the loader
 modules actually load; if a freshly added mixin class is present in the built jar but reported as
 "not found" at runtime, this directory is the stale one.
 
+> **Never run `./gradlew --stop` here.** Several ports are built in parallel from one Gradle home;
+> `--stop` kills every daemon, including the other jobs'. Delete the cache directories instead.
+
 ## Distributables
 
 ```bash
 ./gradlew build
-# -> fabric/build/libs/parcool-fabric.jar
+# -> fabric/build/libs/parcool-1.21.2-3.4.3.3-fabric.jar
 # -> neoforge/build/libs/parcool-neoforge.jar
 ```
 
@@ -48,17 +58,29 @@ Each contains the `:common` code and assets plus the loader module's own classes
 (`fabric.mod.json` / `META-INF/neoforge.mods.toml`), the shared `parcool.accesswidener` and
 `parcool-common.mixins.json`, and the `ServiceLoader` file that binds `ParCoolPlatform`.
 
+Two things about the packaging are load-bearing and are explained at length in the module
+`build.gradle` files:
+
+* **the Fabric jar's access widener must be `v2 intermediary`.** `:common:remapJar` leaves it in
+  `v2 named` (Loom copies it verbatim because the namespaces match) and Fabric Loader rejects that
+  outright on a production client with `ClassTweakerFormatException: Namespace (named) does not match
+  current runtime namespace (intermediary)`, aborting the boot before the window exists. The
+  authoritative copy therefore comes from `:fabric:remapJar`, and `duplicatesStrategy = EXCLUDE`
+  makes the order of the `from { }` clauses decide which one wins.
+* **the NeoForge jar is mojmap-named and skips architectury-plugin's `neoForge()` transform**, for the
+  reasons in the header of `neoforge/build.gradle`.
+
 ## Running
 
 ```bash
 ./gradlew :fabric:runClient      :fabric:runServer
-./gradlew :neoforge:runclient    :neoforge:runserver
+./gradlew :neoforge:runClient    :neoforge:runServer
 ```
 
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
 ParCool mixin; that is how the mixin set is verified without a manual client session. A dedicated
 server refuses to start until it is acknowledged, so before the first `:fabric:runServer` /
-`:neoforge:runserver` create `<module>/run/eula.txt` containing:
+`:neoforge:runServer` create `<module>/run/eula.txt` containing:
 
 ```
 eula=true
@@ -86,9 +108,20 @@ so they can be repeated without a mouse:
 ```
 
 The dedicated servers need `online-mode=false` in `<module>/run*/server.properties` (offline dev
-login) and a free `server-port`.
+login) and a free `server-port`. `:fabric` and `:neoforge` also declare a second client
+(`run-client2`, user name `ParCoolTester2` / `NeoParCool2`) so two ParCool players can be on one
+server at the same time — that is what exercises the action-state broadcast path between two real
+players.
 
 ## Loader independence check
 
-`./gradlew :common:checkCommonLoaderIndependence` fails the build if `common/src/main` ever imports
-`net.fabricmc.*` or `net.neoforged.*`.
+`./gradlew :common:checkCommonLoaderIndependence` fails the build if `common/src/main` imports
+`net.fabricmc.*` or `net.neoforged.*`. It is wired into `:common:check`, so `./gradlew build` runs it.
+
+## Mixin targets
+
+A `@Inject` whose descriptor does not match its target is **not** a compile error — it is a mixin that
+never applies, and with `"defaultRequire": 1` that is a hard boot failure. Loom's annotation processor
+only warns when it cannot remap a *name*, never a descriptor. Check them mechanically against the
+mapped jar; the recipe and the result for this tree (39 targets, 0 problems) are in
+[NOTES.md](NOTES.md) §7.
