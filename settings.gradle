@@ -9,9 +9,13 @@ pluginManagement {
 }
 
 plugins {
-	id 'dev.architectury.loom' version '1.17.493' apply false
+	// Loom 1.7 is the line the 1.21.1 port proved on this exact project layout, and it still
+	// configures 1.21.4 (Loom resolves the Minecraft version from the Mojang manifest at configure
+	// time rather than carrying a hard-coded table).
+	id 'dev.architectury.loom' version '1.7.435' apply false
 	id 'architectury-plugin' version '3.5.170' apply false
-	id 'net.neoforged.moddev' version '2.0.147' apply false
+	// ModDevGradle 1.0.x is the line built for NeoForge 21.1 - 21.4; 2.x is the 21.5+ line.
+	id 'net.neoforged.moddev' version '1.0.9' apply false
 }
 
 rootProject.name = 'parcool-architectury'

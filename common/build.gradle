@@ -33,6 +33,25 @@ loom {
 
 	mixin {
 		defaultRefmapName = 'parcool-common-refmap.json'
+		// Static remapping, requested explicitly.
+		//
+		// Loom 1.7 (this tree) defaults to `useLegacyMixinAp = true`, the refmap-based flow. In that mode
+		// Loom deliberately leaves the @Mixin target classes in mojmap inside the constant pool and
+		// expects the shipped refmap to translate them at runtime.
+		//
+		// For ParCool that flow cannot work: the generated refmap has no class-level entries
+		// (`data.named:intermediary.classes` is empty) because the mixin targets are Class literals in
+		// bytecode rather than annotation strings, and parcool-common.mixins.json declares no "refmap"
+		// key either - so nothing would read the file. The jar ends up with
+		// `@Mixin(net.minecraft.world.entity.player.Player)` against an intermediary production client,
+		// where that class does not exist. Mixin fails to resolve the target and the JVM dies during
+		// mixin application - a boot that stops right after the mod list, with no error line at all.
+		// That is precisely the crash this setting fixes.
+		//
+		// With the legacy AP off, Loom rewrites the annotation strings, the @Shadow descriptors and the
+		// @Mixin targets straight into the bytecode, so the jar is self-contained: no refmap, and
+		// nothing for the loader to look up. Loom >= 1.9 made this the default and fabric-api ships it.
+		useLegacyMixinAp = false
 	}
 
 	mods {
