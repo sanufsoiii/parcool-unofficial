@@ -1,0 +1,33 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+out/
+
+# Architectury Loom / plugin caches and generated artifacts
+.architectury-transformer/
+**/loom-cache/
+**/explodedCommon/
+**/devlibs/
+*.log
+*.txt
+/*.jar
+run/
+run-*/
+run*/
+
+# Gradle wrapper / distribution
+!gradlew
+!gradlew.bat

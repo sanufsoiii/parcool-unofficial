@@ -1,0 +1,12 @@
+accessWidener v2 named
+
+# NeoForge exposes these via patches/ATs; on Fabric they need widening. Verified against the
+# mojmap 1.21.11 jar: LivingEntity#swimAmount / #swimAmountO and Entity#onGround are private there and
+# Player#canPlayerFitWithinBlocksAndEntitiesWhen is protected.
+accessible field net/minecraft/world/entity/LivingEntity swimAmount F
+accessible field net/minecraft/world/entity/LivingEntity swimAmountO F
+accessible field net/minecraft/world/entity/Entity onGround Z
+
+# NeoForge widens these; ParCool calls them directly. 1.21.11 already made LevelResource's constructor
+# public, so only the Player helper still has to be widened.
+accessible method net/minecraft/world/entity/player/Player canPlayerFitWithinBlocksAndEntitiesWhen (Lnet/minecraft/world/entity/Pose;)Z
