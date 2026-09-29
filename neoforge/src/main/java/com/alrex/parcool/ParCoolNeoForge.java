@@ -13,10 +13,6 @@ public class ParCoolNeoForge {
         // common/api/Attributes, and the two entries are owned by NeoForge's DeferredRegister because
         // NeoForge freezes BuiltInRegistries before this constructor is reached.
         NeoForgeAttributes.register(container.getEventBus());
-        // The block entity type registration is a RegisterEvent, i.e. a mod-bus event, and it needs
-        // that bus before ParCool.init() reaches common/block/TileEntities.
-        ((com.alrex.parcool.platform.NeoForgeParCoolPlatform) com.alrex.parcool.platform.PlatformServices.get())
-                .setModEventBus(container.getEventBus());
         ParCool.init();
     }
 }

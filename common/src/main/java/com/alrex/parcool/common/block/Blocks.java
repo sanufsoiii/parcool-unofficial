@@ -4,7 +4,7 @@ import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.block.zipline.IronZiplineHookBlock;
 import com.alrex.parcool.common.block.zipline.WoodenZiplineHookBlock;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
@@ -24,7 +24,7 @@ public class Blocks {
      * It is the block's own registry id, i.e. exactly what the key would be.
      */
     private static ResourceKey<Block> key(String name) {
-        return ResourceKey.create(Registries.BLOCK, Identifier.fromNamespaceAndPath(ParCool.MOD_ID, name));
+        return ResourceKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, name));
     }
     public static final RegistrySupplier<Block> WOODEN_ZIPLINE_HOOK = REGISTER.register(
             "wooden_zipline_hook",
@@ -43,7 +43,9 @@ public class Blocks {
                     .setId(key("iron_zipline_hook"))
                     .mapColor(MapColor.METAL)
                     .strength(1.0f, 3.0f)
-                    .noCollision()
+                    // Vanilla's spelling. NeoForge adds a correctly spelled noCollision() alias, but
+                    // :common compiles against vanilla, where only the typo exists.
+                    .noCollission()
                     .sound(SoundType.CHAIN)
             )
     );

@@ -1,12 +1,31 @@
 accessWidener v2 named
 
 # NeoForge exposes these via patches/ATs; on Fabric they need widening. Verified against the
-# mojmap 1.21.11 jar: LivingEntity#swimAmount / #swimAmountO and Entity#onGround are private there and
-# Player#canPlayerFitWithinBlocksAndEntitiesWhen is protected.
+# mojmap 1.21.7 jar: LivingEntity#swimAmount / #swimAmountO and Entity#onGround are private there,
+# Player#canPlayerFitWithinBlocksAndEntitiesWhen is protected, LevelResource's constructor is
+# private, Entity#damageSources() is public but its return type is not, and
+# ArgumentTypeInfos#register is private (NeoForge exposes registerByClass instead).
 accessible field net/minecraft/world/entity/LivingEntity swimAmount F
 accessible field net/minecraft/world/entity/LivingEntity swimAmountO F
 accessible field net/minecraft/world/entity/Entity onGround Z
+accessible method net/minecraft/commands/synchronization/ArgumentTypeInfos register (Lnet/minecraft/core/Registry;Ljava/lang/String;Ljava/lang/Class;Lnet/minecraft/commands/synchronization/ArgumentTypeInfo;)Lnet/minecraft/commands/synchronization/ArgumentTypeInfo;
 
-# NeoForge widens these; ParCool calls them directly. 1.21.11 already made LevelResource's constructor
-# public, so only the Player helper still has to be widened.
+# NeoForge widens these; ParCool calls them directly.
 accessible method net/minecraft/world/entity/player/Player canPlayerFitWithinBlocksAndEntitiesWhen (Lnet/minecraft/world/entity/Pose;)Z
+accessible method net/minecraft/world/level/storage/LevelResource <init> (Ljava/lang/String;)V
+
+# common/block/TileEntities.java: 1.21.7 deleted BlockEntityType.Builder and has no static register
+# either - what is left is the type's own package-private constructor plus its package-private nested
+# factory interface, which is why the type is constructed directly here.
+accessible class net/minecraft/world/level/block/entity/BlockEntityType$BlockEntitySupplier
+accessible method net/minecraft/world/level/block/entity/BlockEntityType <init> (Lnet/minecraft/world/level/block/entity/BlockEntityType$BlockEntitySupplier;Ljava/util/Set;)V
+
+# client/renderer/RenderTypes.java: 1.21.7 moved culling and the vertex format into RenderPipeline
+# and deleted RenderStateShard#CULL / #NO_CULL / RENDERTYPE_LEASH_SHADER, so the rope has to build its
+# own pipeline. RenderType#create, the two RenderStateShard constants it uses and the two private
+# RenderPipelines members it builds that pipeline from are all inaccessible from another package.
+accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;ILcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+accessible field net/minecraft/client/renderer/RenderStateShard NO_TEXTURE Lnet/minecraft/client/renderer/RenderStateShard$EmptyTextureStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard LIGHTMAP Lnet/minecraft/client/renderer/RenderStateShard$LightmapStateShard;
+accessible field net/minecraft/client/renderer/RenderPipelines PIPELINES_BY_LOCATION Ljava/util/Map;
+accessible field net/minecraft/client/renderer/RenderPipelines MATRICES_FOG_SNIPPET Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;
