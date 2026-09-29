@@ -76,8 +76,11 @@ curl -s https://maven.architectury.dev/dev/architectury/architectury-fabric/mave
 curl -s https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml
 
 # Architectury Loom + ModDevGradle plugin versions
-curl -s https://maven.architectury.dev/dev/architectury/loom/maven-metadata.xml
-curl -s https://maven.neoforged.net/releases/net/neoforged/moddev-gradle/net.neoforged.moddev.gradle.plugin/maven-metadata.xml
+# NOTE: the Loom artifact is `architectury-loom` under the `dev.architectury` group, and the
+# ModDevGradle plugin *marker* lives under `net/neoforged/moddev/`, not `moddev-gradle/`. Both URLs
+# below 404 as written; see NOTES.md of the 1.21.6 port.
+curl -s https://maven.architectury.dev/dev/architectury/architectury-loom/maven-metadata.xml
+curl -s https://maven.neoforged.net/releases/net/neoforged/moddev/net.neoforged.moddev.gradle.plugin/maven-metadata.xml
 ```
 
 Known-good reference values, for calibration only:
@@ -160,6 +163,14 @@ one mapping per physical key, ParCool silently steals right-click / Space / Left
 unless the table is repaired. If your target version has the single-mapping table, port
 `restoreVanillaBindings` (from the 1.21.1 tree) and the `KeyRecorder#onClientTick` call that drives
 it, and comment why. If it has the multi-mapping table, do not port the reflection at all.
+
+Two claims in this table are **wrong** and were verified wrong on 1.21.6 (see the 1.21.6 `NOTES.md`):
+
+* "Entity / BlockEntity save: 1.21.1 = `CompoundTag`, 1.21.11 = `ValueInput`/`ValueOutput`" is a
+  version boundary, but 1.21.6 is already on the *new* side, not the 1.21.1 side.
+* "Render types: 1.21.1 = `RenderStateShard`, 1.21.11 = `RenderSetup`" is likewise not a boundary
+  where it looks like one: `RenderSetup` only arrives in 1.21.9. 1.21.6 is `RenderStateShard`-based
+  *and* takes a `RenderPipeline` in `RenderType.create`, i.e. neither column verbatim.
 
 Also check the two fixes below, which are the same on every version and easy to lose when copying:
 

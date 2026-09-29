@@ -92,6 +92,26 @@ already applied**, so it lies about visibility — `javap` is the only authority
 6. **`PlayerMixin` targeted a method that does not exist in 1.21.6** (`causeExtraKnockback`,
    a 1.21.11 extraction). Retargeted to `attack`, with a comment saying why.
 
+### Mixin targets, verified statically
+
+`tools/verify-mixin-targets.py` re-derives every mixin hook against the mojmap Minecraft jar with
+`javap`: it resolves `@Mixin(X.class)` through the file's imports, walks X's supertypes, and asserts
+that each `@Inject` / `@Redirect` / `@WrapWithCondition` / `@Accessor` target and each `@Shadow`
+field really exists — matching the **name *and* descriptor pair**, and understanding all three
+spellings Mixin accepts (bare name, `name(args)ret`, `Lowner;name(args)ret`). Result for this tree:
+**29 mixin files, 0 problems.**
+
+**A bug I introduced into that script and then had to fix is worth recording, because the same
+mistake is easy to repeat.** The first version parsed an annotation's arguments with
+`@Ann\s*\(([^)]*)\)`. `[^)]*` stops at the first `)`, and a mixin target is almost always written
+*with* a descriptor — `@Inject(method = "setupAnim(L…/PlayerRenderState;)V", at = @At("HEAD"))` —
+so the argument text was truncated mid-string, the `method = "…"` search found no closing quote, and
+**every descriptor-based hook was silently skipped as if it had no `method` at all.** The first run
+reported "0 problems" while having checked only the name-only hooks. The script now scans balanced
+parentheses instead, and it is self-tested both ways: a fixture with a bogus method name, a bogus
+`@Shadow` field and a name/descriptor mismatch must report 4 problems (it does), and mutating a real
+target in this tree must be caught (it is).
+
 ## 4. Found but NOT fixed (deliberately)
 
 * **`Animation#setAnimator(Class, Object...)` dedicated-server verifier guard.** The 1.21.11 tree
