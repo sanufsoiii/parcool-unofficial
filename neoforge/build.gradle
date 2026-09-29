@@ -27,6 +27,23 @@ repositories {
 	maven { url = 'https://maven.architectury.dev/' }
 	mavenCentral()
 	maven { url = 'https://maven.neoforged.net/releases/' }
+	// The two Mojang-side repositories, spelled out rather than left to ModDevGradle.
+	//
+	// ModDevGradle 1.0.x has an internal RepositoriesPlugin that adds exactly these two, but it never
+	// runs on Gradle 9 - which this tree needs, because architectury-plugin 3.5.170 calls
+	// LloomGradleExtension#disableObfuscation(), and that method only exists in Architectury Loom
+	// 1.17.x. Without them, resolving NeoForge's own `neoFormRuntimeDependenciesCompileClasspath`
+	// fails with "Could not find com.mojang:jtracy:1.0.29" and only lists the five repositories above
+	// as searched.
+	maven {
+		name = 'Mojang Minecraft Libraries'
+		url = 'https://libraries.minecraft.net/'
+		content { includeGroup 'com.mojang' }
+	}
+	maven {
+		name = 'Mojang Meta'
+		url = 'https://maven.neoforged.net/mojang-meta/'
+	}
 }
 
 neoForge {
@@ -109,19 +126,26 @@ dependencies {
 	// shipping a second copy of MixinExtras is what the loaders' bundled one would conflict with.
 	compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
-	// Optional integrations, and the only jars that had to move with the port:
-	//   Paraglider       7794499  Paraglider-neoforge-21.11.0-beta.6   (MC 1.21.11)
-	//   ShoulderSurfing  8950509  ShoulderSurfing-NeoForge-1.21.11-5.1.1
-	//   BetterThirdPerson 6455836 the newest NeoForge build (1.21.8)
-	// EpicFight has no 1.21.11 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
-	// latest release), so extern/epicfight is excluded from compilation - see sourceSets below.
+	// Optional integrations. None of the four is a *runtime* dependency of the mod: each one reports
+	// itself absent when its classes are not loadable, so a client without them still works, and the
+	// ids below only have to be good enough to compile against. Verified against the CurseForge file
+	// listing (www.curseforge.com/api/v1/mods/<id>/files):
+	//   Paraglider        289240  7795089  Paraglider-neoforge-21.1.5        (MC 1.21.1)
+	//   EpicFight         405076  8175609  epic-fight-21.17.3.1-mc1.21.1    (MC 1.21.1)
+	//   BetterThirdPerson 435044  5965876  BetterThirdPerson-neoforge-1.9.0 (MC 1.21.4, exact)
+	//   ShoulderSurfing   243190  6543497  ShoulderSurfing-NeoForge-1.21.4-4.12.0 (MC 1.21.4, exact)
+	//
+	// Paraglider and EpicFight have no 1.21.4 build in the CurseForge listing this machine can reach
+	// (it exposes only a truncated page of Paraglider's files), so both are compiled against their
+	// 1.21.1 build - the same situation the 1.21.1 and 1.21.11 ports are in. The APIs ParCool touches
+	// (`Paraglider.playerStates()`, EpicFight's `getPlayerPatch()`) are unchanged across those builds.
 	// Patchouli is only an optional book dependency and is never referenced from source.
-	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7794499"
-	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:7489617"
-	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
-	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:8950509"
+	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7795089"
+	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8175609"
+	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:5965876"
+	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6543497"
 
-	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7794499"
+	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7795089"
 }
 
 tasks.named('compileJava') {

@@ -18,10 +18,9 @@ import java.util.function.BiConsumer;
  * {@code NetworkManager.registerReceiver} died with
  * {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C}, and the
  * channel - which registers one id per payload class for both directions - was the only working path.
- * {@code architectury-fabric 16.1.4}'s adaptor implements {@code registerS2C} (verified against
- * {@code dev.architectury.networking.fabric.NetworkManagerImpl$1} in that artifact), so the id-based
- * API is usable and both loaders now share one code path and one set of wire ids.
- * {@code NetworkChannel} still exists in Architectury 16 and is deliberately not used.
+ * Architectury 19.0.1 removed {@code NetworkChannel} entirely and
+ * {@code architectury-fabric 19.0.1}'s adaptor implements {@code registerS2C}, so the id-based API is
+ * usable and both loaders now share one code path and one set of wire ids.
  *
  * <p>This is also what keeps M4 away: registration and sending both address a message by its explicit
  * id, so {@code NetworkAggregator.C2S_TYPE}/{@code S2C_TYPE} - which the id-based send reads - are
