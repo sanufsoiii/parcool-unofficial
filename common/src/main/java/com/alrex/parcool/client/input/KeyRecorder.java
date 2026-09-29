@@ -1,9 +1,8 @@
 package com.alrex.parcool.client.input;
 
-import net.minecraft.client.KeyMapping;
-import net.minecraft.world.phys.Vec3;
-
 import javax.annotation.Nullable;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.KeyMapping;
 
 public class KeyRecorder {
 	public static final KeyState keyForward = new KeyState();
@@ -31,10 +30,9 @@ public class KeyRecorder {
 	 * NeoForge fires the event from — so the sampled key states see the same values on both loaders.
 	 */
 	public static void onClientTick() {
-		// 1.21.11 needs no repair pass here any more: `KeyMapping.MAP` is a `Map<Key, List<KeyMapping>>`,
-		// so several bindings may share one physical key and `KeyMapping#set` feeds all of them. The
-		// 1.21.1 single-mapping-per-key table (and the `restoreVanillaBindings` workaround with it) is
-		// gone, and the physical polling in `KeyBindings#isDown` stays the source of truth either way.
+		// Fabric runs the client entrypoint before Minecraft builds its Options, so vanilla's own
+		// bindings are created *after* ours and re-claim the shared keys. Repair once the world is up.
+		KeyBindings.restoreVanillaBindings();
         record(KeyBindings.isKeyForwardDown(), keyForward);
         record(KeyBindings.isKeyBackDown(), keyBack);
         record(KeyBindings.isKeyRightDown(), keyRight);

@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.client.animation.impl.FastSwimAnimator;
 import com.alrex.parcool.client.input.KeyBindings;
@@ -11,16 +10,16 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.config.ParCoolConfig;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.player.Player;
 import com.alrex.parcool.platform.PlatformServices;
 
 import java.nio.ByteBuffer;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
 
 public class FastSwim extends Action {
-    private static final Identifier FAST_SWIM_MODIFIER = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastswim");
+    private static final ResourceLocation FAST_SWIM_MODIFIER = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastswim");
     private double speedModifier = 0;
     private boolean toggleStatus;
 
@@ -38,7 +37,7 @@ public class FastSwim extends Action {
 
     @Override
     public boolean canContinue(Player player, Parkourability parkourability) {
-        return (EntityUtil.isInWaterOrBubble(player)
+        return (player.isInWaterOrBubble()
                 && player.getVehicle() == null
                 && !player.isFallFlying()
                 && player.isSprinting()
@@ -55,7 +54,7 @@ public class FastSwim extends Action {
         if (player.isLocalPlayer()) {
             if (ParCoolConfig.Client.getInstance().FastRunControl.get() == FastRun.ControlType.Toggle
                     && parkourability.getAdditionalProperties().getSprintingTick() > 3
-                    && EntityUtil.isInWaterOrBubble(player)
+                    && player.isInWaterOrBubble()
                     && player.isSwimming()
             ) {
                 if (KeyRecorder.keyFastRunning.isPressed())
@@ -70,7 +69,7 @@ public class FastSwim extends Action {
     public void onWorkingTickInClient(Player player, Parkourability parkourability) {
         Animation animation = Animation.get(player);
         if (animation != null && !animation.hasAnimator()) {
-            animation.setAnimator(FastSwimAnimator.class);
+            animation.setAnimator(new FastSwimAnimator());
         }
     }
 

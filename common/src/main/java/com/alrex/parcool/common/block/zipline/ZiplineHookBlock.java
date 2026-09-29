@@ -13,7 +13,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ShearsItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.util.RandomSource;
@@ -57,6 +56,28 @@ public abstract class ZiplineHookBlock extends DirectionalBlock implements Entit
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         Direction direction = context.getClickedFace();
         return this.defaultBlockState().setValue(FACING, direction);
+    }
+
+    /**
+     * Drops the rope items a broken hook was holding.
+     *
+     * <p>{@code BlockBehaviour#onRemove} is still overridden here on purpose: 1.21.4 keeps the hook
+     * (vanilla only removed this method in 1.21.9, which is why the 1.21.11 port has no override at
+     * all). Without it a hook that is broken while a rope is attached would delete the rope silently,
+     * because the block entity - and with it the connection list - is destroyed together with the
+     * block and nothing would ever hand the items back.
+     */
+    @Override
+    public void onRemove(@Nonnull BlockState state, @Nonnull Level world, @Nonnull BlockPos pos,
+                         @Nonnull BlockState oldState, boolean movedByPiston) {
+        if (!world.isClientSide()) {
+            var tileEntity = world.getBlockEntity(pos);
+            if (tileEntity instanceof ZiplineHookTileEntity ziplineHookTileEntity) {
+                List<ItemStack> itemStacks = ziplineHookTileEntity.removeAllConnection();
+                itemStacks.forEach(it -> Containers.dropItemStack(world, pos.getX(), pos.getY(), pos.getZ(), it));
+            }
+        }
+        super.onRemove(state, world, pos, oldState, movedByPiston);
     }
 
     @Override

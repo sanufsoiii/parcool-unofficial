@@ -1,20 +1,18 @@
 package com.alrex.parcool.client.gui;
 
-import net.minecraft.client.input.MouseButtonEvent;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.common.info.ClientSetting;
 import com.alrex.parcool.common.network.payload.ClientInformationPayload;
+import com.alrex.parcool.config.ConfigSpec.BooleanValue;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.common.network.NetworkRegistries;
+import java.util.Collections;
+import net.minecraft.network.chat.Component;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.chat.Component;
-
-
-import java.util.Collections;
 
 public class SettingBooleanConfigScreen extends ParCoolSettingScreen {
     private final ParCoolConfig.Client.Booleans[] booleans = ParCoolConfig.Client.Booleans.values();
@@ -57,7 +55,7 @@ public class SettingBooleanConfigScreen extends ParCoolSettingScreen {
             graphics.fill(offsetX, button.getY() + button.getHeight(), width - offsetX, button.getY() + button.getHeight() + 1, color.getSubSeparator());
             String comment = booleans[i + topIndex].Comment;
             if (comment != null && button.getX() < mouseX && mouseX < button.getX() + contentWidth && button.getY() < mouseY && mouseY < button.getY() + 20) {
-                graphics.setComponentTooltipForNextFrame(
+                graphics.renderComponentTooltip(
                         font,
                         Collections.singletonList(Component.literal(comment)),
                         mouseX, mouseY);
@@ -68,13 +66,13 @@ public class SettingBooleanConfigScreen extends ParCoolSettingScreen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClicked) {
+    public boolean mouseClicked(double mouseX, double mouseY, int type) {
         for (Checkbox button : configButtons) {
-            if (button.mouseClicked(event, doubleClicked)) {
+            if (button.mouseClicked(mouseX, mouseY, type)) {
                 return true;
             }
         }
-        return super.mouseClicked(event, doubleClicked);
+        return super.mouseClicked(mouseX, mouseY, type);
     }
 
     @Override

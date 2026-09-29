@@ -8,16 +8,16 @@ import com.alrex.parcool.common.action.Actions;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.network.ActionSynchronizationBroadcaster;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.DecoderException;
 import com.alrex.parcool.api.event.ParCoolEventBus;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import dev.architectury.networking.NetworkManager;
 
 import javax.annotation.Nonnull;
-import io.netty.handler.codec.DecoderException;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,7 @@ import java.util.UUID;
 
 public record ActionStatePayload(UUID playerID, List<Entry> states) implements CustomPacketPayload {
     public static final Type<ActionStatePayload> TYPE
-            = new Type<>(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state"));
+            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state"));
     public static final StreamCodec<ByteBuf, ActionStatePayload> CODEC = StreamCodec.of(
             ActionStatePayload::encode,
             ActionStatePayload::decode

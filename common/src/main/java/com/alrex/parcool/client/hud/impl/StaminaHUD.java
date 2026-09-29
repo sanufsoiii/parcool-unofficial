@@ -8,14 +8,14 @@ import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.MathUtil;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.resources.Identifier;
 import net.minecraft.util.Tuple;
+import net.minecraft.client.player.LocalPlayer;
 
 public class StaminaHUD {
-	public static final Identifier STAMINA = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "textures/gui/stamina_bar.png");
+	public static final ResourceLocation STAMINA = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "textures/gui/stamina_bar.png");
 
 	public StaminaHUD() {
 	}
@@ -79,13 +79,17 @@ public class StaminaHUD {
 		if (staminaScale < 0) staminaScale = 0;
 		if (staminaScale > 1) staminaScale = 1;
 
-				graphics.blit(RenderPipelines.GUI_TEXTURED, STAMINA, pos.getA(), pos.getB(), 0, 0, 93, 17, 128, 128, -1);
+
+    // 1.21.4 removed the convenience overloads that took the texture alone, so every blit has to name
+    // its render type: `RenderType::guiTextured` is the vanilla GUI pipeline and the `-1` colour
+    // argument is what the old `RenderSystem.setShaderColor(1, 1, 1, 1)` + uncoloured blit produced.
+				graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0, 0, 93, 17, 128, 128, -1);
 		if (!stamina.isExhausted()) {
-            graphics.blit(RenderPipelines.GUI_TEXTURED, STAMINA, pos.getA(), pos.getB(), 0, 102, (int) Math.ceil(92 * statusScale), 17, 128, 128, -1);
-			graphics.blit(RenderPipelines.GUI_TEXTURED, STAMINA, pos.getA(), pos.getB(), 0, 85, Math.round(16 + 69 * shadowScale) + 1, 12, 128, 128, -1);
-			graphics.blit(RenderPipelines.GUI_TEXTURED, STAMINA, pos.getA(), pos.getB(), 0, 17 * (renderGageType + 1), Math.round(16 + 69 * staminaScale) + 1, 12, 128, 128, -1);
+            graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0, 102, (int) Math.ceil(92 * statusScale), 17, 128, 128, -1);
+			graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0, 85, Math.round(16 + 69 * shadowScale) + 1, 12, 128, 128, -1);
+			graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0, 17 * (renderGageType + 1), Math.round(16 + 69 * staminaScale) + 1, 12, 128, 128, -1);
 		} else {
-			graphics.blit(RenderPipelines.GUI_TEXTURED, STAMINA, pos.getA(), pos.getB(), 0, 68, Math.round(16 + 69 * staminaScale) + 1, 17, 128, 128, -1);
+			graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0, 68, Math.round(16 + 69 * staminaScale) + 1, 17, 128, 128, -1);
 		}
 		shadowScale = staminaScale - (staminaScale - shadowScale) / 1.1f;
 	}

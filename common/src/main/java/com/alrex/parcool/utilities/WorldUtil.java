@@ -4,20 +4,27 @@ import com.alrex.parcool.platform.PlatformServices;
 
 import com.alrex.parcool.common.action.impl.HangDown;
 import com.alrex.parcool.common.tags.BlockTags;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.util.Mth;
-import net.minecraft.util.Tuple;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.*;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.Half;
-import net.minecraft.world.level.block.state.properties.WallSide;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CrossCollisionBlock;
+import net.minecraft.world.level.block.DirectionalBlock;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-
+import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.WallBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.util.Mth;
+import net.minecraft.util.Tuple;
+import net.minecraft.world.level.block.state.properties.WallSide;
+import net.minecraft.world.level.block.EndRodBlock;
+import net.minecraft.world.level.block.*;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -114,7 +121,7 @@ public class WorldUtil {
 	@Nullable
 	public static Vec3 getVaultableStep(LivingEntity entity) {
 		final double d = entity.getBbWidth() * 0.5;
-		Level world = entity.level();
+		Level world = entity.getCommandSenderWorld();
 		double distance = entity.getBbWidth() / 2;
 		double baseLine = Math.min(entity.getBbHeight() * 0.86, getWallHeight(entity));
 		double stepX = 0;
@@ -236,18 +243,18 @@ public class WorldUtil {
 				entity.getY() + entity.getBbHeight() + bbHeight,
 				entity.getZ() + bbWidth
 		);
-		if (entity.level().noCollision(entity, bb)) return null;
+		if (entity.getCommandSenderWorld().noCollision(entity, bb)) return null;
 		BlockPos pos = new BlockPos(
 				Mth.floor(entity.getX()),
 				Mth.floor(entity.getY() + entity.getBbHeight() + 0.4),
 				Mth.floor(entity.getZ())
 		);
-		if (!entity.level().isLoaded(pos)) return null;
-		BlockState state = entity.level().getBlockState(pos);
+		if (!entity.getCommandSenderWorld().isLoaded(pos)) return null;
+		BlockState state = entity.getCommandSenderWorld().getBlockState(pos);
 		Block block = state.getBlock();
 		HangDown.BarAxis axis = null;
 		if (block instanceof RotatedPillarBlock) {
-			if (state.isCollisionShapeFullBlock(entity.level(), pos)) {
+			if (state.isCollisionShapeFullBlock(entity.getCommandSenderWorld(), pos)) {
 				return null;
 			}
 			Direction.Axis pillarAxis = state.getValue(RotatedPillarBlock.AXIS);
@@ -285,10 +292,10 @@ public class WorldUtil {
 		} else if (block instanceof WallBlock) {
 			int zCount = 0;
 			int xCount = 0;
-			if (state.getValue(WallBlock.NORTH) != WallSide.NONE) zCount++;
-			if (state.getValue(WallBlock.SOUTH) != WallSide.NONE) zCount++;
-			if (state.getValue(WallBlock.EAST) != WallSide.NONE) xCount++;
-			if (state.getValue(WallBlock.WEST) != WallSide.NONE) xCount++;
+			if (state.getValue(WallBlock.NORTH_WALL) != WallSide.NONE) zCount++;
+			if (state.getValue(WallBlock.SOUTH_WALL) != WallSide.NONE) zCount++;
+			if (state.getValue(WallBlock.EAST_WALL) != WallSide.NONE) xCount++;
+			if (state.getValue(WallBlock.WEST_WALL) != WallSide.NONE) xCount++;
 			if (zCount > 0 && xCount == 0) axis = HangDown.BarAxis.Z;
 			if (xCount > 0 && zCount == 0) axis = HangDown.BarAxis.X;
 		}
@@ -317,7 +324,7 @@ public class WorldUtil {
         return world.noCollision(boundingBox);
     }
 	public static boolean existsDivableSpace(LivingEntity entity) {
-		Level world = entity.level();
+		Level world = entity.getCommandSenderWorld();
 		double width = entity.getBbWidth() * 1.5;
 		double height = entity.getBbHeight() * 1.5;
 		double wideWidth = entity.getBbWidth() * 2;
@@ -403,7 +410,7 @@ public class WorldUtil {
 
 	private static Vec3 getGrabbableWall(LivingEntity entity, double distance, double baseLine) {
 		final double d = entity.getBbWidth() * 0.49;
-		Level world = entity.level();
+		Level world = entity.getCommandSenderWorld();
 		Vec3 pos = entity.position();
 		AABB baseBoxSide = new AABB(
 				pos.x() - d,
@@ -447,11 +454,11 @@ public class WorldUtil {
 					Mth.floor(entity.getBoundingBox().minY + baseLine - 0.3),
 					Mth.floor(entity.getZ() + zDirection)
 			);
-			if (!entity.level().isLoaded(blockPos1)) return null;
-			if (!entity.level().isLoaded(blockPos2)) return null;
+			if (!entity.getCommandSenderWorld().isLoaded(blockPos1)) return null;
+			if (!entity.getCommandSenderWorld().isLoaded(blockPos2)) return null;
 			slipperiness = Math.min(
-					PlatformServices.get().getFriction(entity.level().getBlockState(blockPos1), entity.level(), blockPos1, entity),
-					PlatformServices.get().getFriction(entity.level().getBlockState(blockPos2), entity.level(), blockPos2, entity)
+					PlatformServices.get().getFriction(entity.getCommandSenderWorld().getBlockState(blockPos1), entity.getCommandSenderWorld(), blockPos1, entity),
+					PlatformServices.get().getFriction(entity.getCommandSenderWorld().getBlockState(blockPos2), entity.getCommandSenderWorld(), blockPos2, entity)
 			);
 		} else {
 			double blockX = entity.getX() + xDirection, blockZ = entity.getZ() + zDirection;

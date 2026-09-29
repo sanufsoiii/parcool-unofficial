@@ -5,7 +5,7 @@ import dev.architectury.platform.Platform;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 
@@ -33,7 +33,7 @@ import java.util.Objects;
  *     <li><b>Fabric</b>: the static initialiser below registers the two entries, and it is reached
  *     from {@code Bootstrap#bootStrap} through the mixin.</li>
  *     <li><b>NeoForge</b>: {@code :neoforge}'s {@code NeoForgeAttributes} registers them through
- *     NeoForge's own {@code DeferredRegister} (which fires on {@code NewRegistryEvent}, while the
+ *     NeoForge's own {@code DeferredRegister} (which fires on {@code RegisterEvent}, while the
  *     registry is still open) - exactly what upstream ParCool's NeoForge build does. Architectury's
  *     {@code DeferredRegister} is not an option: it rejects
  *     {@link net.minecraft.core.registries.Registries#ATTRIBUTE} outright
@@ -56,7 +56,7 @@ public class Attributes {
 
     private static Holder<Attribute> resolve(
             String id, String descriptionId, double defaultValue, double min, double max) {
-        Identifier key = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, id);
+        ResourceLocation key = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, id);
         if (Platform.isNeoForge()) {
             // Registered by :neoforge, so read the holder back instead of creating a second entry.
             return BuiltInRegistries.ATTRIBUTE.get(key)

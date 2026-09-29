@@ -9,18 +9,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ListStreamCodec<B extends ByteBuf, R> implements StreamCodec<B, List<R>> {
+    private final StreamCodec<B, R> CODEC;
+
+    public ListStreamCodec(StreamCodec<B, R> codec) {
+        CODEC = codec;
+    }
+
     /**
      * Upper bound on the element count read off the wire. The list is replicated to every client, so a
      * single crafted packet with a huge count turns into a multi-gigabyte allocation on every server
      * that receives it.
      */
     public static final int MAX_ENTRIES = 512;
-
-    private final StreamCodec<B, R> CODEC;
-
-    public ListStreamCodec(StreamCodec<B, R> codec) {
-        CODEC = codec;
-    }
 
     @Nonnull
     @Override

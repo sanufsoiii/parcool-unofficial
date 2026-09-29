@@ -27,8 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ActionProcessor {
-	// Sized by BufferUtil#SYNC_BUFFER_SIZE, which documents the head-room and is what every writer's
-	// overflow check reports against.
 	private final ByteBuffer bufferOfPostState = ByteBuffer.allocate(BufferUtil.SYNC_BUFFER_SIZE);
 	private final ByteBuffer bufferOfPreState = ByteBuffer.allocate(BufferUtil.SYNC_BUFFER_SIZE);
 	private final ByteBuffer bufferOfStarting = ByteBuffer.allocate(BufferUtil.SYNC_BUFFER_SIZE);

@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.HorizontalWallRunAnimator;
 import com.alrex.parcool.client.input.KeyBindings;
@@ -15,20 +14,22 @@ import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.BufferUtil;
 import com.alrex.parcool.utilities.VectorUtil;
 import com.alrex.parcool.utilities.WorldUtil;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 import com.alrex.parcool.common.event.CompatEvents;
 
 import java.nio.ByteBuffer;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.client.player.LocalPlayer;
 
 public class HorizontalWallRun extends Action {
     public enum ControlType {
@@ -72,8 +73,8 @@ public class HorizontalWallRun extends Action {
 				Mth.floor(player.getBoundingBox().minY + player.getBbHeight() * 0.5),
 				Mth.floor(player.getZ() + runningWallDirection.z())
 		);
-		if (!player.level().isLoaded(leanedBlock)) return;
-		float slipperiness = PlatformServices.get().getFriction(player.level().getBlockState(leanedBlock), player.level(), leanedBlock, player);
+		if (!player.getCommandSenderWorld().isLoaded(leanedBlock)) return;
+		float slipperiness = PlatformServices.get().getFriction(player.getCommandSenderWorld().getBlockState(leanedBlock), player.getCommandSenderWorld(), leanedBlock, player);
 		if (slipperiness <= 0.8) {
             double speedScale = 0.2;
             var attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
@@ -123,7 +124,7 @@ public class HorizontalWallRun extends Action {
 				&& !parkourability.get(Dodge.class).isDoing()
 				&& !parkourability.get(Vault.class).isDoing()
                 && !parkourability.get(ClingToCliff.class).isDoing()
-                && !EntityUtil.isInWaterOrBubble(player)
+                && !player.isInWaterOrBubble()
                 && Math.abs(player.getDeltaMovement().y()) < 0.5
 				&& coolTime == 0
 				&& !player.onGround()
@@ -138,8 +139,7 @@ public class HorizontalWallRun extends Action {
     public boolean canContinue(Player player, Parkourability parkourability) {
 		Vec3 wallDirection = WorldUtil.getRunnableWall(player, player.getBbWidth() * 0.65f);
 		if (wallDirection == null) return false;
-		if (!player.isLocalPlayer()) return false;
-		LocalPlayer localPlayer = (LocalPlayer) player;
+		if (!(player instanceof LocalPlayer localPlayer)) return false;
 		if (localPlayer.input == null) return false;
 		var moveVector = localPlayer.input.getMoveVector();
 		var actualInputVector
@@ -176,7 +176,7 @@ public class HorizontalWallRun extends Action {
             player.playSound(SoundEvents.HORIZONTAL_WALL_RUN.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(HorizontalWallRunAnimator.class, wallIsRightward);
+			animation.setAnimator(new HorizontalWallRunAnimator(wallIsRightward));
 		}
 	}
 
@@ -189,7 +189,7 @@ public class HorizontalWallRun extends Action {
         if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.HORIZONTAL_WALL_RUN.get(), 1f, 1f);
 		if (animation != null) {
-			animation.setAnimator(HorizontalWallRunAnimator.class, wallIsRightward);
+			animation.setAnimator(new HorizontalWallRunAnimator(wallIsRightward));
 		}
 	}
 

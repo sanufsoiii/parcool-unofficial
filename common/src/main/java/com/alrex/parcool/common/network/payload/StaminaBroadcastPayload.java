@@ -3,16 +3,16 @@ package com.alrex.parcool.common.network.payload;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.network.ListStreamCodec;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import dev.architectury.networking.NetworkManager;
 
 import java.util.List;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
 
 public record StaminaBroadcastPayload(List<StaminaPayload> staminaList) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<StaminaBroadcastPayload> TYPE
-            = new Type<>(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina.broadcast"));
+            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina.broadcast"));
 
     private static final StreamCodec<ByteBuf, List<StaminaPayload>> STAMINA_CODEC = new ListStreamCodec<>(StaminaPayload.CODEC);
     public static final StreamCodec<ByteBuf, StaminaBroadcastPayload> CODEC = StreamCodec.composite(

@@ -1,39 +1,37 @@
 package com.alrex.parcool.platform;
 
 import dev.architectury.networking.NetworkManager;
+import java.util.function.BiConsumer;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ServerPlayer;
-
-import java.util.function.BiConsumer;
 
 /**
- * The network plumbing, built on Architectury's raw {@code NetworkManager}.
+ * The network plumbing, because Architectury's cross-loader API is not usable for ParCool's message
+ * set on either loader as it stands:
  *
- * <p>Both loaders need it, and both need the <b>id</b> based overloads:
  * <ul>
  *     <li><b>NeoForge</b>: a payload id can only be registered once, and Architectury's
- *     {@code NetworkChannel#register} registered a C2S <i>and</i> an S2C receiver under the same id
- *     ("Cannot register payload … as it is already registered"). A bidirectional message therefore
- *     needs one id per direction (see {@code NetworkRegistries}).</li>
- *     <li><b>Fabric</b>: in Architectury 13 the raw path threw
- *     {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C}, so
- *     {@code NetworkChannel} was the only working path there and the two loaders ended up with
- *     different wire ids. Architectury 19.0.1 removed {@code NetworkChannel} and
- *     {@code architectury-fabric 19.0.1} implements {@code registerS2C}, so the two loaders now share
- *     one path and one set of ids ({@code parcool:payload.*} plus a {@code .c2s} variant).</li>
+ *     {@code NetworkChannel#register} registers a C2S <i>and</i> an S2C receiver under the same id
+ *     ("Cannot register payload … as it is already registered"). The raw
+ *     {@code NetworkManager.registerReceiver} is correct here, and a bidirectional message needs one
+ *     id per direction (see {@code NetworkRegistries}).</li>
+ *     <li><b>Fabric</b>: the raw {@code registerReceiver} path throws
+ *     {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C} — architectury-fabric
+ *     13.0.11 does not implement the {@code NetworkAggregator.Adaptor} method that the common
+ *     architectury artifact calls. {@code NetworkChannel} is the working path there, because on Fabric
+ *     a payload type is registered once and serves both directions.</li>
  * </ul>
  *
- * <p>Mixing the two overloads is what M4 warns about: the {@code ResourceLocation} one fills
- * {@code NetworkAggregator.C2S_TYPE} / {@code S2C_TYPE}, which the id-based send reads, while the
- * {@code CustomPacketPayload.Type} one leaves those maps empty - the first client -&gt; server packet
- * would then fail inside {@code collectPackets} and NeoForge would drop the connection with
- * "Network Protocol Error".
+ * <p>Note that the two loaders therefore put the same logical message under different wire ids
+ * ({@code parcool:payload.*} on NeoForge, {@code parcool:main/<hash>} on Fabric). That is by design:
+ * Architectury's {@code NetworkAggregator} collects packets on one side and re-sends them on the
+ * other, which is what lets a Fabric client and a NeoForge server talk to each other.
  *
  * <p>Sending takes the payload <b>object</b> rather than a pre-encoded buffer, because each platform
- * encodes it with its own addressing.
+ * needs its own addressing: NeoForge sends by explicit id, Fabric by channel lookup.
  */
 public interface ParCoolNetwork {
 
@@ -50,19 +48,19 @@ public interface ParCoolNetwork {
     <T extends CustomPacketPayload> void register(
             Class<T> payloadClass,
             CustomPacketPayload.Type<T> type,
-            Identifier wireId,
+            ResourceLocation wireId,
             StreamCodec<?, T> codec,
             boolean clientbound,
             BiConsumer<T, NetworkManager.PacketContext> handler);
 
     <T extends CustomPacketPayload> void sendToServer(
-            T payload, Identifier wireId, StreamCodec<?, T> codec);
+            T payload, ResourceLocation wireId, StreamCodec<?, T> codec);
 
     <T extends CustomPacketPayload> void sendToPlayer(
-            ServerPlayer player, T payload, Identifier wireId, StreamCodec<?, T> codec);
+            ServerPlayer player, T payload, ResourceLocation wireId, StreamCodec<?, T> codec);
 
     <T extends CustomPacketPayload> void sendToPlayers(
-            Iterable<ServerPlayer> players, T payload, Identifier wireId, StreamCodec<?, T> codec);
+            Iterable<ServerPlayer> players, T payload, ResourceLocation wireId, StreamCodec<?, T> codec);
 
     /** Shared helper: encodes a payload into a fresh buffer for the loaders that send by id. */
     static RegistryFriendlyByteBuf encode(StreamCodec<?, ?> codec, CustomPacketPayload payload) {

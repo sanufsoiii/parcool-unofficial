@@ -10,31 +10,33 @@ import com.alrex.parcool.common.item.component.ZiplinePositionComponent;
 import com.alrex.parcool.common.item.component.ZiplineTensionComponent;
 import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.common.zipline.ZiplineType;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.TooltipDisplay;
-import java.util.function.Consumer;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.BlockEntity;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import net.minecraft.util.Mth;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.List;
 
 public class ZiplineRopeItem extends Item {
-    // 1.21.1's `RopeColor` (a vanilla `ItemColor`) moved to
-    // `client/registry/ItemColors.ZiplineRopeItemTintSource`: 1.21.11 resolves item tints from the
-    // model JSON through a codec registry, and a client-only tint type cannot live on this class
-    // because `Items` - and therefore this one - is loaded on a dedicated server.
+    /**
+     * 1.21.1's `RopeColor` (a vanilla `ItemColor`) no longer exists: 1.21.4 already resolves item tints
+     * from the model definition through a codec registry (`ItemTintSource` / `ItemTintSources`), and
+     * Architectury 16 dropped `ColorHandlerRegistry.registerItemColors` with it. The tint now lives in
+     * `client/registry/ItemColors.ZiplineRopeItemTintSource` and is registered into
+     * `assets/parcool/items/zipline_rope.json`; it cannot stay on this class because `Items` - and
+     * therefore this one - is loaded on a dedicated server, and a client-only tint type there trips
+     * NeoForge's RuntimeDistCleaner.
+     */
 
     public ZiplineRopeItem(Properties p_i48487_1_) {
         super(p_i48487_1_);
@@ -50,19 +52,16 @@ public class ZiplineRopeItem extends Item {
     }
 
     @Override
-    // 1.21.11 collects tooltip lines through a Consumer and hands over a TooltipDisplay (which can
-    // hide components from the tooltip) instead of a mutable List.
-    public void appendHoverText(ItemStack stack, @Nonnull TooltipContext context, TooltipDisplay display,
-                                @Nonnull Consumer<Component> lines, @Nonnull TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, @Nonnull TooltipContext context, @Nonnull List<Component> lines, @Nonnull TooltipFlag tooltipFlag) {
         var posComponent = stack.getComponents().get(DataComponents.ZIPLINE_POSITION.get());
 
         if (posComponent != null) {
-            lines.accept(Component.translatable("parcool.gui.text.zipline.bind_pos", posComponent.pos().getX() + ", " + posComponent.pos().getY() + ", " + posComponent.pos().getZ()).withStyle(ChatFormatting.YELLOW));
+            lines.add(Component.translatable("parcool.gui.text.zipline.bind_pos", posComponent.pos().getX() + ", " + posComponent.pos().getY() + ", " + posComponent.pos().getZ()).withStyle(ChatFormatting.YELLOW));
         } else {
-            lines.accept(Component.translatable("parcool.gui.text.zipline.not_bound").withStyle(ChatFormatting.DARK_GRAY));
+            lines.add(Component.translatable("parcool.gui.text.zipline.not_bound").withStyle(ChatFormatting.DARK_GRAY));
         }
-        lines.accept(Component.empty());
-        lines.accept(Component.translatable("parcool.gui.text.zipline.tension", getZiplineType(stack).getTranslationName()).withStyle(ChatFormatting.GRAY));
+        lines.add(Component.empty());
+        lines.add(Component.translatable("parcool.gui.text.zipline.tension", getZiplineType(stack).getTranslationName()).withStyle(ChatFormatting.GRAY));
         if (hasCustomColor(stack)) {
             /*
             int color = getColor(stack);
@@ -70,12 +69,12 @@ public class ZiplineRopeItem extends Item {
             float r = 100f * ((color & 0xFF0000) >> 16) / 255f;
             float g = 100f * ((color & 0x00FF00) >> 8) / 255f;
             float b = 100f * (color & 0x0000FF) / 255f;
-            lines.accept(new StringTextComponent(""));
-            lines.accept(new StringTextComponent("R : " + format.format(r) + "%").withStyle(TextFormatting.RED));
-            lines.accept(new StringTextComponent("G : " + format.format(g) + "%").withStyle(TextFormatting.GREEN));
-            lines.accept(new StringTextComponent("B : " + format.format(b) + "%").withStyle(TextFormatting.BLUE));
+            lines.add(new StringTextComponent(""));
+            lines.add(new StringTextComponent("R : " + format.format(r) + "%").withStyle(TextFormatting.RED));
+            lines.add(new StringTextComponent("G : " + format.format(g) + "%").withStyle(TextFormatting.GREEN));
+            lines.add(new StringTextComponent("B : " + format.format(b) + "%").withStyle(TextFormatting.BLUE));
              */
-            lines.accept(Component.translatable("parcool.gui.text.zipline.colored").withStyle(ChatFormatting.BLUE));
+            lines.add(Component.translatable("parcool.gui.text.zipline.colored").withStyle(ChatFormatting.BLUE));
         }
     }
 
@@ -140,7 +139,10 @@ public class ZiplineRopeItem extends Item {
                         player.playSound(SoundEvents.ZIPLINE_SET.get(), 1, 1);
                     }
                     removeBlockPosition(stack);
-                    return context.getLevel().isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
+                    // 1.21.4's InteractionResult is an interface with the split baked in; sidedSuccess(...)
+                    // only arrives in 1.21.5.
+                    return context.getLevel().isClientSide()
+                            ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
                 } else {
                     removeBlockPosition(stack);
                     if (context.getLevel().isClientSide()) {

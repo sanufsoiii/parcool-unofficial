@@ -7,9 +7,9 @@ import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.MathUtil;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.player.LocalPlayer;
 
 public class LightStaminaHUD {
@@ -36,7 +36,7 @@ public class LightStaminaHUD {
 		var stamina = ParCoolDataKeys.getStamina(player);
 		int newValue = stamina.value();
 		changingSign = (int) Math.signum(newValue - oldValue);
-		final long gameTime = player.level().getGameTime();
+		final long gameTime = player.getCommandSenderWorld().getGameTime();
 		if (changingSign != lastChangingSign) {
 			lastChangingSign = changingSign;
 			changingTimeTick = 0;
@@ -97,7 +97,7 @@ public class LightStaminaHUD {
         staminaScale *= 10f;
 		float statusScale = showStatus ? MathUtil.lerp(oldStatusValue, statusValue, partialTick) * 10f : 0f;
 
-				final int width = graphics.guiWidth();
+		final int width = graphics.guiWidth();
 		final int height = graphics.guiHeight();
         int baseX = width / 2 + 91 + ParCoolConfig.Client.Integers.HorizontalOffsetOfLightStaminaHUD.get();
 		// Was `height - Minecraft.getInstance().gui.rightHeight`: `Gui#rightHeight` is a NeoForge-only
@@ -146,7 +146,7 @@ public class LightStaminaHUD {
 				offsetY = randomOffset;
 			}
 
-			graphics.blit(RenderPipelines.GUI_TEXTURED, StaminaHUD.STAMINA, x, baseY + offsetY, textureX, 119, 9, 9, 128, 128, -1);
+			graphics.blit(RenderType::guiTextured, StaminaHUD.STAMINA, x, baseY + offsetY, textureX, 119, 9, 9, 128, 128, -1);
 		}
 	}
 }

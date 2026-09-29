@@ -1,53 +1,56 @@
 package com.alrex.parcool.client.renderer;
 
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.rendertype.RenderSetup;
-import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.RenderType;
 
 /**
- * ParCool's own render types.
+ * ParCool's own render types for the zipline rope.
  *
- * <h2>Why two pipelines are built instead of reusing {@code RenderTypes.leash()}</h2>
- * 1.21.11 dropped {@code RenderStateShard} and reduced {@code RenderType} to a named
- * {@link RenderSetup} around a {@link RenderPipeline}, i.e. culling and the vertex format moved into
- * the pipeline. Vanilla's leash pipeline draws {@code POSITION_COLOR_LIGHTMAP} in
- * {@code TRIANGLE_STRIP} with culling off, while the zipline rope emits {@code QUADS} and has a
- * culled and an unculled variant (the {@code Enable3DRenderingForZipline} config switch), so
- * neither vanilla pipeline fits. The shaders are the same
- * {@code core/rendertype_leash} pair the 1.21.1 {@code RENDERTYPE_LEASH_SHADER} shard selected, and
- * the lightmap is still requested through {@code useLightmap()}, so the rope looks the same.
+ * <p>Two are needed because the rope is drawn in one of two shapes: {@link #ZIPLINE_3D} with culling
+ * and {@link #ZIPLINE_2D} without, switched by the {@code Enable3DRenderingForZipline} config entry.
+ * Neither vanilla type matches: {@code RenderType.leash()} is the closest (it is also
+ * {@code POSITION_COLOR_LIGHTMAP} with a lightmap) but it renders as a {@code TRIANGLE_STRIP} with
+ * culling disabled, while the rope emits {@code QUADS} and has to be culled in the 3D variant.
  *
- * <p>{@code RenderPipelines#register} is private, but the map it fills is public, so the two
- * pipelines are registered the same way vanilla's are.
+ * <p>1.21.4 still has the {@code RenderStateShard} model - {@code RenderSetup} around a
+ * {@code RenderPipeline} only arrives in 1.21.5 - so this is the 1.21.1 shape. What 1.21.4 did
+ * change is access: {@code RenderType.create(String, VertexFormat, Mode, int, boolean, boolean,
+ * CompositeState)} is private here (1.21.1 still had a package-private five-argument overload) and
+ * the {@code RenderStateShard} shards are {@code protected}. Both are widened in
+ * {@code common/src/main/resources/parcool.accesswidener} for Fabric and in
+ * {@code neoforge/src/main/resources/META-INF/accesstransformer.cfg} for NeoForge; without them
+ * this class does not compile.
  */
 public class RenderTypes {
     public static final RenderType ZIPLINE_3D;
     public static final RenderType ZIPLINE_2D;
 
     static {
-        ZIPLINE_2D = RenderType.create("zipline2d",
-                RenderSetup.builder(registerPipeline("parcool/zipline_no_cull", false))
-                        .useLightmap()
-                        .createRenderSetup());
-        ZIPLINE_3D = RenderType.create("zipline3d",
-                RenderSetup.builder(registerPipeline("parcool/zipline", true))
-                        .useLightmap()
-                        .createRenderSetup());
-    }
-
-    private static RenderPipeline registerPipeline(String location, boolean cull) {
-        RenderPipeline pipeline = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
-                .withLocation(location)
-                .withVertexShader("core/rendertype_leash")
-                .withFragmentShader("core/rendertype_leash")
-                .withSampler("Sampler2")
-                .withCull(cull)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_LIGHTMAP, VertexFormat.Mode.QUADS)
-                .build();
-        RenderPipelines.PIPELINES_BY_LOCATION.put(pipeline.getLocation(), pipeline);
-        return pipeline;
+        ZIPLINE_2D = RenderType.create(
+                "zipline2d",
+                DefaultVertexFormat.POSITION_COLOR_LIGHTMAP,
+                VertexFormat.Mode.QUADS, 256,
+                false, false,
+                RenderType.CompositeState.builder()
+                        .setShaderState(RenderStateShard.RENDERTYPE_LEASH_SHADER)
+                        .setTextureState(RenderStateShard.NO_TEXTURE)
+                        .setCullState(RenderStateShard.NO_CULL)
+                        .setLightmapState(RenderStateShard.LIGHTMAP)
+                        .createCompositeState(false)
+        );
+        ZIPLINE_3D = RenderType.create(
+                "zipline3d",
+                DefaultVertexFormat.POSITION_COLOR_LIGHTMAP,
+                VertexFormat.Mode.QUADS, 256,
+                false, false,
+                RenderType.CompositeState.builder()
+                        .setShaderState(RenderStateShard.RENDERTYPE_LEASH_SHADER)
+                        .setTextureState(RenderStateShard.NO_TEXTURE)
+                        .setCullState(RenderStateShard.CULL)
+                        .setLightmapState(RenderStateShard.LIGHTMAP)
+                        .createCompositeState(false)
+        );
     }
 }

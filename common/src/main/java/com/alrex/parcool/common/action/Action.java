@@ -1,6 +1,7 @@
 package com.alrex.parcool.common.action;
 
 import com.alrex.parcool.common.data.Parkourability;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Player;
 import com.alrex.parcool.common.event.CompatEvents;
 
@@ -137,19 +138,11 @@ public abstract class Action {
 	public void saveSynchronizedState(ByteBuffer buffer) {
 	}
 
-    /**
-     * The status-bar hooks take a plain {@link Player}: 1.21.11's verifier resolves the parameter type
-     * when it checks that a subclass really overrides this method, and {@code Actions}' static
-     * initialiser is reached on a dedicated server - so a {@code LocalPlayer} parameter made the server
-     * die with "Attempted to load class net.minecraft.client.player.LocalPlayer which is not present on
-     * the dedicated server". No implementation uses anything client-only, and the only caller already
-     * passes the local player.
-     */
-    public boolean wantsToShowStatusBar(Player player, Parkourability parkourability) {
+    public boolean wantsToShowStatusBar(LocalPlayer player, Parkourability parkourability) {
         return false;
     }
 
-    public float getStatusValue(Player player, Parkourability parkourability) {
+    public float getStatusValue(LocalPlayer player, Parkourability parkourability) {
         return 0;
     }
 

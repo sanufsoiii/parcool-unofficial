@@ -17,8 +17,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(KeyboardInput.class)
 public abstract class KeyboardInputMixin {
 
-    @Inject(method = "tick()V", at = @At("RETURN"))
-    private void parcool$recordKeys(CallbackInfo ci) {
+    @Inject(method = "tick", at = @At("RETURN"))
+    private void parcool$recordKeys(boolean slowDown, float movingSpeed, CallbackInfo ci) {
         KeyRecorder.onClientTick();
     }
 }

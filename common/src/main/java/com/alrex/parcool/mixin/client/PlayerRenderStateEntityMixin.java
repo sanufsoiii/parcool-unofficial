@@ -1,27 +1,27 @@
 package com.alrex.parcool.mixin.client;
 
-import com.alrex.parcool.compat.IAvatarRenderStateEntity;
+import com.alrex.parcool.compat.IPlayerRenderStateEntity;
 
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 
 /**
- * Carries the rendered player on {@link AvatarRenderState}.
+ * Carries the rendered player on {@link PlayerRenderState}.
  *
- * <p>1.21.11 entity renderers no longer see the entity while rendering: {@code setupRotations} and
+ * <p>1.21.4 entity renderers no longer see the entity while rendering: {@code setupRotations} and
  * {@code PlayerModel#setupAnim} only get a render state, and a state holds no entity reference.
  * ParCool's animators are keyed on the player (its {@code Animation}, its {@code Parkourability}, its
  * pose and head yaw), so the player has to travel with the state.
  *
- * <p>Written in {@link AvatarRenderStateExtractorMixin} while the render state is extracted, i.e. at
+ * <p>Written in {@link PlayerRenderStateExtractorMixin} while the render state is extracted, i.e. at
  * the same point in the frame where 1.21.1's {@code setupRotations} could still read the entity. The
  * field is created lazily - mixin field initialisers run in the mixin's own constructor and are
  * unreliable for a state object the renderer pool reuses.
  */
-@Mixin(AvatarRenderState.class)
-public abstract class AvatarRenderStateEntityMixin implements IAvatarRenderStateEntity {
+@Mixin(PlayerRenderState.class)
+public abstract class PlayerRenderStateEntityMixin implements IPlayerRenderStateEntity {
 
     @Unique
     private AbstractClientPlayer parcool$player;

@@ -8,19 +8,16 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.client.LocalStamina;
 import com.alrex.parcool.common.event.CompatEvents;
 import com.alrex.parcool.config.ParCoolConfig;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.Identifier;
-
 import java.util.List;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
 
 /**
  * The client-only half of {@link com.alrex.parcool.common.action.ActionProcessor}.
@@ -134,8 +131,8 @@ public final class ClientActionProcessor {
         animation.cameraSetup(event, player, parkourability);
     }
 
-    private static final Identifier STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
-            Identifier.fromNamespaceAndPath(com.alrex.parcool.ParCool.MOD_ID, "exhausted.speed");
+    private static final ResourceLocation STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
+            ResourceLocation.fromNamespaceAndPath(com.alrex.parcool.ParCool.MOD_ID, "exhausted.speed");
 
     private static final AttributeModifier STAMINA_DEPLETED_SLOWNESS_MODIFIER = new AttributeModifier(
             STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID,

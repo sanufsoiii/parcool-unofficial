@@ -13,12 +13,11 @@ import com.alrex.parcool.platform.ParCoolNetwork;
 import com.alrex.parcool.platform.PlatformServices;
 import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
-import net.minecraft.server.MinecraftServer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.server.MinecraftServer;
 import javax.annotation.Nullable;
 import java.util.function.BiConsumer;
 
@@ -66,12 +65,12 @@ public final class NetworkRegistries {
     // registration
     // ------------------------------------------------------------------
 
-    private static <T extends CustomPacketPayload> Identifier id(String path) {
-        return Identifier.fromNamespaceAndPath(ParCool.MOD_ID, path);
+    private static <T extends CustomPacketPayload> ResourceLocation id(String path) {
+        return ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, path);
     }
 
-    private static Identifier serverbound(String path) {
-        return Identifier.fromNamespaceAndPath(ParCool.MOD_ID, path + ".c2s");
+    private static ResourceLocation serverbound(String path) {
+        return ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, path + ".c2s");
     }
 
     /** Client -&gt; server message. */
@@ -79,7 +78,7 @@ public final class NetworkRegistries {
             Class<T> payloadClass,
             StreamCodec<? super FriendlyByteBuf, T> codec,
             CustomPacketPayload.Type<T> type,
-            Identifier wireId,
+            ResourceLocation wireId,
             BiConsumer<T, NetworkManager.PacketContext> handler) {
         PlatformServices.get().getNetwork().register(payloadClass, type, wireId, codec, false, handler);
     }
@@ -89,7 +88,7 @@ public final class NetworkRegistries {
             Class<T> payloadClass,
             StreamCodec<? super FriendlyByteBuf, T> codec,
             CustomPacketPayload.Type<T> type,
-            Identifier wireId,
+            ResourceLocation wireId,
             BiConsumer<T, NetworkManager.PacketContext> handler) {
         PlatformServices.get().getNetwork().register(payloadClass, type, wireId, codec, true, handler);
     }
@@ -162,7 +161,7 @@ public final class NetworkRegistries {
     /**
      * The path component of a payload's declared id.
      *
-     * <p>{@code Identifier#getPath()} never contains the namespace, so this must
+     * <p>{@code ResourceLocation#getPath()} never contains the namespace, so this must
      * not strip one. It previously did, which chopped the first seven characters off
      * every path: {@code payload.client_info} became {@code nt.client_info}, and the
      * client then sent the join packet to {@code parcool:nt.client_info.c2s} while

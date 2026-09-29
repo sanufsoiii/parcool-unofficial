@@ -1,16 +1,14 @@
 package com.alrex.parcool.client.gui;
 
 import com.alrex.parcool.common.info.ActionInfo;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.resources.language.I18n;
-import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nonnull;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.network.chat.Component;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.function.BooleanSupplier;
@@ -40,17 +38,13 @@ public abstract class ParCoolSettingScreen extends Screen {
     protected final BooleanSupplier serverPermissionReceived;
 
 	@Override
-    public void resize(int p_231152_2_, int p_231152_3_) {
-        // 1.21.11 no longer hands the Screen its Minecraft instance in resize(); the client is reachable
-        // through the singleton it always was.
-        super.resize(p_231152_2_, p_231152_3_);
-		// No scroll reset here: the call this used to make was mouseScrolled(0, 0, 0, 0), whose value is
-		// 0, so signum(0) is 0 and the guard below returns without moving topIndex. topIndex is clamped
-		// in mouseScrolled itself, so it stays valid across a resize.
+    public void resize(@Nonnull Minecraft minecraft, int p_231152_2_, int p_231152_3_) {
+        super.resize(minecraft, p_231152_2_, p_231152_3_);
+		// No scroll reset here: the call this used to make was mouseScrolled(0, 0, 0), whose delta is
+		// 0, so signum(0) is 0 and the guard in mouseScrolled returns without moving topIndex. topIndex
+		// is clamped in mouseScrolled itself, so it stays valid across a resize.
 	}
 	private static final Component MenuTitle = Component.translatable("parcool.gui.title.setting");
-    /** Right-aligned x of the first tab, recomputed per frame in {@link #render}. */
-    private int topBarOffsetX;
 
 	@Override
 	public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float p_230430_4_) {
@@ -59,8 +53,9 @@ public abstract class ParCoolSettingScreen extends Screen {
 		int topBarHeight = font.lineHeight * 2;
         int topBarItemWidth = (int) (1.2 * Arrays.stream(screenList).map(it -> font.width(it.title)).max(Integer::compareTo).orElse(0));
         // Clamped so the leftmost tab cannot be pushed off a narrow window: the bar is right-aligned, and
-        // on a window narrower than the bar used to start at a negative x.
-        topBarOffsetX = Math.max(0, width - topBarItemWidth * screenList.length);
+        // on a window narrower than the bar this used to start at a negative x, which made the tabs
+        // unclickable.
+        int topBarOffsetX = Math.max(0, width - topBarItemWidth * screenList.length);
 		graphics.fillGradient(0, 0, this.width, topBarHeight, color.getTopBar1(), color.getTopBar2());
         renderSubHeaderAndFooter(graphics, screenList[currentScreen].title, isDownScrollable(), topBarHeight);
         renderContents(graphics, mouseX, mouseY, p_230430_4_, topBarHeight + font.lineHeight * 2, font.lineHeight * 2);
@@ -87,7 +82,7 @@ public abstract class ParCoolSettingScreen extends Screen {
 			graphics.fill(3, 3, topBarHeight - 4, topBarHeight - 4, 0xFFEE0000);
 			graphics.drawCenteredString(font, "!", topBarHeight / 2, (topBarHeight - font.lineHeight) / 2 + 1, 0xEEEEEE);
 			if (2 <= mouseX && mouseX < topBarHeight - 3 && 1 <= mouseY && mouseY < topBarHeight - 3) {
-				graphics.setComponentTooltipForNextFrame(
+				graphics.renderComponentTooltip(
 						font,
 						Collections.singletonList(Permission_Not_Received),
 						mouseX, mouseY);
@@ -114,11 +109,6 @@ public abstract class ParCoolSettingScreen extends Screen {
     protected void save() {
     }
 
-    /**
-     * Whether the current tab has more rows than fit. Called from render() before renderContents()
-     * recomputes viewableItemCount, so it reports the previous frame's count - off by one row while
-     * scrolling, and stale for the first frame of every tab.
-     */
     protected boolean isDownScrollable() {
         return false;
     }
@@ -144,8 +134,8 @@ public abstract class ParCoolSettingScreen extends Screen {
     }
 
 	@Override
-	public boolean keyPressed(KeyEvent event) {
-		switch (event.key()) {
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		switch (keyCode) {
 			case GLFW.GLFW_KEY_RIGHT:
                 save();
                 Minecraft.getInstance().setScreen(screenList[(currentScreen + 1) % screenList.length].screenSupplier.get());
@@ -163,7 +153,7 @@ public abstract class ParCoolSettingScreen extends Screen {
 				mouseScrolled(0, 0, -1);
 				break;
 		}
-		return super.keyPressed(event);
+		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
 	@Override
@@ -200,9 +190,9 @@ public abstract class ParCoolSettingScreen extends Screen {
 	}
 
 	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClicked) {//0->left 1->right
+	public boolean mouseClicked(double mouseX, double mouseY, int type) {//type:1->right 0->left
         for (ScreenSet<?> modeSet : screenList) {
-			if (modeSet.isMouseIn(event.x(), event.y()) && event.button() == 0) {
+			if (modeSet.isMouseIn((int) mouseX, (int) mouseY) && type == 0) {
                 save();
                 Minecraft.getInstance().setScreen(modeSet.screenSupplier.get());
 				return true;

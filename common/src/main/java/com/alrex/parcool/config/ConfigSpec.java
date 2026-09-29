@@ -34,11 +34,9 @@ import java.util.function.Function;
  * <h2>File format</h2>
  * JSON (Gson, which the game already ships), one file per side:
  * {@code <config>/parcool-client.json} and {@code <config>/parcool-server.json}. Values are stored
- * as a nested tree mirroring the {@code push}/{@code pop} structure, so the file is hand-editable.
- * Unknown keys are ignored and missing keys keep their declared default, so a config written by a
- * newer build still loads. {@link Builder#comment} is kept on the values for callers that want to
- * surface the help text, but it is not serialised: the on-disk document holds values only, so a
- * comment change never rewrites a user's file.
+ * as a nested tree mirroring the {@code push}/{@code pop} structure, so the file is hand-editable
+ * and self-documenting. Unknown keys are ignored and missing keys keep their declared default, so a
+ * config written by a newer build still loads.
  */
 public class ConfigSpec {
 
@@ -73,9 +71,6 @@ public class ConfigSpec {
             return this.right;
         }
     }
-
-    /** Set by {@link #persist()}, cleared by a successful {@link #save(Path)}. */
-    private volatile boolean dirty;
 
     public boolean isLoaded() {
         return this.file != null;
@@ -157,7 +152,6 @@ public class ConfigSpec {
                 Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
             }
             temp = null;
-            this.dirty = false;
         } catch (IOException e) {
             ParCool.LOGGER.warn("Could not write ParCool config {}: {}", file, e.toString());
         } finally {
@@ -171,21 +165,9 @@ public class ConfigSpec {
         }
     }
 
-    /**
-     * Re-persists to the file this spec was last loaded from; used by the settings screens.
-     *
-     * <p>Nothing is written here. Every {@code set()} on any value used to trigger a full rewrite of
-     * the whole document - and the settings screens call {@code set()} from {@code apply}, including
-     * once per rendered frame while a slider is being dragged, so a single drag produced hundreds of
-     * full-file writes. The value is marked dirty instead and {@link #save(Path)} writes once.
-     */
+    /** Re-persists to the file this spec was last loaded from; used by the settings screens. */
     public void persist() {
-        this.dirty = true;
-    }
-
-    /** True when a value changed since the last write. */
-    public boolean isDirty() {
-        return this.dirty;
+        if (this.file != null) save(this.file);
     }
 
     private static JsonElement descend(JsonObject root, List<String> segments) {

@@ -28,7 +28,7 @@ public class Tap extends Action {
     public void onStartInLocalClient(Player player, Parkourability parkourability, ByteBuffer startData) {
 		startRequired = false;
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(TapAnimator.class);
+		if (animation != null) animation.setAnimator(new TapAnimator());
         parkourability.getBehaviorEnforcer().addMarkerCancellingJump(ID_JUMP_CANCEL, this::isDoing);
 	}
 
@@ -36,7 +36,7 @@ public class Tap extends Action {
 	public void onStartInOtherClient(Player player, Parkourability parkourability, ByteBuffer startData) {
 		startRequired = false;
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(TapAnimator.class);
+		if (animation != null) animation.setAnimator(new TapAnimator());
 	}
 
 	@Override

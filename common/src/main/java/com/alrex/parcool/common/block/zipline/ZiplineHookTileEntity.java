@@ -3,26 +3,22 @@ package com.alrex.parcool.common.block.zipline;
 import com.alrex.parcool.common.entity.zipline.ZiplineRopeEntity;
 import com.alrex.parcool.common.item.Items;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.Containers;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.util.ARGB;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import net.minecraft.util.ARGB;
+import net.minecraft.core.HolderLookup;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -143,73 +139,71 @@ public class ZiplineHookTileEntity extends BlockEntity {
         return result ? entity : null;
     }
 
-    /**
-     * 1.21.11 replaced the {@code CompoundTag} save hooks with {@link ValueOutput}, so the connection
-     * list is written through {@code childrenList}. The on-disk keys are unchanged, so a world written
-     * by 1.21.1 still loads: the reader accepts both the relative ({@code rX}/{@code rY}/{@code rZ})
-     * and the absolute ({@code X}/{@code Y}/{@code Z}) form, exactly as before.
-     */
-    private void saveTo(ValueOutput output) {
-        ValueOutput.ValueOutputList connections = output.childrenList("Connection");
-        BlockPos pos = getBlockPos();
+    private void saveTo(CompoundTag nbt) {
+        var connections = new ListTag();
         for (Map.Entry<BlockPos, ZiplineInfo> infoEntry : getConnectionInfo().entrySet()) {
-            ValueOutput entry = connections.addChild();
-            entry.putInt("rX", infoEntry.getKey().getX() - pos.getX());
-            entry.putInt("rY", infoEntry.getKey().getY() - pos.getY());
-            entry.putInt("rZ", infoEntry.getKey().getZ() - pos.getZ());
-            entry.store("Info", ZiplineInfo.CODEC, infoEntry.getValue());
+            var entryTag = new CompoundTag();
+            var pos = getBlockPos();
+            entryTag.putInt("rX", infoEntry.getKey().getX() - pos.getX());
+            entryTag.putInt("rY", infoEntry.getKey().getY() - pos.getY());
+            entryTag.putInt("rZ", infoEntry.getKey().getZ() - pos.getZ());
+            entryTag.put("Info", infoEntry.getValue().save());
+            connections.add(entryTag);
         }
+        nbt.put("Connection", connections);
     }
 
-    private void restoreFrom(ValueInput input) {
-        ValueInput.ValueInputList connections = input.childrenListOrEmpty("Connection");
-        if (connections.isEmpty()) return;
+    private void restoreFrom(CompoundTag nbt) {
+        Tag connections = nbt.get("Connection");
+        if (!(connections instanceof ListTag listConnections)) {
+            return;
+        }
         getConnectionInfo().clear();
-        for (ValueInput entry : connections) {
+
+        for (Tag entry : listConnections) {
+            if (!(entry instanceof CompoundTag cTag))
+                continue;
+
             BlockPos pos;
-            if (entry.getIntOr("rX", Integer.MIN_VALUE) != Integer.MIN_VALUE
-                    || entry.getIntOr("rY", Integer.MIN_VALUE) != Integer.MIN_VALUE
-                    || entry.getIntOr("rZ", Integer.MIN_VALUE) != Integer.MIN_VALUE) {
+            if (cTag.contains("rX") && cTag.contains("rY") && cTag.contains("rZ")) {
                 pos = getBlockPos().offset(
-                        entry.getIntOr("rX", 0),
-                        entry.getIntOr("rY", 0),
-                        entry.getIntOr("rZ", 0));
-            } else {
-                pos = new BlockPos(entry.getIntOr("X", 0), entry.getIntOr("Y", 0), entry.getIntOr("Z", 0));
-            }
-            entry.read("Info", ZiplineInfo.CODEC)
-                    .ifPresent(info -> getConnectionInfo().put(pos, info));
+                        cTag.getInt("rX"),
+                        cTag.getInt("rY"),
+                        cTag.getInt("rZ")
+                );
+            } else if (cTag.contains("X") && cTag.contains("Y") && cTag.contains("Z")) {
+                pos = new BlockPos(cTag.getInt("X"), cTag.getInt("Y"), cTag.getInt("Z"));
+            } else
+                continue;
+            ZiplineInfo info = ZiplineInfo.load(cTag.get("Info"));
+            getConnectionInfo().put(pos, info);
         }
     }
 
     @Override
-    protected void saveAdditional(ValueOutput output) {
-        super.saveAdditional(output);
-        saveTo(output);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        saveTo(tag);
     }
 
     @Override
-    protected void loadAdditional(ValueInput input) {
-        super.loadAdditional(input);
-        restoreFrom(input);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        restoreFrom(tag);
     }
 
-    /**
-     * Was {@code Block#onRemove} on {@link ZiplineHookBlock}, which 1.21.11 removed: the removal
-     * side effects now hang off the block entity instead. Called from {@code LevelChunk#setBlockState}
-     * on the server right before the block entity is dropped, which is exactly the old {@code onRemove}
-     * window, so the linked ropes are still detached and their items returned to the world.
-     */
+    @Nonnull
     @Override
-    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
-        var itemStacks = removeAllConnection();
-        itemStacks.forEach(it -> Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), it));
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        var nbt = super.getUpdateTag(registries);
+        saveTo(nbt);
+        return nbt;
     }
 
     /**
-     * {@code getUpdateTag}/{@code handleUpdateTag} are vanilla again in 1.21.11, and both route through
-     * {@link #saveAdditional} / {@link #loadAdditional}, so the sync needs no hook of its own - the
-     * connections travel to the client through the same ValueInput/ValueOutput pair as on disk.
+     * Was {@code handleUpdateTag(CompoundTag, HolderLookup.Provider)}, a NeoForge addition. Vanilla
+     * routes both the disk load and the client sync through {@link #loadAdditional}, so the restore
+     * hook lives there.
      */
 
     public static void tick(Level level, BlockPos pos, BlockState state, BlockEntity entity) {
