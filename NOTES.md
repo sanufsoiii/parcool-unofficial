@@ -279,3 +279,21 @@ the 18 inject/redirect/wrap handler arities against the arity of the method they
 check that catches the `KeyboardInputMixin` bug of §5.1 - the Loom annotation processor does neither.
 `parcool-common.mixins.json` lists exactly the 29 mixin classes that exist on disk, no more and no
 fewer, with `defaultRequire: 1`.
+
+## Recipe `category` field (added by the orchestrator, after the port was built)
+
+All five `data/parcool/recipe/*.json` were missing `category`, which the vanilla
+`ShapedRecipe` / `ShapelessRecipe` codec declares as `Codec.fieldOf("category")` --
+a *required* field, not an optional one. Verified on this version's mojmap jar with
+`javap -c 'net.minecraft.world.item.crafting.ShapedRecipe$Serializer'`: the CODEC builder
+uses `Codec.fieldOf` for the key `category` while `group` and `show_notification` go
+through `optionalFieldOf`. Without it the datapack loader reports `Missing field category`
+and drops the recipe, so every ParCool item is uncraftable in game -- a build-time-clean,
+boot-time-broken bug that only shows up in a running client.
+
+`"category": "misc"` was added to all five files. It is harmless on
+`parcool:zipline_rope_dye` (ParCool's own `CustomRecipe` codec ignores unknown keys).
+
+This is **inherited, not original**: the same omission exists in the read-only reference
+trees `parcool-Architectury-API-1.21.1` and `parcool-Architectury-API-1.21.11`, and it is
+inherited from upstream ParCool. Any port starting from those trees will reproduce it.
