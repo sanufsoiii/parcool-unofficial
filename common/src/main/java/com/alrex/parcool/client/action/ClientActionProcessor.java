@@ -18,7 +18,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 
@@ -134,8 +134,8 @@ public final class ClientActionProcessor {
         animation.cameraSetup(event, player, parkourability);
     }
 
-    private static final Identifier STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
-            Identifier.fromNamespaceAndPath(com.alrex.parcool.ParCool.MOD_ID, "exhausted.speed");
+    private static final ResourceLocation STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
+            ResourceLocation.fromNamespaceAndPath(com.alrex.parcool.ParCool.MOD_ID, "exhausted.speed");
 
     private static final AttributeModifier STAMINA_DEPLETED_SLOWNESS_MODIFIER = new AttributeModifier(
             STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID,

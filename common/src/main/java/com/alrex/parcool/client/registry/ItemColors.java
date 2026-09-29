@@ -6,7 +6,7 @@ import com.alrex.parcool.mixin.client.ItemTintSourcesAccessor;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
@@ -37,8 +37,8 @@ import javax.annotation.Nullable;
 public final class ItemColors {
 
     /** The {@code type} an {@code assets/parcool/items/*.json} tint entry refers to. */
-    public static final Identifier ZIPLINE_ROPE_TINT =
-            Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "zipline_rope");
+    public static final ResourceLocation ZIPLINE_ROPE_TINT =
+            ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "zipline_rope");
 
     public static final MapCodec<ItemTintSource> ZIPLINE_ROPE_TINT_CODEC =
             MapCodec.unit((ItemTintSource) ZiplineRopeItemTintSource.INSTANCE);

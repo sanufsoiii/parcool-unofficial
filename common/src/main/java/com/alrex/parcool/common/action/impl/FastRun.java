@@ -12,7 +12,7 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.config.ParCoolConfig;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
@@ -24,7 +24,7 @@ public class FastRun extends Action {
 		PressKey, Toggle, Auto
 	}
 
-	private static final Identifier FAST_RUNNING_MODIFIER = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastrun");
+	private static final ResourceLocation FAST_RUNNING_MODIFIER = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastrun");
 	private double speedModifier = 0;
 	private boolean toggleStatus = false;
 	private int lastDashTick = 0;

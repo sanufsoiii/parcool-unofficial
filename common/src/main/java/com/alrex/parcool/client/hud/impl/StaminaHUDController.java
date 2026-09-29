@@ -11,12 +11,12 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 
 public class StaminaHUDController {
-	public static Identifier ID = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "hud.stamina");
+	public static ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "hud.stamina");
 	LightStaminaHUD lightStaminaHUD;
 	StaminaHUD staminaHUD;
 

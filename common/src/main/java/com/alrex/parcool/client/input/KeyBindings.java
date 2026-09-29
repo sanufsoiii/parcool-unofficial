@@ -9,7 +9,7 @@ import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
@@ -21,7 +21,7 @@ public class KeyBindings {
      * entry moved from {@code key.categories.parcool} to {@code key.category.parcool}.
      */
     private static final KeyMapping.Category CATEGORY =
-            KeyMapping.Category.register(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "parcool"));
+            KeyMapping.Category.register(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "parcool"));
 
 
     /**

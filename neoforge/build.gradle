@@ -110,18 +110,28 @@ dependencies {
 	compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
 	// Optional integrations, and the only jars that had to move with the port:
-	//   Paraglider       7794499  Paraglider-neoforge-21.11.0-beta.6   (MC 1.21.11)
+	//   Paraglider       6739612  Paraglider-neoforge-21.5.2   (MC 1.21.5)
 	//   ShoulderSurfing  8950509  ShoulderSurfing-NeoForge-1.21.11-5.1.1
 	//   BetterThirdPerson 6455836 the newest NeoForge build (1.21.8)
-	// EpicFight has no 1.21.11 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
+	// EpicFight has no 1.21.10 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
 	// latest release), so extern/epicfight is excluded from compilation - see sourceSets below.
 	// Patchouli is only an optional book dependency and is never referenced from source.
-	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7794499"
+	//
+	// Paraglider is pinned to the 21.5.2 build, not the newest one (7794499, 21.11.0-beta.6):
+	// CurseForge has no Paraglider build for 1.21.10 at all - the file list jumps straight from the
+	// 21.5.x line to 21.11.0-beta - and the 21.11.0-beta.6 bytecode references
+	// `net.minecraft.resources.Identifier`, a class that does not exist before 1.21.11, so the
+	// compile dies with "cannot access Identifier". 21.5.2's plugin API is written against
+	// `ResourceLocation`, which is what 1.21.10 still has, and `MovementPlugin`'s two nested
+	// interfaces are byte-for-byte the signatures ParCoolPlugin implements (verified with javap
+	// against both jars). At runtime the plugin is loaded by Paraglider's own @ParagliderPlugin
+	// scan, so the version it is compiled against only has to be API-compatible, not identical.
+	parcoolIntegrationsCompile "curse.maven:paraglider-289240:6739612"
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:7489617"
 	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
 	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:8950509"
 
-	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7794499"
+	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:6739612"
 }
 
 tasks.named('compileJava') {

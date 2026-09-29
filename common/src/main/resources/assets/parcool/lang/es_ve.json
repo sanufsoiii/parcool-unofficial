@@ -90,7 +90,5 @@
   "parcool.command.message.success.setLimitationToDefault": "Configurado las limitaciones de %d jugador[es] a por defecto",
   "parcool.command.message.success.enableLimitation": "Activado las limitaciones de %d jugador[es]",
   "parcool.command.message.success.disableLimitation": "Desactivado las limitaciones de %d jugador[es]",
-  "parcool.command.message.success.deleteLimitation": "Limitación eliminada: %d",
-  "item.parcool.wooden_zipline_hook": "Wooden Zipline Hook",
-  "item.parcool.iron_zipline_hook": "Iron Zipline Hook"
+  "parcool.command.message.success.deleteLimitation": "Limitación eliminada: %d"
 }

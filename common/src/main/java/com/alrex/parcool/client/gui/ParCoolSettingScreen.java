@@ -40,13 +40,13 @@ public abstract class ParCoolSettingScreen extends Screen {
     protected final BooleanSupplier serverPermissionReceived;
 
 	@Override
-    public void resize(int p_231152_2_, int p_231152_3_) {
-        // 1.21.11 no longer hands the Screen its Minecraft instance in resize(); the client is reachable
+    public void resize(@Nonnull Minecraft minecraft, int p_231152_2_, int p_231152_3_) {
+        // 1.21.10 still hands the Screen its Minecraft instance in resize(); the client is reachable
         // through the singleton it always was.
-        super.resize(p_231152_2_, p_231152_3_);
-		// No scroll reset here: the call this used to make was mouseScrolled(0, 0, 0, 0), whose value is
-		// 0, so signum(0) is 0 and the guard below returns without moving topIndex. topIndex is clamped
-		// in mouseScrolled itself, so it stays valid across a resize.
+        super.resize(minecraft, p_231152_2_, p_231152_3_);
+		// No scroll reset here: the call this used to make was mouseScrolled(0, 0, 0), whose delta is
+		// 0, so signum(0) is 0 and the guard in mouseScrolled returns without moving topIndex. topIndex
+		// is clamped in mouseScrolled itself, so it stays valid across a resize.
 	}
 	private static final Component MenuTitle = Component.translatable("parcool.gui.title.setting");
     /** Right-aligned x of the first tab, recomputed per frame in {@link #render}. */
