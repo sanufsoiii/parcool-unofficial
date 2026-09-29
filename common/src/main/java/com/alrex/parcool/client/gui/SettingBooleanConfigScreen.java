@@ -4,7 +4,6 @@ import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.common.info.ClientSetting;
 import com.alrex.parcool.common.network.payload.ClientInformationPayload;
-import com.alrex.parcool.config.ConfigSpec.BooleanValue;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.common.network.NetworkRegistries;
 import java.util.Collections;

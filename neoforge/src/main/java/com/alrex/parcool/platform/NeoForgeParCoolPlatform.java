@@ -1,6 +1,5 @@
 package com.alrex.parcool.platform;
 
-import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.action.impl.Dodge;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.stamina.IParCoolStaminaHandler;

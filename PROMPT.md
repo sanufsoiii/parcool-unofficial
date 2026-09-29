@@ -154,6 +154,38 @@ still old-side, in which case copy the 1.21.1 side.
 | Translation keys | `key.categories.parcool` | `key.category.parcool` |
 | NeoForge mapping naming | **mojmap**, despite the `client-…-srg.jar` filename | mojmap as well (verified against a shipped NeoForge mod) — re-verify for your NeoForge version, do not assume |
 
+### 6a. Corrections for 1.21.7, verified against the 1.21.7 jar
+
+This tree targets **1.21.7**, and on several rows above 1.21.7 is on neither the 1.21.1 nor the 1.21.11
+side. The rows below were added after checking every claim with `javap` / by reading the decompiled
+1.21.7 sources; `NOTES.md` §2 has the evidence. `PROMPT.md` is otherwise unchanged and still says
+"copy the 1.21.11 side unless the target is old-side" — that heuristic does not cover 1.21.7.
+
+| Area | what 1.21.7 actually is |
+|---|---|
+| Render types | **hybrid.** `RenderStateShard` and `RenderType.CompositeState` survive, but `CULL`, `NO_CULL` and `RENDERTYPE_LEASH_SHADER` are **gone** (culling and the vertex format moved into `RenderPipeline`) and the only `RenderType#create` overload takes a `RenderPipeline`. So the 1.21.1 recipe does not exist *and* the 1.21.11 `RenderSetup` class does not either: build the pipeline yourself from `RenderPipelines#MATRICES_FOG_SNIPPET`, register it in `RenderPipelines#PIPELINES_BY_LOCATION`, and widen `RenderType#create`, both `RenderPipelines` fields and `RenderStateShard.NO_TEXTURE`/`LIGHTMAP`. Because `ShaderManager#apply` precompiles that map during the resource reload and throws on a failure, the registration has to happen during mod init, not on the first frame |
+| Entity rendering | **hybrid.** `EntityRenderer<T, S extends EntityRenderState>` with `extractRenderState` + `render(S, PoseStack, MultiBufferSource, int)`, but **no** `SubmitNodeCollector` and **no** `CameraRenderState`. Take the 1.21.11 render-state shape and keep writing the geometry straight into the `MultiBufferSource` |
+| Player rendering | **hybrid.** `net.minecraft.client.model.PlayerModel` (no type parameter) and `PlayerRenderer` + `PlayerRenderState` — so the 1.21.1 classes — but `setupAnim` / `setupRotations` already take only the render state, and the second-layer model parts are still children of the limbs. `AvatarRenderer` / `AvatarRenderState` / `world.entity.Avatar` do not exist: name the state duck after `PlayerRenderState` |
+| Recipe ingredients | the table above is wrong for 1.21.7. Vanilla 1.21.7's own `data/minecraft/recipe/*.json` use **plain strings** (`"minecraft:chain"`, `"#minecraft:logs"`) and a result of `{"id": …, "count": …}`. It is the **1.21.1 `{"item": …}` object form that is gone**, not the other way round. Check the target jar's own recipes; do not trust the version number |
+| `pack.mcmeta` | `PackMetadataSection` in 1.21.7 has only `description`, `pack_format` and a lenient `supported_formats`. **`min_format` / `max_format` do not exist** and are silently dropped. The numbers are `SharedConstants.RESOURCE_PACK_FORMAT` = 64 and `DATA_PACK_FORMAT` = 81, and `supported_formats` has to *contain* `pack_format` or the game warns and falls back |
+| `BlockEntityType` construction | 1.21.7 has neither `Builder` **nor a static `register`** — only the private 2-argument constructor (and a package-private nested `BlockEntitySupplier`). The 1.21.11 `BlockEntityTypeInvoker` has no target to invoke. Widen the constructor and the nested interface in the AW/AT, construct directly, and keep the 1.21.1 Architectury `DeferredRegister`: the platform seam the 1.21.11 tree added is not needed |
+| `Item` registration | `Item.Properties#setId(ResourceKey<Item>)` is **mandatory** — the constructor does `requireNonNull(this.id, "Item id not set")` — and `BlockBehaviour.Properties#setId` likewise (`"Block id not set"`, hit from `getDrops` / `getDescriptionId`). Architectury's `DeferredRegister` does **not** set either, and it is not called by NeoForge's. **Neither reference tree has this**: without it the mod does not initialise on any loader |
+| `BlockItem` description id | `BlockItem#getDescriptionId` is gone and `Item#descriptionId` is final; `Item.Properties#useBlockDescriptionPrefix()` is the replacement. Without it every hook is `item.parcool.*`. The 1.21.11 tree "solved" this by adding `item.parcool.*` keys to every language file — fix the cause instead, and note that the 1.21.11 tree therefore has 26 lang keys the game will never ask for |
+| `Item.Properties#noCollision()` | does not exist; vanilla's spelling `noCollission()` is what compiles |
+| `ClientInput` | `Input` is a record, but the *old* accessors are still the wrong shape: `forwardImpulse` / `leftImpulse` / `jumping` are gone, and `Input` has no `keyPresses` field either — the record is `jump/shift/sprint/forward/backward/left/right` and `ClientInput` exposes it as `input.keyPresses`. `Input#keyPresses` arrives in a later version |
+| `InteractionResult` | an interface, so `sidedSuccess(…)` is gone: `isClientSide ? SUCCESS : SUCCESS_SERVER` |
+| Item colour | `ItemTintSources` exists and `net.minecraft.client.color.item.ItemColor` does not — that is the 1.21.5 model-tint rewrite. Architectury 18.0.8 has no `ColorHandlerRegistry.registerItemColors` either, so a `MapCodec` registered in `ItemTintSources`' private id mapper is the only route, exactly as in 1.21.11 |
+| Item models | `assets/<ns>/items/<id>.json` (`ClientItemInfoLoader`); `assets/<ns>/models/item/**` is dead and can be deleted |
+| `Commands.LEVEL_GAMEMASTERS` | an `int`, not a predicate, and `CommandSourceStack#permissions()` is gone: `commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS)` |
+| `Player#causeExtraKnockback` | does not exist; `setSprinting(false)` is still inline in `Player#attack`, so the `@WrapWithCondition` targets `attack`. Loom's remapper prints `Cannot remap <name> because it does not exist in any of the targets` for this class of mistake — read the warning |
+| `BlockBehaviour#onRemove` | gone; the block entity's removal side effects hang off `BlockEntity#preRemoveSideEffects`, which `LevelChunk#setBlockState` calls on the server before dropping the block entity |
+| `Potion` | `new Potion(String name, MobEffectInstance…)`; the `name` is what becomes `item.minecraft.potion.effect.<name>`, so the 1.21.11 tree's explicit `"energy_drink"` / `"poor_energy_drink"` is required and matches the existing lang keys |
+
+Plus the deltas the hand-over notes mention that are in fact **not** wrong for 1.21.7: `RenderTypes` needs
+the AW/AT treatment (1.21.11 got away with it only because 1.21.11 made those members public), and
+`minecraft-merged-*-sources.jar` still lies about member visibility because it is decompiled from the
+AW-applied jar.
+
 **Do not skip the one-mapping-per-key row.** It is Fabric-only and it is the single most
 player-visible difference between the two reference ports: on a loader where `KeyMapping.MAP` holds
 one mapping per physical key, ParCool silently steals right-click / Space / Left-Ctrl from vanilla
@@ -194,7 +226,8 @@ are load-bearing:
   the access widener, converts named → intermediary and — with Loom's default
   `mixinRemapType = static` — rewrites the mixin targets straight into the bytecode). There is
   deliberately **no refmap**, and the Fabric jar must carry the access widener in `v2 intermediary`
-  (`v2 named` makes Fabric Loader 0.19.x abort the boot before the window exists). The order of the
+  (`v2 named` makes Fabric Loader abort the boot before the window exists - `ClassTweakerFormatException:
+    line 1: Namespace (named) does not match current runtime namespace (intermediary)`). The order of the
   `from { }` clauses in `distJar` matters: first contributor wins because `duplicatesStrategy` is
   `EXCLUDE`.
 - **NeoForge**: mojmap-named bytecode, because the production runtime loads mojmap. architectury-plugin's
@@ -211,16 +244,30 @@ record why in `NOTES.md`.
 silently behaves like the old code, that cache is stale:
 
 ```bash
-./gradlew --stop
 rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
+
+> **Do not run `./gradlew --stop` here.** The instruction for this port is to clear the cache by deleting
+> the directories and restarting the build, and not to stop daemons (three other ports share this
+> machine's Gradle daemons and memory).
 
 Do this whenever you add a class to `:common`. It will otherwise make you debug a build that is not
 the one you are looking at.
 
+The same applies after editing `common/src/main/resources/parcool.accesswidener`: it is **not** part of
+the Loom artifact cache key, so the previously built (un-widened) Minecraft jar is reused and the
+widening silently does not happen. And a wrong *descriptor* in the AW is silently ignored rather than
+reported - verify each entry with `javap` on the AW-applied jar under
+`.gradle/loom-cache/minecraftMaven/`, not on the plain Mojang jar.
+
 ## 9. Phase 6 — actually run both loaders
 
 A port that only compiles is not a port.
+
+> **Status in this tree: NOT DONE, by instruction.** The brief for the 1.21.7 port forbade launching
+> Minecraft, so none of the runs or checks below were executed. `./gradlew build` succeeds and the
+> artifacts are static-verified as far as possible (`NOTES.md` §5); the in-game half is open and is
+> reproduced as a checklist in `BUILDING.md`. Treat this port as a verified build, not a verified port.
 
 ```bash
 ./gradlew build
@@ -296,14 +343,18 @@ did not create.
 
 ## 12. Definition of done
 
-- [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
+- [x] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
+      Two steps, not one: see §8 / NOTES.md §1 for why a cold tree needs `:common:build` first.
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev.
+      **Not done in this tree** - the brief forbade launching the game.
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
       commented-out blocks, no absolute local paths, no machine-specific paths in the build.
 - [ ] No unused imports.
-- [ ] `.gitignore` covers `.gradle/`, `build/`, the run directories, `*.log`, `*.txt`, `/*.jar`,
+- [x] `.gitignore` covers `.gradle/`, `build/`, the run directories, `*.log`, `*.txt`, `/*.jar`,
       `.architectury-transformer/`, `**/loom-cache/`, `**/explodedCommon/`.
+- [ ] No unused imports **introduced by this port** - the 26 that remain are the same set both
+      reference trees carry, so a sweep would be noise, not a fix.
 - [ ] `NOTES.md` records: the resolved toolchain and where each number came from, every version
       delta you had to decide, every upstream bug you found but did not fix, and anything you think
       the next port should not trust.
