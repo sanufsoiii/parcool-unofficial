@@ -128,21 +128,33 @@ dependencies {
 
 	// Optional integrations. None of the four is a *runtime* dependency of the mod: each one reports
 	// itself absent when its classes are not loadable, so a client without them still works, and the
-	// ids below only have to be good enough to compile against. Verified against the CurseForge file
-	// listing (www.curseforge.com/api/v1/mods/<id>/files):
-	//   Paraglider        289240  7795089  Paraglider-neoforge-21.1.5        (MC 1.21.1)
-	//   EpicFight         405076  8175609  epic-fight-21.17.3.1-mc1.21.1    (MC 1.21.1)
-	//   BetterThirdPerson 435044  5965876  BetterThirdPerson-neoforge-1.9.0 (MC 1.21.4, exact)
-	//   ShoulderSurfing   243190  6543497  ShoulderSurfing-NeoForge-1.21.4-4.12.0 (MC 1.21.4, exact)
+	// ids below only have to be good enough to compile against.
 	//
-	// Paraglider and EpicFight have no 1.21.4 build in the CurseForge listing this machine can reach
-	// (it exposes only a truncated page of Paraglider's files), so both are compiled against their
-	// 1.21.1 build - the same situation the 1.21.1 and 1.21.11 ports are in. The APIs ParCool touches
-	// (`Paraglider.playerStates()`, EpicFight's `getPlayerPatch()`) are unchanged across those builds.
+	// What upstream has for MC 1.21.5, per the CurseForge file listing
+	// (www.curseforge.com/api/v1/mods/<id>/files):
+	//   Paraglider        289240  6739612  Paraglider-neoforge-21.5.2               (MC 1.21.5, exact)
+	//   BetterThirdPerson 435044  6455836  BetterThirdPerson-neoforge-1.21.5-1.9.0 (MC 1.21.5+, exact)
+	//   ShoulderSurfing   243190  -        no 1.21.5 build published at all
+	//   EpicFight         405076  -        no 1.21.5 build on the reachable page
+	//
+	// Paraglider and EpicFight are still compiled against their 1.21.1 builds (7795089 / 8175609), the
+	// same situation the 1.21.1, 1.21.4 and 1.21.11 ports are in: the APIs ParCool touches
+	// (`ParagliderItemCapability.CAPABILITY`, `Stamina.get(player)`, `EpicFightCapabilities
+	// .getPlayerPatch(player)`) are unchanged across those builds, and EpicFight additionally reports
+	// itself absent at runtime through `EpicFightManager#isEpicFightUsable`.
+	// ShoulderSurfing has no 1.21.5 build, so it is compiled against ShoulderSurfing-NeoForge-1.21.4
+	// -4.12.0 (6543497) - the newest NeoForge build published for any 1.21.x. The Fabric side of the
+	// plugin API would not do: a plain `compileOnly` Maven dependency is not remapped by Loom, so an
+	// intermediary-named Fabric build fails to compile.
 	// Patchouli is only an optional book dependency and is never referenced from source.
+	//
+	// All four coordinates resolve out of the shared Gradle module cache. Do not "upgrade" them from
+	// this comment: www.cursemaven.com currently answers 404 for every file of every project
+	// (including the ones that used to be listed above), so a coordinate that is not already cached
+	// cannot be fetched on this machine at all.
 	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7795089"
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8175609"
-	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:5965876"
+	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
 	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6543497"
 
 	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7795089"

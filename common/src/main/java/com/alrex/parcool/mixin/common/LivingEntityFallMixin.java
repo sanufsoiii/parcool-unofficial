@@ -14,11 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * Replaces {@code LivingEvent.LivingFallEvent}, which has no Architectury counterpart.
  *
- * <p>{@code LivingEntity#causeFallDamage(float, float, DamageSource)} (1.21.4 still passes the fall
- * distance as a {@code float}; it widens to {@code double} only in 1.21.5) delegates to
+ * <p>{@code LivingEntity#causeFallDamage(double, float, DamageSource)} delegates to
  * {@code super.causeFallDamage}, then computes the amount with {@code calculateFallDamage} and
- * applies it with {@code hurtOrSimulate(source, amount)}. Two hooks reproduce the NeoForge event
- * exactly:
+ * applies it with {@code hurt(source, amount)}. Two hooks reproduce the NeoForge event exactly:
  * <ul>
  *     <li>HEAD + {@code cancellable} for {@link CompatEvents.LivingFallEvent#isCanceled()};</li>
  *     <li>a redirect of the single damage call for
@@ -26,6 +24,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *     than {@code calculateFallDamage} keeps the fall sound and the method's return value intact and
  *     avoids needing access to the protected damage formula.</li>
  * </ul>
+ *
+ * <h2>1.21.5 widened the fall distance</h2>
+ * {@code causeFallDamage}'s first parameter is a {@code double} here; it was a {@code float} in 1.21.4.
+ * A handler still declared as {@code (float, float, DamageSource, CallbackInfo)} compiles and then
+ * never applies - and with {@code defaultRequire: 1} a mismatch is a hard boot failure rather than a
+ * silent no-op, so the handler below is spelled with the widened type and narrows back to the
+ * {@code float} the ParCool event has always carried.
  */
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityFallMixin {
@@ -35,11 +40,11 @@ public abstract class LivingEntityFallMixin {
     private float parcool$fallDamageMultiplier = 1.0F;
 
     @Inject(method = "causeFallDamage", at = @At("HEAD"), cancellable = true)
-    private void parcool$onFall(float fallDistance, float damageMultiplier, DamageSource source,
+    private void parcool$onFall(double fallDistance, float damageMultiplier, DamageSource source,
                                 CallbackInfoReturnable<Boolean> cir) {
         this.parcool$fallDamageMultiplier = 1.0F;
         CompatEvents.LivingFallEvent event =
-                new CompatEvents.LivingFallEvent((LivingEntity) (Object) this, fallDistance, source);
+                new CompatEvents.LivingFallEvent((LivingEntity) (Object) this, (float) fallDistance, source);
         PlayerDamageHandler.onFall(event);
         if (event.isCanceled()) {
             cir.setReturnValue(false);
@@ -48,15 +53,18 @@ public abstract class LivingEntityFallMixin {
         this.parcool$fallDamageMultiplier = event.getDamageMultiplier();
     }
 
-    // Entity#hurt is a final void in 1.21.4, so the call causeFallDamage makes is
-    // hurtOrSimulate(...), which is what returns the boolean this redirect has to give back.
+    // The call causeFallDamage makes is Entity#hurt, which is `final void` since 1.21.2 - it dispatches
+    // to hurtOrSimulate (client) / hurtServer (server) internally. The 1.21.1 code redirected
+    // `hurt(DamageSource;F)Z`; a redirect aimed at `hurtOrSimulate(DamageSource;F)Z` finds no such call
+    // site in causeFallDamage and silently does nothing, so the target and the handler's return type
+    // both follow the void call.
     @Redirect(
             method = "causeFallDamage",
             at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/LivingEntity;hurtOrSimulate(Lnet/minecraft/world/damagesource/DamageSource;F)Z")
+                    target = "Lnet/minecraft/world/entity/LivingEntity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)V")
     )
-    private boolean parcool$applyDamageMultiplier(LivingEntity self, DamageSource source, float amount) {
+    private void parcool$applyDamageMultiplier(LivingEntity self, DamageSource source, float amount) {
         float multiplier = this.parcool$fallDamageMultiplier;
-        return self.hurtOrSimulate(source, multiplier == 1.0F ? amount : amount * multiplier);
+        self.hurt(source, multiplier == 1.0F ? amount : amount * multiplier);
     }
 }
