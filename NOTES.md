@@ -312,3 +312,17 @@ acceptance list is open. None of the following was executed:
 10. **`~` in a Fabric version predicate is SAME_TO_NEXT_MINOR, not "same patch".** That is why
     architectury-fabric's stale `"minecraft": "~1.21.7"` still admits 1.21.8 — and it is also why
     `"~1.21.4-"` in architectury 16.1.4 admitted 1.21.5.
+
+## 9. Published artifacts
+
+```
+0.1-mc1.21.8fabric-3.4.3.3.jar     21c69b5de817a377af572aae673a90d63583cdc82f0a7c53fac8800921b4d6db
+0.1-mc1.21.8neoforge-3.4.3.3.jar  6457dc9ca837dd3d0443aa2bd70846f4ee5d99297e59b9fd78614bf2899be5a9
+```
+
+copied to `/home/sanufsoii/ports/готовые порты/parcool/`. The clean-checkout build was re-run from
+scratch (every `build/`, `.gradle/` and `.architectury-transformer/` deleted): the single
+`./gradlew build` fails with the documented `Failed to read metadata from
+common/build/libs/parcool-1.21.8-3.4.3.3.jar`, and `./gradlew :common:build && ./gradlew build`
+succeeds, after which the three verifiers above were re-run against the freshly produced jars with
+the same results.
