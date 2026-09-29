@@ -15,11 +15,14 @@ evaluationDependsOn(':common')
 //
 // The step architectury-plugin would have done is a mojmap -> SRG remap, and it is not needed: the
 // NeoForge production runtime loads mojmap-named vanilla members. Verified against a shipped NeoForge
-// 1.21.11 mod (Paraglider 21.11.0-beta.6), whose own bytecode references
-// `net/minecraft/resources/Identifier` and whose own accesstransformer.cfg ships
+// mod (Paraglider 21.5.2, the newest published build whose bytecode still uses
+// `net/minecraft/resources/ResourceLocation` like 1.21.9 does), whose own accesstransformer.cfg ships
 // `aboveGroundTickCount` rather than an `f_110147_` token. So the mojmap-named artifact this module
 // produces is already what NeoForge loads, and the access transformer in
 // neoforge/src/main/resources/META-INF/accesstransformer.cfg is written in the same naming.
+//
+// Re-verified for NeoForge 21.9.16-beta: every member this port touches is reachable under its mojmap
+// name, i.e. no SRG rename is introduced between the production runtime and the dev artifact.
 
 repositories {
 	maven { url = 'https://www.cursemaven.com' }
@@ -27,6 +30,10 @@ repositories {
 	maven { url = 'https://maven.architectury.dev/' }
 	mavenCentral()
 	maven { url = 'https://maven.neoforged.net/releases/' }
+	// ModDevGradle adds Mojang's own repositories through Gradle's RepositoriesPlugin, which it does not
+	// wire up when it runs on Gradle 9 - and without this the Minecraft artifact itself cannot resolve
+	// ("Could not find com.mojang:jtracy", and then datafixerupper and the rest of the Mojang libraries).
+	maven { url = 'https://libraries.minecraft.net/' }
 }
 
 neoForge {
@@ -109,19 +116,27 @@ dependencies {
 	// shipping a second copy of MixinExtras is what the loaders' bundled one would conflict with.
 	compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
-	// Optional integrations, and the only jars that had to move with the port:
-	//   Paraglider       7794499  Paraglider-neoforge-21.11.0-beta.6   (MC 1.21.11)
-	//   ShoulderSurfing  8950509  ShoulderSurfing-NeoForge-1.21.11-5.1.1
-	//   BetterThirdPerson 6455836 the newest NeoForge build (1.21.8)
-	// EpicFight has no 1.21.11 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
-	// latest release), so extern/epicfight is excluded from compilation - see sourceSets below.
-	// Patchouli is only an optional book dependency and is never referenced from source.
-	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7794499"
+	// Optional integrations. None of these four has a build that declares Minecraft 1.21.9:
+	//   Paraglider        6739612  Paraglider-neoforge-21.5.2      (MC 1.21.5; the newest 1.21.x line
+	//                                 whose API is spelled with ResourceLocation, which is what 1.21.9
+	//                                 still uses - 21.11.0-beta.6 renamed it to Identifier and would not
+	//                                 compile here)
+	//   ShoulderSurfing   6496668  ShoulderSurfing-NeoForge-1.21.1-4.11.0  (MC 1.21.1; the 5.x line only
+	//                                 publishes 1.21.1 and 1.21.11, and 5.x changed
+	//                                 IShoulderSurfingPlugin#register to take an IEventBus)
+	//   BetterThirdPerson 6455836  BetterThirdPerson-neoforge-1.21.5-1.9.0  (the newest NeoForge build
+	//                                 at all; CurseForge lists it for 1.21.5-1.21.8)
+	//   EpicFight         7489617  epic-fight-21.15.1-mc1.21.1-neoforge  (its 1.21.1 line is still the
+	//                                 latest release; EpicFightManager#isEpicFightUsable checks the class
+	//                                 is loadable, so the integration reports itself absent at runtime)
+	// Paraglider is the only one also pulled onto the runtime classpath below, because its
+	// @ParagliderPlugin-annotated plugin class has to be found by Paraglider's own plugin loader.
+	parcoolIntegrationsCompile "curse.maven:paraglider-289240:6739612"
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:7489617"
 	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
-	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:8950509"
+	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6496668"
 
-	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7794499"
+	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:6739612"
 }
 
 tasks.named('compileJava') {

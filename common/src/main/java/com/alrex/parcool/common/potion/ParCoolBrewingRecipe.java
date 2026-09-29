@@ -4,7 +4,7 @@ import com.alrex.parcool.ParCool;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.item.alchemy.PotionBrewing;
@@ -28,7 +28,7 @@ public class ParCoolBrewingRecipe {
      * {@code Holder.direct(...)} would have no key to serialize.
      */
     private static Holder<Potion> parcoolPotion(String id) {
-        return BuiltInRegistries.POTION.get(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, id))
+        return BuiltInRegistries.POTION.get(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, id))
                 .orElseThrow(() -> new IllegalStateException("ParCool potion " + id + " is not registered"));
     }
 

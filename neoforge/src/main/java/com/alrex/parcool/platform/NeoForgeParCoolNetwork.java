@@ -4,7 +4,7 @@ import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.function.BiConsumer;
@@ -42,7 +42,7 @@ public class NeoForgeParCoolNetwork implements ParCoolNetwork {
     public <T extends CustomPacketPayload> void register(
             Class<T> payloadClass,
             CustomPacketPayload.Type<T> type,
-            Identifier wireId,
+            ResourceLocation wireId,
             StreamCodec<?, T> codec,
             boolean clientbound,
             BiConsumer<T, NetworkManager.PacketContext> handler) {
@@ -61,19 +61,19 @@ public class NeoForgeParCoolNetwork implements ParCoolNetwork {
 
     @Override
     public <T extends CustomPacketPayload> void sendToServer(
-            T payload, Identifier wireId, StreamCodec<?, T> codec) {
+            T payload, ResourceLocation wireId, StreamCodec<?, T> codec) {
         NetworkManager.sendToServer(wireId, ParCoolNetwork.encode(codec, payload));
     }
 
     @Override
     public <T extends CustomPacketPayload> void sendToPlayer(
-            ServerPlayer player, T payload, Identifier wireId, StreamCodec<?, T> codec) {
+            ServerPlayer player, T payload, ResourceLocation wireId, StreamCodec<?, T> codec) {
         NetworkManager.sendToPlayer(player, wireId, ParCoolNetwork.encode(codec, payload));
     }
 
     @Override
     public <T extends CustomPacketPayload> void sendToPlayers(
-            Iterable<ServerPlayer> players, T payload, Identifier wireId, StreamCodec<?, T> codec) {
+            Iterable<ServerPlayer> players, T payload, ResourceLocation wireId, StreamCodec<?, T> codec) {
         NetworkManager.sendToPlayers(players, wireId, ParCoolNetwork.encode(codec, payload));
     }
 }

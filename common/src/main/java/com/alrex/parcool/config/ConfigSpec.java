@@ -174,13 +174,19 @@ public class ConfigSpec {
     /**
      * Re-persists to the file this spec was last loaded from; used by the settings screens.
      *
-     * <p>Nothing is written here. Every {@code set()} on any value used to trigger a full rewrite of
-     * the whole document - and the settings screens call {@code set()} from {@code apply}, including
-     * once per rendered frame while a slider is being dragged, so a single drag produced hundreds of
-     * full-file writes. The value is marked dirty instead and {@link #save(Path)} writes once.
+     * <p>This <b>has</b> to write. A variant that only set a {@code dirty} flag looked like a
+     * write-throttling optimisation, but nothing in the mod ever read that flag back and no other
+     * code path calls {@link #save(Path)} on a client config after startup - the settings screens
+     * reach the file only through here - so every change made in the GUI was silently dropped and the
+     * config went back to its startup contents on the next launch.
+     *
+     * <p>The write volume is not a problem in practice: the screens call {@code save()} when the user
+     * switches tab or closes the screen, not once per rendered frame, so this runs a handful of times
+     * per interaction rather than continuously.
      */
     public void persist() {
         this.dirty = true;
+        if (this.file != null) save(this.file);
     }
 
     /** True when a value changed since the last write. */

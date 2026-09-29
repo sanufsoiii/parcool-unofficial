@@ -9,11 +9,6 @@ import java.nio.ByteBuffer;
 public class BufferUtil {
 	ByteBuffer buffer;
 
-	private BufferUtil(ByteBuffer buffer) {
-		this.buffer = buffer;
-		current = buffer;
-	}
-
 	/**
 	 * A start/state buffer, 128 bytes. The largest honest payload today is HideInBlock's 98-byte
 	 * start buffer (2 booleans + 2 BlockPos + 3 Vec3), so the head-room is 30 bytes; every writer is
@@ -22,6 +17,10 @@ public class BufferUtil {
 	 * ActionProcessor and turned into a force-finish with no indication of the real cause.
 	 */
 	public static final int SYNC_BUFFER_SIZE = 128;
+
+	private BufferUtil(ByteBuffer buffer) {
+		this.buffer = buffer;
+	}
 
 	public static BufferUtil wrap(ByteBuffer byteBuffer) {
 		return new BufferUtil(byteBuffer);
@@ -38,17 +37,6 @@ public class BufferUtil {
 		return this;
 	}
 
-	private static void ensureRoom(int bytes) {
-		if (bytes >= 0 && current != null && current.remaining() < bytes) {
-			throw new IllegalStateException("ParCool sync buffer overflow: " + bytes
-					+ " bytes needed, " + current.remaining() + " left (limit " + SYNC_BUFFER_SIZE
-					+ "). Enlarge SYNC_BUFFER_SIZE for the payload this action writes.");
-		}
-	}
-
-	/** The buffer currently being wrapped; only used by ensureRoom's bounds message. */
-	private static ByteBuffer current;
-
 	public BufferUtil putBoolean(boolean bool) {
 		ensureRoom(1);
 		buffer.put(bool ? (byte) 1 : 0);
@@ -64,11 +52,13 @@ public class BufferUtil {
     }
 
     public BufferUtil putVector3i(Vec3i vec) {
+        ensureRoom(12);
         buffer.putInt(vec.getX()).putInt(vec.getY()).putInt(vec.getZ());
         return this;
     }
 
     public BufferUtil putVec3(Vec3 vec) {
+        ensureRoom(24);
         buffer.putDouble(vec.x()).putDouble(vec.y()).putDouble(vec.z());
         return this;
     }
@@ -99,5 +89,24 @@ public class BufferUtil {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Bounds check for one writer, against <em>this</em> instance's buffer.
+	 *
+	 * <p>An earlier revision made this {@code static} and read the capacity out of a second,
+	 * separately-held static reference that nothing ever re-assigned per action. That reference kept
+	 * whatever buffer was wrapped first, so the check described the wrong buffer (and threw nothing
+	 * for every later one), while {@link #putVector3i} and {@link #putVec3} - the two widest writers -
+	 * had their checks deleted outright. The effect was exactly the silent overflow this method exists
+	 * to prevent: a payload that does not fit still reached {@code ByteBuffer#putInt} / {@code #putDouble}
+	 * unchecked.
+	 */
+	private void ensureRoom(int bytes) {
+		if (this.buffer.remaining() < bytes) {
+			throw new IllegalStateException("ParCool sync buffer overflow: " + bytes
+					+ " bytes needed, " + this.buffer.remaining() + " left (limit " + SYNC_BUFFER_SIZE
+					+ "). Enlarge SYNC_BUFFER_SIZE for the payload this action writes.");
+		}
 	}
 }

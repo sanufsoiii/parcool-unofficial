@@ -11,7 +11,10 @@ pluginManagement {
 plugins {
 	id 'dev.architectury.loom' version '1.17.493' apply false
 	id 'architectury-plugin' version '3.5.170' apply false
-	id 'net.neoforged.moddev' version '2.0.147' apply false
+	// 2.0.148 is the last published ModDevGradle (checked in
+	// maven.neoforged.net/releases/net/neoforged/moddev/net.neoforged.moddev.gradle.plugin/maven-metadata.xml);
+	// 2.x is the branch that supports NeoForge 21.5 and newer, which the 21.9.x line needs.
+	id 'net.neoforged.moddev' version '2.0.148' apply false
 }
 
 rootProject.name = 'parcool-architectury'

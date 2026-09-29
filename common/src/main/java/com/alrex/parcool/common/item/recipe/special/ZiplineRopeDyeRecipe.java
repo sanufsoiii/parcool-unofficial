@@ -83,9 +83,13 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
         return resultZiplineRope;
     }
 
-    // 1.21.11 dropped CustomRecipe#canCraftInDimensions; the recipe no longer declares a grid size
-    // limit. `matches` already requires exactly one rope and at least one dye, which is what the old
+    // The recipe declares no grid size limit (CustomRecipe#canCraftInDimensions is gone by now).
+    // `matches` already requires exactly one rope and at least one dye, which is what the old
     // "width * height >= 2" check was standing in for.
+
+    // Note for the data files: `Recipes#ZIPLINE_ROPE_DYE`'s own codec reads `category` with
+    // Codec.fieldOf, i.e. it is mandatory, which is why data/parcool/recipe/zipline_rope_dye.json
+    // carries "category": "misc" even though it has no other field.
 
     @Nonnull
     @Override
