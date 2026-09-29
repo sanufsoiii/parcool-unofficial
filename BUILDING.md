@@ -1,12 +1,12 @@
-# Building ParCool (Architectury, Minecraft 1.21.11)
+# Building ParCool (Architectury, Minecraft 1.21.3)
 
 Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
-`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` and
-no machine-specific path anywhere in the build.
+`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` in
+the project and no machine-specific path anywhere in the build.
 
-Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.11, Architectury API 19.0.1,
-NeoForge 21.11.45, Fabric Loader 0.19.5, Fabric API 0.141.6+1.21.11, Architectury Loom 1.17.493,
-ModDevGradle 2.0.147, Gradle 9.4.1.
+Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.3, Architectury API 14.0.4,
+NeoForge 21.3.97, Fabric Loader 0.16.10, Fabric API 0.114.1+1.21.3, Architectury Loom 1.7.435,
+ModDevGradle 1.0.24, Gradle 8.10.2. `NOTES.md` §1 records where each number was resolved from.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -17,36 +17,62 @@ ModDevGradle 2.0.147, Gradle 9.4.1.
 ## Building
 
 ```bash
-./gradlew build   # from a clean checkout; the root build bootstraps :common itself
+./gradlew :common:build   # once on a fresh checkout
+./gradlew build
 ```
 
 The two steps are needed because Architectury Loom resolves the `:common` project dependency while it
 *configures* the loader modules, so `:common` has to have been built once. The root `build` task
 depends on the `bootstrap` task (an alias of `:common:build`), which covers every case except a truly
-fresh checkout.
+fresh checkout — and on a fresh checkout the very first invocation has to be the `:common:build` one,
+because the failure happens during configuration, before `build` can run at all.
 
-**If you add a new class to `:common` and the loader module then reports
-`cannot find symbol` for it, Loom's cached remap of `:common` is stale.** Clear it once:
+**If you add a new class to `:common` and the loader module then reports `cannot find symbol` for it,
+Loom's cached remap of `:common` is stale.** Clear it with
 
 ```bash
-rm -rf common/build/devlibs common/build/loom-cache fabric/build/loom-cache .gradle/loom-cache
+rm -rf .gradle/loom-cache build common/build fabric/build neoforge/build
+./gradlew :common:build && ./gradlew build
 ```
 
 `.gradle/loom-cache/remapped_mods` holds the per-consumer remapped copy of `:common` that the loader
 modules actually load; if a freshly added mixin class is present in the built jar but reported as
-"not found" at runtime, this directory is the stale one.
+"not found" at runtime, this directory is the stale one. Do **not** reach for `./gradlew --stop` —
+several ports of this project build on one machine and share the Gradle daemons (`NOTES.md` §8).
+
+The same delete also fixes a second, quieter variant: `minecraft-merged-*-sources.jar` under
+`.gradle/loom-cache` is generated *with this project's access widener applied*, so it reports
+post-widener access flags. If you are checking whether a vanilla member is private, delete the cache
+and regenerate before trusting it.
 
 ## Distributables
 
 ```bash
 ./gradlew build
-# -> fabric/build/libs/parcool-fabric.jar
+# -> fabric/build/libs/parcool-1.21.3-3.4.3.3-fabric.jar
 # -> neoforge/build/libs/parcool-neoforge.jar
 ```
 
+(the plain `jar` task also leaves `parcool-1.21.3-3.4.3.3.jar` / `parcool.jar` next to them; those are
+the un-remapped module jars, not the distributables.)
+
 Each contains the `:common` code and assets plus the loader module's own classes, metadata
 (`fabric.mod.json` / `META-INF/neoforge.mods.toml`), the shared `parcool.accesswidener` and
-`parcool-common.mixins.json`, and the `ServiceLoader` file that binds `ParCoolPlatform`.
+`parcool-common.mixins.json`, and the `ServiceLoader` file that binds `ParCoolPlatform`. The published
+names are `0.1-mc1.21.3fabric-3.4.3.3.jar` and `0.1-mc1.21.3neoforge-3.4.3.3.jar`.
+
+What to check after a build, since this port cannot boot the game (`README`):
+
+```bash
+# Fabric: intermediary, no refmap, authoritative access widener
+unzip -l fabric/build/libs/parcool-1.21.3-3.4.3.3-fabric.jar | grep -E 'refmap|accesswidener'
+unzip -p fabric/build/libs/parcool-1.21.3-3.4.3.3-fabric.jar parcool.accesswidener | head -1
+#   -> accessWidener v2 intermediary, and NO refmap entry
+
+# NeoForge: mojmap, mojmap-named access transformer
+unzip -p neoforge/build/libs/parcool-neoforge.jar parcool.accesswidener | head -1   # v2 named
+unzip -p neoforge/build/libs/parcool-neoforge.jar META-INF/accesstransformer.cfg
+```
 
 ## Running
 
@@ -92,3 +118,12 @@ login) and a free `server-port`.
 
 `./gradlew :common:checkCommonLoaderIndependence` fails the build if `common/src/main` ever imports
 `net.fabricmc.*` or `net.neoforged.*`.
+
+## Where the version-specific decisions are written down
+
+`NOTES.md` is not a changelog; it is the file to read before touching anything here. It carries the
+resolved toolchain with its sources, the per-row 1.21.1 / 1.21.3 / 1.21.11 API comparison (1.21.3 is on
+the *new* side of six rows that `PROMPT.md` marks as 1.21.1, and on its own side of three more), the
+Loom and NeoForge build facts that are not obvious from a diff, and the bugs found in the reference
+ports — including one serious one (`ConfigSpec#persist()` in the 1.21.11 tree never writes, so that
+branch's settings screen does not persist changes) that this port deliberately did not copy.

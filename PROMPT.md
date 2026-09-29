@@ -129,8 +129,31 @@ Rules that save a lot of time:
 
 ## 6. Phase 3 — the version deltas that will actually bite
 
+> **Correction (written by the 1.21.3 port, see `NOTES.md` §2).** The table below has only two
+> columns, and 1.21.3 is on the **new** side of six rows that are marked "1.21.1 (old side)", because
+> 1.21.2 was a large internal rework that 1.21.3 sits directly on top of. The rows that are wrong for
+> 1.21.3 are: `BlockEntityType` construction, `jumpFromGround`, `Entity#hurt` (implied by
+> "Entity / BlockEntity save" being `CompoundTag`-shaped on the 1.21.1 side is still true, but `hurt`
+> is not), `HumanoidModel`/`PlayerModel` type parameters, and `BlockBehaviour`/`Item` registry keys
+> (not listed at all). The rows that are *correct* for 1.21.3: `ResourceLocation`, save/load,
+> `Block#useItemOn`, `Block#updateShape`, `EntityType.Builder#build`, `Registry#get`,
+> `Item#descriptionId`, recipe ingredients, `pack.mcmeta` (but see below), `KeyMapping` category and
+> `KeyMapping.MAP`, `ClientInput`, `isInWaterOrBubble`, `canInteractWithEntity`, item model location.
+>
+> 1.21.3 is its own case in three rows, i.e. **neither** column applies:
+> * *Entity rendering*: the render-state split (`EntityRenderer<T, S extends EntityRenderState>` with
+>   `extractRenderState`) **is** present, but `SubmitNodeCollector` and `submit(...)` are **not** —
+>   `render(S, PoseStack, MultiBufferSource, int)` still draws. The 1.21.11 mixin set
+>   (`AvatarRenderStateEntityMixin`, `AvatarRenderStateExtractorMixin`) has to be rebuilt around
+>   `PlayerRenderState` / `PlayerRenderer` instead of `AvatarRenderState` / `AvatarRenderer`.
+> * *`pack.mcmeta`*: 1.21.3's `PackMetadataSection` has only `description`, `pack_format` and an
+>   optional `supported_formats`. The `min_format` / `max_format` keys in the 1.21.11 file do not
+>   exist here, and the resource / data formats are 42 and 57.
+> * *Loom*: `useLegacyMixinAp` defaults to `true` on the Loom 1.7 line, so the static mixin remap has
+>   to be requested explicitly — the 1.21.11 tree can rely on the Loom 1.17 default, this one cannot.
+
 These are the seams between 1.21.1 and 1.21.11. For each one, **find out for yourself whether your
-target version is on the old or the new side** (the decompiled sources or the mappings in the Loom
+target is on the old or the new side** (the decompiled sources or the mappings in the Loom
 cache are the authority), then port accordingly. Copy the 1.21.11 side unless you find the target is
 still old-side, in which case copy the 1.21.1 side.
 
@@ -211,14 +234,32 @@ record why in `NOTES.md`.
 silently behaves like the old code, that cache is stale:
 
 ```bash
-./gradlew --stop
 rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
+
+> **`./gradlew --stop` is not available in this checkout.** Several `parcool-Architectury-API-*` ports
+> build on the same machine at the same time and share the Gradle daemons, so stopping them — or
+> `pkill`/`killall` — is off limits. Delete the cache directories of this project and start the build
+> again; a fresh daemon is not needed. See `NOTES.md` §8.
 
 Do this whenever you add a class to `:common`. It will otherwise make you debug a build that is not
 the one you are looking at.
 
+> Second, related trap: the `minecraft-merged-*-sources.jar` Loom writes under `.gradle/loom-cache`
+> is generated **with this project's access widener already applied**. It reports post-widener access
+> flags, not vanilla's. To learn whether a vanilla member is private, remove the widener entry, delete
+> `.gradle/loom-cache` so the jar is regenerated, and `javap -p` the result — or just let `javac` tell
+> you. See `NOTES.md` §4.
+
 ## 9. Phase 6 — actually run both loaders
+
+> **Not done for this port.** The 1.21.3 port was explicitly told not to launch Minecraft (no
+> `runClient`, no `runServer`, no headless client, no Prism instance), so the acceptance used instead
+> is: `./gradlew build` succeeds from a clean tree and both artifacts are inspected
+> (`accessWidener` namespace, refmap present or absent, no mojmap strings in the Fabric jar, no
+> intermediary strings in the NeoForge jar, mod metadata version strings). `NOTES.md` §6 lists what
+> that leaves unverified, in order of risk. Everything below is therefore still worth doing, but by
+> someone who is allowed to start the game.
 
 A port that only compiles is not a port.
 
