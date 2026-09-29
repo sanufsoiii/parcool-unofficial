@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * ParCool's two jump hooks, which 1.21.11 moved up from {@code Player} to {@code LivingEntity}
+ * ParCool's two jump hooks, which 1.21.6 moved up from {@code Player} to {@code LivingEntity}
  * (1.21.1 had {@code Player#jumpFromGround} overriding the inherited method, so the mixin could
  * target {@code Player} and the cast was safe). Living entities that are not players return
  * immediately, which is what the cast used to guarantee.
@@ -32,9 +32,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * normal one block. TAIL also gives {@code Dive#onJump} the real launch velocity instead of the
  * resting {@code -0.0784}.
  *
- * <p>Verified against 1.21.11's vanilla, which now writes
- * {@code setDeltaMovement(vec3.x, Math.max((double) getJumpPower(), vec3.y), vec3.z)}: the jump is
- * still the last thing that touches the vertical velocity inside the method, so the boost
+ * <p>Verified against 1.21.6's vanilla with {@code javap}: {@code jumpFromGround} still ends in the
+ * three-argument {@code setDeltaMovement(double, double, double)} - the jump is the last thing that
+ * touches the vertical velocity inside the method, so the boost
  * {@code ChargeJump} applies from {@code onStartInLocalClient} (after {@code LivingEntity#travel})
  * still has to be followed by this TAIL hook rather than being applied before the jump. The
  * injection point is unchanged; nothing was moved back to HEAD.

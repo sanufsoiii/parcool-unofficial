@@ -32,7 +32,7 @@ import java.util.List;
 
 public class ZiplineRopeItem extends Item {
     // 1.21.1's `RopeColor` (a vanilla `ItemColor`) moved to
-    // `client/registry/ItemColors.ZiplineRopeItemTintSource`: 1.21.11 resolves item tints from the
+    // `client/registry/ItemColors.ZiplineRopeItemTintSource`: 1.21.6 resolves item tints from the
     // model JSON through a codec registry, and a client-only tint type cannot live on this class
     // because `Items` - and therefore this one - is loaded on a dedicated server.
 
@@ -50,7 +50,7 @@ public class ZiplineRopeItem extends Item {
     }
 
     @Override
-    // 1.21.11 collects tooltip lines through a Consumer and hands over a TooltipDisplay (which can
+    // 1.21.6 collects tooltip lines through a Consumer and hands over a TooltipDisplay (which can
     // hide components from the tooltip) instead of a mutable List.
     public void appendHoverText(ItemStack stack, @Nonnull TooltipContext context, TooltipDisplay display,
                                 @Nonnull Consumer<Component> lines, @Nonnull TooltipFlag tooltipFlag) {

@@ -23,8 +23,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ArgumentTypeInfos.class)
 public abstract class ArgumentTypeInfosMixin {
 
-    // 1.21.1 kept this private, 1.21.11 made it public static; a shadow may not narrow access, and
-    // the access widener entry the method used to need is gone with it.
+    // Declared public because 1.21.6 still keeps the method private and the access widener entry in
+    // common/src/main/resources/parcool.accesswidener - mirrored by the line in
+    // neoforge/src/main/resources/META-INF/accesstransformer.cfg - is what makes it public in the
+    // game. A shadow may widen the target's access but never narrow it, so "public" is the only
+    // declaration that is correct here, and Loom's validateAccessWidener fails the build if that
+    // entry ever goes stale.
     @Shadow
     public static <A extends ArgumentType<?>, T extends ArgumentTypeInfo.Template<A>>
     ArgumentTypeInfo<A, T> register(Registry<ArgumentTypeInfo<?, ?>> registry,

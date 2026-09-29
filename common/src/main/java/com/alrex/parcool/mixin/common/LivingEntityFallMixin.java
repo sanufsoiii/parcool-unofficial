@@ -14,14 +14,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * Replaces {@code LivingEvent.LivingFallEvent}, which has no Architectury counterpart.
  *
- * <p>{@code LivingEntity#causeFallDamage(double, float, DamageSource)} (1.21.11 widened the fall
- * distance from {@code float} to {@code double}) delegates to
+ * <p>{@code LivingEntity#causeFallDamage(double, float, DamageSource)} (1.21.5 widened the fall
+ * distance from {@code float} to {@code double}, so 1.21.6 already has it) delegates to
  * {@code super.causeFallDamage}, then computes the amount with {@code calculateFallDamage} and
  * applies it with {@code hurt(source, amount)}. Two hooks reproduce the NeoForge event exactly:
  * <ul>
  *     <li>HEAD + {@code cancellable} for {@link CompatEvents.LivingFallEvent#isCanceled()};</li>
- *     <li>a redirect of the single {@code hurt} call (which 1.21.11 turned into a final
- *     {@code void hurt(DamageSource, float)}) for
+ *     <li>a redirect of the single {@code hurt} call - a {@code final void hurt(DamageSource, float)}
+ *     since 1.21.2, and {@code javap} confirms the call {@code causeFallDamage} makes is that one
+ *     ({@code invokevirtual} at offset 45) - for
  *     {@link CompatEvents.LivingFallEvent#getDamageMultiplier()}. Redirecting {@code hurt} rather
  *     than {@code calculateFallDamage} keeps the fall sound and the method's return value intact
  *     and avoids needing access to the protected damage formula.</li>
@@ -50,7 +51,7 @@ public abstract class LivingEntityFallMixin {
         this.parcool$fallDamageMultiplier = event.getDamageMultiplier();
     }
 
-    // 1.21.11 split Entity#hurt into a final void hurt(...) plus hurtOrSimulate/hurtServer; the call
+    // 1.21.6 split Entity#hurt into a final void hurt(...) plus hurtOrSimulate/hurtServer; the call
     // LivingEntity#causeFallDamage makes is hurt(...), so the redirect target and the handler's return
     // type follow it to void.
     @Redirect(

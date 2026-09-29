@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 /**
  * Reaches {@code BlockEntityType}'s private factory.
  *
- * <p>1.21.11 removed {@code BlockEntityType.Builder} and left {@code register(String, factory, blocks)}
+ * <p>1.21.6 removed {@code BlockEntityType.Builder} and left {@code register(String, factory, blocks)}
  * private, so a mod has no public way to build a type - while {@code LevelChunk#setBlockState} still
  * creates block entities through {@code EntityBlock#newBlockEntity}, i.e. through the block, and
  * {@code BlockEntity} still carries its {@code BlockEntityType} for the network and validity checks.

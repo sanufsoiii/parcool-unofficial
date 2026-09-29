@@ -138,7 +138,7 @@ public abstract class Action {
 	}
 
     /**
-     * The status-bar hooks take a plain {@link Player}: 1.21.11's verifier resolves the parameter type
+     * The status-bar hooks take a plain {@link Player}: 1.21.6's verifier resolves the parameter type
      * when it checks that a subclass really overrides this method, and {@code Actions}' static
      * initialiser is reached on a dedicated server - so a {@code LocalPlayer} parameter made the server
      * die with "Attempted to load class net.minecraft.client.player.LocalPlayer which is not present on

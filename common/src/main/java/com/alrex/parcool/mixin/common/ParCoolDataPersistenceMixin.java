@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Player.class)
 public abstract class ParCoolDataPersistenceMixin {
 
-    // 1.21.11's player save hooks are ValueOutput / ValueInput based. ParCool's persistent slots are
+    // 1.21.6's player save hooks are ValueOutput / ValueInput based. ParCool's persistent slots are
     // small and flat, so they are written as one NBT compound under a single key - which keeps the
     // on-disk key ({@code parcool}) and the round trip identical to 1.21.1. The key itself lives in
     // ParCoolData#ROOT_TAG; a second copy of it here was never read by anything.

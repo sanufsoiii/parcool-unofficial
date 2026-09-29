@@ -131,6 +131,13 @@ target in this tree must be caught (it is).
 * **`Limitations` filename validation.** PROMPT.md claims 1.21.11 removed it. Re-checked: the two
   trees are byte-identical here, the validation **is** present in both, and it is present here too.
   Nothing to do — but the brief is wrong on this point.
+* Every "1.21.11" in a code comment was renumbered to "1.21.6" — the comments name the *target*
+  version, per the convention of both reference trees — except four genuine historical cross-references
+  (`RenderTypes`' "halfway between the 1.21.1 and the 1.21.11 shape", `KeyMappingMixin`' "1.21.11 widened
+  it to protected", and the two in `PlayerMixin` about `causeExtraKnockback` being a 1.21.11
+  extraction). `ArgumentTypeInfosMixin`'s comment was wrong in a way worth recording: the 1.21.11 tree
+  says the method *became* public there and that the access widener entry is therefore "gone with it".
+  In 1.21.6 it is still private, so the widener entry is required and the shadow must be `public`.
 * The 25 unused imports are upstream (present in both reference trees); only imports this port
   introduced were removed.
 
@@ -141,8 +148,8 @@ SUCCESSFUL**, no `Cannot remap` line, `checkCommonLoaderIndependence` passes, 29
 resolve. Published:
 
 ```
-bf1f1e8eb51bcb3ae4528cb4edcf999d282b26169ad6bd7b3e5ce3af43a5c5f5  0.1-mc1.21.6fabric-3.4.3.3.jar
-88ba0b488c1229257e989b6dc1b1632edfffff899c717dcf47f4af4a0d1800ea  0.1-mc1.21.6neoforge-3.4.3.3.jar
+effe92a4af8f623852856d1a515ab590f3341c9047067342b8f1062b880afb68  0.1-mc1.21.6fabric-3.4.3.3.jar
+80d1dcb4ae6c4d867dbf75a0def9978f66a9ddc6c9d7b48d61c4db9b794af54b  0.1-mc1.21.6neoforge-3.4.3.3.jar
 ```
 
 Verified in the jars by inspection: the Fabric one carries `accessWidener v2 intermediary`, contains

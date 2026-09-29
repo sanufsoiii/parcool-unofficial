@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 /**
  * Exposes {@code ItemTintSources}' private id mapper.
  *
- * <p>1.21.11 resolves every item model tint through a codec keyed by an {@link ResourceLocation}, and the
+ * <p>1.21.6 resolves every item model tint through a codec keyed by an {@link ResourceLocation}, and the
  * mapper is a private static {@link LateBoundIdMapper} that only {@code ItemTintSources#bootstrap}
  * (vanilla's eight entries) writes to. There is no public registration API on either loader any more -
  * Architectury 19 removed {@code ColorHandlerRegistry.registerItemColors} - so ParCool's rope tint

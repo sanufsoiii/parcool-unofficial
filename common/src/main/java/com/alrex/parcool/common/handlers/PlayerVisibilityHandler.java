@@ -11,7 +11,7 @@ public class PlayerVisibilityHandler {
      * NeoForge's variant has no Architectury counterpart, so the factor is applied by
      * {@code mixin.common.PlayerInteractionVisibilityMixin}, which injects into
      * {@code LivingEntity#getVisibilityPercent} - the method NeoForge fired the event from, and the
-     * only visibility hook 1.21.11 still has.
+     * only visibility hook 1.21.6 still has.
      */
     public static boolean isHiddenFrom(Entity viewer, Player target) {
         Parkourability parkourability = Parkourability.get(target);

@@ -12,7 +12,7 @@ import javax.annotation.Nullable;
 public class ZiplineInfo {
 
     /**
-     * 1.21.11's block entity save hooks speak {@code ValueOutput}/{@code ValueInput} rather than
+     * 1.21.6's block entity save hooks speak {@code ValueOutput}/{@code ValueInput} rather than
      * {@code CompoundTag}, so the connection entry is stored through a codec. The compound form is
      * still what {@link #save()} and {@link #load(Tag)} produce, keeping the on-disk layout identical.
      */
