@@ -1,0 +1,24 @@
+pluginManagement {
+	repositories {
+		maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+		maven { name = 'Architectury'; url = 'https://maven.architectury.dev/' }
+		maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases/' }
+		mavenCentral()
+		gradlePluginPortal()
+	}
+}
+
+plugins {
+	// Loom 1.7.x is the line that configures Minecraft 1.21.x; 1.17.x dropped support for the
+	// 1.21.2-era NeoForge/Minecraft pair this port targets. Its mixin annotation processor is the
+	// legacy one, so common/build.gradle has to ask for `useLegacyMixinAp = false` explicitly.
+	id 'dev.architectury.loom' version '1.7.435' apply false
+	id 'architectury-plugin' version '3.5.170' apply false
+	id 'net.neoforged.moddev' version '1.0.24' apply false
+}
+
+rootProject.name = 'parcool-architectury'
+
+include 'common'
+include 'fabric'
+include 'neoforge'
