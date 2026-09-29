@@ -258,3 +258,24 @@ sampler and uniform block. A pipeline whose declared uniform set does not match 
 actually uses fails to compile at first draw, and nothing in this build would catch it. Treat a first
 `:fabric:runClient` with a zipline in the world as the remaining step before shipping these jars to a
 player.
+
+## 10. Published artifacts
+
+```
+0.1-mc1.21.5fabric-3.4.3.3.jar     sha256 7ad6f3000db0f4c987dcfcc2d8d2de54dc635a1c884592da144f71dea4947b3d
+0.1-mc1.21.5neoforge-3.4.3.3.jar   sha256 78ade57a5d2afc7d942f09938d7b3e35170659b601fa1c464227f581ff278d81
+```
+
+copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
+
+## 11. The mixin check, mechanically
+
+The 49 mixin references in this tree (every `@Mixin` target, every `@Inject`/`@Redirect`/
+`@WrapWithCondition` `method =` with and without an explicit descriptor, every `@At` `INVOKE` target
+including the two that name an inherited member - `LivingEntity;hurt` and `Player;setSprinting` -,
+every `@Shadow`, and every `@Accessor`/`@Invoker` name) were resolved against the 1.21.5 mojmap jar
+by script, name **and** descriptor, walking supertypes for inherited members. A second pass checked
+the 18 inject/redirect/wrap handler arities against the arity of the method they target, which is the
+check that catches the `KeyboardInputMixin` bug of §5.1 - the Loom annotation processor does neither.
+`parcool-common.mixins.json` lists exactly the 29 mixin classes that exist on disk, no more and no
+fewer, with `defaultRequire: 1`.
