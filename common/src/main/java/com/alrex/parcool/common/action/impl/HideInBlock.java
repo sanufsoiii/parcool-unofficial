@@ -343,7 +343,7 @@ public class HideInBlock extends Action {
                 for (int x = minX; x <= maxX; x++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (!world.isLoaded(pos)) break;
-                    // 1.21.11 moved ParticleEngine#destroy to ClientLevel#addDestroyBlockEffect; it is
+                    // 1.21.7 moved ParticleEngine#destroy to ClientLevel#addDestroyBlockEffect; it is
                     // the same terrain-particle burst over the block's shape.
                     if (world instanceof net.minecraft.client.multiplayer.ClientLevel clientLevel) {
                         clientLevel.addDestroyBlockEffect(pos, world.getBlockState(pos));

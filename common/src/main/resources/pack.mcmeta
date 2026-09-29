@@ -2,8 +2,6 @@
     "pack": {
         "description": "ParCool mod resources",
         "pack_format": 81,
-        "min_format": 81,
-        "max_format": 81,
-        "supported_formats": [81, 81]
+        "supported_formats": [64, 81]
     }
 }

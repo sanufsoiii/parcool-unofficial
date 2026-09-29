@@ -13,7 +13,7 @@
   "parcool.patchouli.guide.entry.aboutParCool": "Hakkında",
   "parcool.patchouli.guide.entry.credit": "Yapanlar",
   "itemGroup.ParCool": "ParCool!",
-  "key.category.parcool": "ParCool",
+  "key.categories.parcool": "ParCool",
   "key.parcool.Breakfall": "Takla",
   "key.parcool.ClimbPoles": "Direğe Tırmanma",
   "key.parcool.ClingToCliff": "Uçuruma Tırmanmak",
@@ -66,7 +66,5 @@
   "parcool.command.message.success.setPermissionOfAction": " %d Oyuncusunun %s Aksiyonunu %d 'ye çektiniz ",
   "parcool.command.message.success.setLimitationToDefault": " %d Oyuncunun Limitlerini Normale Çektiniz",
   "parcool.command.message.success.enableLimitation": "Açtınız %d Oyuncunun Bireysel Limitlerini",
-  "parcool.command.message.success.disableLimitation": "Kapattınız %d Oyuncunun Bireysel Limitlerini",
-  "item.parcool.wooden_zipline_hook": "Wooden Zipline Hook",
-  "item.parcool.iron_zipline_hook": "Iron Zipline Hook"
+  "parcool.command.message.success.disableLimitation": "Kapattınız %d Oyuncunun Bireysel Limitlerini"
 }

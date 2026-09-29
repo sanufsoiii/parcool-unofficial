@@ -17,13 +17,13 @@ import net.minecraft.world.item.alchemy.Potions;
  * <p>
  * The mixes are now applied through {@link #addMixes(PotionBrewing.Builder)}, which is invoked from
  * {@code mixin.common.PotionBrewingBuilderMixin} on {@code PotionBrewing.Builder#build} TAIL. That
- * hook is vanilla and therefore behaves identically on both loaders. 1.21.11 calls the builder from
+ * hook is vanilla and therefore behaves identically on both loaders. 1.21.7 calls the builder from
  * {@code MinecraftServer}'s constructor, so the registry entries are long since frozen and complete.
  */
 public class ParCoolBrewingRecipe {
 
     /**
-     * The mixes take {@code Holder<Potion>} in 1.21.11, and the holder ends up in a synced
+     * The mixes take {@code Holder<Potion>} in 1.21.7, and the holder ends up in a synced
      * {@code PotionContents} component, so it has to be the registry holder - a
      * {@code Holder.direct(...)} would have no key to serialize.
      */

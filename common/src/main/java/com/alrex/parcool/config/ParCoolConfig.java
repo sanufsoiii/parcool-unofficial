@@ -1023,7 +1023,7 @@ public class ParCoolConfig {
 	 *
 	 * <p>This runs on a dedicated server too, and it initialises the client half, which is what
 	 * {@code Actions} and the animator classes are reached through. That is harmless: the classes
-	 * involved are enums and class literals (ldc), which 1.21.11's verifier does not resolve, and the
+	 * involved are enums and class literals (ldc), which the JVM verifier does not resolve, and the
 	 * arrays are sized from {@code Actions.LIST}, not from a client-only value. It is written down
 	 * because the claim in common/build.gradle - that every client-only entry point is guarded by
 	 * {@code Platform.getEnvironment() == Env.CLIENT} - is not enforced anywhere in the code, and the

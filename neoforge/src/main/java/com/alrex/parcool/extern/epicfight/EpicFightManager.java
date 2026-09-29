@@ -24,7 +24,7 @@ public class EpicFightManager extends ModManager {
     }
 
     public IParCoolStaminaHandler newStaminaHandlerFor(Player player) {
-        // EpicFight has no 1.21.11 build, so a client that asks for EPIC_FIGHT stamina reaches this
+        // EpicFight has no 1.21.7 build, so a client that asks for EPIC_FIGHT stamina reaches this
         // without EpicFight on the classpath. Handing out the handler would then NoClassDefFoundError as
         // soon as its getPlayerPatch() signature is resolved.
         if (isEpicFightUsable() && isUsingEpicFightStamina(Parkourability.get(player))) {

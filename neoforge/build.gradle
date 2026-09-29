@@ -109,19 +109,27 @@ dependencies {
 	// shipping a second copy of MixinExtras is what the loaders' bundled one would conflict with.
 	compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
-	// Optional integrations, and the only jars that had to move with the port:
-	//   Paraglider       7794499  Paraglider-neoforge-21.11.0-beta.6   (MC 1.21.11)
-	//   ShoulderSurfing  8950509  ShoulderSurfing-NeoForge-1.21.11-5.1.1
+	// Optional integrations, and the only jars that had to move with the port. None of the four
+	// publishes a 1.21.7 build, so each is compiled against the newest build that is still on the
+	// 1.21.x side of its own API; all of them are compileOnly and report themselves absent at runtime
+	// when the mod is missing or is a different build (see ModManager#isInstalled):
+	//   Paraglider       6739612  Paraglider for MC 1.21.5. The 1.21.11 build (7794499) cannot be
+	//                          used: Paraglider's own bytecode references net.minecraft.resources.
+	//                          Identifier, which does not exist in 1.21.7, so the plugin API's
+	//                          ResourceLocation-typed state ids would not even link.
+	//   EpicFight        7489617  the 1.21.1 line, still the newest release
 	//   BetterThirdPerson 6455836 the newest NeoForge build (1.21.8)
-	// EpicFight has no 1.21.11 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
-	// latest release), so extern/epicfight is excluded from compilation - see sourceSets below.
+	//   ShoulderSurfing  6496668  the [1.21,) build, the same one :common compiles against
 	// Patchouli is only an optional book dependency and is never referenced from source.
-	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7794499"
+	parcoolIntegrationsCompile "curse.maven:paraglider-289240:6739612"
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:7489617"
 	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
-	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:8950509"
+	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6496668"
 
-	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7794499"
+	// Paraglider is the only integration the packaged jar actually needs at runtime: its
+	// `@ParagliderPlugin` class is discovered by Paraglider's own plugin loader, so without the jar in
+	// mods/ the plugin entry point is simply absent.
+	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:6739612"
 }
 
 tasks.named('compileJava') {
