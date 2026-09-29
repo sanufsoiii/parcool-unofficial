@@ -153,8 +153,12 @@ session still has to cover, and it is deliberately the same list PROMPT.md phase
       table, so the repair is required, not dead code.
 - [ ] One action of each family: wall run, wall jump, slide, roll, dodge, vault, hide-in-block,
       zipline ride, stamina HUD, the settings screen.
-- [ ] Both recipes that use the string ingredient form actually load (`/recipe give @s
-      parcool:zipline_rope`); a bad ingredient form is a datapack error, not a crash.
+- [ ] All five ParCool recipes actually load. Two things in that file are only checked by the
+      datapack loader, not by javac: the *string* ingredient form (`"minecraft:chain"`,
+      `"#minecraft:logs"` — 1.21.6 rejects the `{"item": …}` object form) and the mandatory
+      `"category"` field. Both were wrong in the base tree at some point; the log line to watch for
+      is `Parsing error loading recipe parcool:…: Missing field category` or
+      `Failed to parse recipe`. `/recipe give @s parcool:zipline_rope` is the quick check.
 - [ ] The camera roll in `CameraAnglesMixin` looks right — it is the one hook whose visual result is
       new code rather than a direct translation.
 - [ ] Two clients on one server see each other's animations.

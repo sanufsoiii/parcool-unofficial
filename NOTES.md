@@ -51,6 +51,7 @@ already applied**, so it lies about visibility — `javap` is the only authority
 | Entity render states | **new** | `EntityRenderer<T, S extends EntityRenderState>`, `createRenderState` / `extractRenderState(T,S,float)` / `render(S,PoseStack,MultiBufferSource,int)`. **Package is `net.minecraft.client.renderer.entity.state`, and there is no `AvatarRenderState`, no `AvatarRenderer` and no `SubmitNodeCollector`** — those are 1.21.9+/1.21.11. This is the `PlayerRenderState` shape the 1.21.4 tree already uses. |
 | `KeyMapping` | **old** | category is a `String`; `MAP` is `Map<Key, KeyMapping>`; there is no `KeyMapping.Category` record. → `KeyBindings#restoreVanillaBindings` and its `KeyRecorder#onClientTick` driver are **required**, taken from the 1.21.4 tree. |
 | `KeyMapping#key` | **private** | `@Shadow private`, not `protected` (1.21.11 widened it) |
+| Recipe `category` | **required since 1.21.5** | `Codec.fieldOf("category")` in all three recipe serializers; ParCool had none, see §3.7 |
 | Recipe ingredients | **string form** | `Ingredient.CODEC` = `HolderSetCodec.create(Registries.ITEM, Item.CODEC, false)`, which is `Codec.either(TagKey.hashedCodec, ExtraCodecs.compactListCodec(...))` → accepts `"minecraft:chain"`, `"#minecraft:logs"` and `["a","b"]`, and **rejects** `{"item": …}` / `{"tag": …}`. Vanilla 1.21.6 `data/minecraft/recipe/chain.json` writes `"I": "minecraft:iron_ingot"`. The `result` object is the new `{"count", "id"}` form. |
 | `isInWaterOrBubble` | removed | `EntityUtil` keeps the 1.21.11 re-implementation |
 | `Player#canInteractWithEntity` | **present** (`(Entity,double)` and `(AABB,double)`) | `PlayerInteractionVisibilityMixin` uses the 1.21.4 form, not `getVisibilityPercent` |
@@ -91,6 +92,15 @@ already applied**, so it lies about visibility — `javap` is the only authority
    wrong descriptor outright, which is how the difference was caught.
 6. **`PlayerMixin` targeted a method that does not exist in 1.21.6** (`causeExtraKnockback`,
    a 1.21.11 extraction). Retargeted to `attack`, with a comment saying why.
+7. **No ParCool recipe had a `category`, so the whole crafting tree was dead.** 1.21.5 added the
+   crafting-book category to the recipe codecs, and it is `Codec.fieldOf` — i.e. **required** — in
+   `ShapedRecipe.Serializer`, `ShapelessRecipe.Serializer` *and* `CustomRecipe.Serializer` (all three
+   confirmed with `javap` on the 1.21.6 jar, and the same is true on 1.21.4). All five recipes were
+   still the 1.21.1 shape, so every one of them was rejected at datapack load with
+   `Missing field category`: no zipline rope, no hook, no reset, no dyeing. `"category": "misc"` was
+   added to all five — that is what vanilla itself uses for `chain` (the rope's own ingredient) and
+   for dyeing recipes. **This bug is still present in the 1.21.4 and 1.21.11 trees; it was inherited
+   from 1.21.1, where the field did not exist yet.**
 
 ### Mixin targets, verified statically
 
@@ -131,8 +141,8 @@ SUCCESSFUL**, no `Cannot remap` line, `checkCommonLoaderIndependence` passes, 29
 resolve. Published:
 
 ```
-d53483bbe9f3ca795c62915d0fce6bea52866d82bf7d0e7106c9652736cccba9  0.1-mc1.21.6fabric-3.4.3.3.jar
-67ed925f1b0ed6b5e6a0746c1b9f44352e3aeace1a15259b99c01aeab9407061  0.1-mc1.21.6neoforge-3.4.3.3.jar
+bf1f1e8eb51bcb3ae4528cb4edcf999d282b26169ad6bd7b3e5ce3af43a5c5f5  0.1-mc1.21.6fabric-3.4.3.3.jar
+88ba0b488c1229257e989b6dc1b1632edfffff899c717dcf47f4af4a0d1800ea  0.1-mc1.21.6neoforge-3.4.3.3.jar
 ```
 
 Verified in the jars by inspection: the Fabric one carries `accessWidener v2 intermediary`, contains
