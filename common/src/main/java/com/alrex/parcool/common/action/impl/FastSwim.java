@@ -11,7 +11,7 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.config.ParCoolConfig;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
@@ -20,7 +20,7 @@ import com.alrex.parcool.platform.PlatformServices;
 import java.nio.ByteBuffer;
 
 public class FastSwim extends Action {
-    private static final Identifier FAST_SWIM_MODIFIER = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastswim");
+    private static final ResourceLocation FAST_SWIM_MODIFIER = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastswim");
     private double speedModifier = 0;
     private boolean toggleStatus;
 

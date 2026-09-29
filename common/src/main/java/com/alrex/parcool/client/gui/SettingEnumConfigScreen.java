@@ -1,6 +1,5 @@
 package com.alrex.parcool.client.gui;
 
-import net.minecraft.client.input.MouseButtonEvent;
 import com.alrex.parcool.common.data.client.LocalStamina;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
@@ -8,15 +7,15 @@ import com.alrex.parcool.common.info.ClientSetting;
 import com.alrex.parcool.common.network.payload.ClientInformationPayload;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.common.network.NetworkRegistries;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.chat.Component;
 import com.alrex.parcool.config.ConfigSpec;
 
 
 import java.util.List;
+import net.minecraft.network.chat.Component;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.player.LocalPlayer;
 
 public class SettingEnumConfigScreen extends ParCoolSettingScreen {
     private final EnumConfigSet<?>[] enumConfigList = new EnumConfigSet[]{
@@ -84,13 +83,13 @@ public class SettingEnumConfigScreen extends ParCoolSettingScreen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClicked) {
+    public boolean mouseClicked(double mouseX, double mouseY, int type) {
         for (Button button : enumConfigButtons) {
-            if (button.mouseClicked(event, doubleClicked)) {
+            if (button.mouseClicked(mouseX, mouseY, type)) {
                 return true;
             }
         }
-        return super.mouseClicked(event, doubleClicked);
+        return super.mouseClicked(mouseX, mouseY, type);
     }
 
     @Override

@@ -3,10 +3,9 @@ package com.alrex.parcool.client.sound;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.config.ParCoolConfig;
-import net.minecraft.client.Minecraft;
-import net.minecraft.world.entity.player.Player;
-
 import javax.annotation.Nullable;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.client.Minecraft;
 
 /**
  * Owns the single {@link ZiplineRideSoundInstance} that plays while the local player rides a rope.
@@ -32,7 +31,7 @@ public final class ZiplineRideSound {
         stop();
         try {
             if (!ParCoolConfig.Client.Booleans.EnableActionSounds.get()) return;
-            if (!player.level().isClientSide()) return;
+            if (!player.level().isClientSide) return;
             ZiplineRideSoundInstance instance =
                     new ZiplineRideSoundInstance(SoundEvents.ZIPLINE_RIDE.get(), player, speed);
             current = instance;
@@ -40,7 +39,7 @@ public final class ZiplineRideSound {
             // Read only after play(): AbstractSoundInstance#getVolume needs the resolved Sound, which
             // exists from here on and not before.
             ParCool.LOGGER.debug("[parcool] zipline ride sound started {} volume={} pitch={}",
-                    instance.getIdentifier(), instance.getVolume(), instance.getPitch());
+                    instance.getLocation(), instance.getVolume(), instance.getPitch());
         } catch (RuntimeException | LinkageError e) {
             current = null;
             ParCool.LOGGER.error("[parcool] zipline ride sound could not be started", e);

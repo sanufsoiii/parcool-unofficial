@@ -109,19 +109,24 @@ dependencies {
 	// shipping a second copy of MixinExtras is what the loaders' bundled one would conflict with.
 	compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
-	// Optional integrations, and the only jars that had to move with the port:
-	//   Paraglider       7794499  Paraglider-neoforge-21.11.0-beta.6   (MC 1.21.11)
-	//   ShoulderSurfing  8950509  ShoulderSurfing-NeoForge-1.21.11-5.1.1
-	//   BetterThirdPerson 6455836 the newest NeoForge build (1.21.8)
-	// EpicFight has no 1.21.11 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
-	// latest release), so extern/epicfight is excluded from compilation - see sourceSets below.
+	// Optional integrations, and the only jars that had to move with the port. None of the three
+	// publishes a 1.21.6 build, so each is compiled against the closest published line and the
+	// matching runtime guard reports it absent on a client that does not have it:
+	//   Paraglider       6739612  Paraglider-neoforge-21.5.2        (MC 1.21.5 - the release right
+	//                              before 1.21.6; Paraglider never shipped a 1.21.6 build)
+	//   ShoulderSurfing  6543497  ShoulderSurfing-NeoForge-1.21.4   (1.21.6 skipped; 1.21.4 and
+	//                              1.21.11 are the neighbouring lines, 1.21.4 is the closer API)
+	//   BetterThirdPerson 6455836 BetterThirdPerson-neoforge-1.21.5-1.9.0, which declares 1.21.6
+	// EpicFight's latest release is still the 1.21.1 line (21.17.3.1, file 8175609) and it is the
+	// one compiled against; EpicFightManager#isEpicFightUsable() is what keeps the integration from
+	// NoClassDefFoundError on a client without it.
 	// Patchouli is only an optional book dependency and is never referenced from source.
-	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7794499"
-	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:7489617"
+	parcoolIntegrationsCompile "curse.maven:paraglider-289240:6739612"
+	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8175609"
 	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
-	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:8950509"
+	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6543497"
 
-	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7794499"
+	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:6739612"
 }
 
 tasks.named('compileJava') {

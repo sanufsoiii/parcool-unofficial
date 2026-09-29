@@ -11,7 +11,7 @@ pluginManagement {
 plugins {
 	id 'dev.architectury.loom' version '1.17.493' apply false
 	id 'architectury-plugin' version '3.5.170' apply false
-	id 'net.neoforged.moddev' version '2.0.147' apply false
+	id 'net.neoforged.moddev' version '2.0.90' apply false
 }
 
 rootProject.name = 'parcool-architectury'

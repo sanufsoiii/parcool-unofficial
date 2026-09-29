@@ -1,12 +1,28 @@
 accessWidener v2 named
 
 # NeoForge exposes these via patches/ATs; on Fabric they need widening. Verified against the
-# mojmap 1.21.11 jar: LivingEntity#swimAmount / #swimAmountO and Entity#onGround are private there and
+# mojmap 1.21.6 jar: LivingEntity#swimAmount / #swimAmountO and Entity#onGround are private there and
 # Player#canPlayerFitWithinBlocksAndEntitiesWhen is protected.
 accessible field net/minecraft/world/entity/LivingEntity swimAmount F
 accessible field net/minecraft/world/entity/LivingEntity swimAmountO F
 accessible field net/minecraft/world/entity/Entity onGround Z
 
-# NeoForge widens these; ParCool calls them directly. 1.21.11 already made LevelResource's constructor
-# public, so only the Player helper still has to be widened.
+# NeoForge exposes ArgumentTypeInfos.registerByClass; vanilla keeps the equivalent private.
+accessible method net/minecraft/commands/synchronization/ArgumentTypeInfos register (Lnet/minecraft/core/Registry;Ljava/lang/String;Ljava/lang/Class;Lnet/minecraft/commands/synchronization/ArgumentTypeInfo;)Lnet/minecraft/commands/synchronization/ArgumentTypeInfo;
+
+# NeoForge widens these; ParCool calls them directly. 1.21.6 still keeps LevelResource's constructor
+# private, so both it and the Player helper have to be widened.
 accessible method net/minecraft/world/entity/player/Player canPlayerFitWithinBlocksAndEntitiesWhen (Lnet/minecraft/world/entity/Pose;)Z
+accessible method net/minecraft/world/level/storage/LevelResource <init> (Ljava/lang/String;)V
+
+# The zipline rope needs its own render types: the rope emits POSITION_COLOR_LIGHTMAP in QUADS and
+# has a culled and an unculled variant (the Enable3DRenderingForZipline config switch), which no
+# vanilla pipeline matches. 1.21.6 still uses the RenderStateShard model, so building the composite
+# state means touching RenderStateShard's shards and RenderType's factory - and both are non-public:
+# `RenderType.create(String, int, RenderPipeline, CompositeState)` is package-private (1.21.5 dropped
+# the VertexFormat/Mode/boolean overloads in favour of a RenderPipeline) and the shards are
+# `protected`. The NeoForge side gets the same three members through
+# neoforge/src/main/resources/META-INF/accesstransformer.cfg.
+accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;ILcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+accessible field net/minecraft/client/renderer/RenderStateShard NO_TEXTURE Lnet/minecraft/client/renderer/RenderStateShard$EmptyTextureStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard LIGHTMAP Lnet/minecraft/client/renderer/RenderStateShard$LightmapStateShard;

@@ -10,9 +10,11 @@ import org.spongepowered.asm.mixin.Shadow;
 @Mixin(KeyMapping.class)
 public abstract class KeyMappingMixin implements IKeyMappingDuck {
 
-    // 1.21.1 kept `key` private; 1.21.11 made it protected, and a shadow may not narrow access.
+    // 1.21.6 still keeps `key` private (1.21.11 widened it to protected). A shadow may widen the
+    // target's access but never narrow it, so `private` is the only declaration that is correct on
+    // both: it matches 1.21.6's private field and would still be valid if the field were protected.
     @Shadow
-    protected InputConstants.Key key;
+    private InputConstants.Key key;
 
     @Override
     public InputConstants.Key parcool$getKey() {

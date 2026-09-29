@@ -6,7 +6,7 @@ import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -23,7 +23,7 @@ public class Items {
      */
     private static Item.Properties properties(String name) {
         return new Item.Properties().setId(ResourceKey.create(
-                Registries.ITEM, Identifier.fromNamespaceAndPath(ParCool.MOD_ID, name)));
+                Registries.ITEM, ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, name)));
     }
 
     public static final RegistrySupplier<Item> WOODEN_ZIPLINE_HOOK = ITEMS.register("wooden_zipline_hook", () -> new BlockItem(Blocks.WOODEN_ZIPLINE_HOOK.get(), properties("wooden_zipline_hook")));

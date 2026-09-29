@@ -5,7 +5,7 @@ import dev.architectury.platform.Platform;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 
@@ -56,7 +56,7 @@ public class Attributes {
 
     private static Holder<Attribute> resolve(
             String id, String descriptionId, double defaultValue, double min, double max) {
-        Identifier key = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, id);
+        ResourceLocation key = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, id);
         if (Platform.isNeoForge()) {
             // Registered by :neoforge, so read the holder back instead of creating a second entry.
             return BuiltInRegistries.ATTRIBUTE.get(key)
