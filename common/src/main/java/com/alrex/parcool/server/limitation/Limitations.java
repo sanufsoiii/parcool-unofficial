@@ -117,7 +117,8 @@ public class Limitations {
                 continue;
             }
             for (File limitationGroup : limitationGroups) {
-                File[] limitationFiles = limitationGroup.listFiles((file) -> file.isFile() && file.canRead() && file.getName().endsWith(".json"));
+                File[] limitationFiles = limitationGroup.listFiles((file) -> file.isFile()
+                        && file.canRead() && file.getName().endsWith(".json"));
                 if (limitationFiles == null) {
                     ParCool.LOGGER.error("Cannot get Limitation files of '" + dir.getName() + "'");
                     continue;

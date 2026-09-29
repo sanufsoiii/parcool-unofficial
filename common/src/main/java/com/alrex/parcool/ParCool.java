@@ -1,6 +1,5 @@
 package com.alrex.parcool;
 
-import com.alrex.parcool.api.Attributes;
 import com.alrex.parcool.api.Effects;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.hud.HUDManager;
@@ -63,12 +62,12 @@ public class ParCool {
 
         Effects.registerAll();
         Potions.registerAll();
-        // NOTE: com.alrex.parcool.api.Attributes is deliberately *not* touched here. NeoForge freezes the
-        // built-in registries before the mod constructors run, so the two entries are registered by
-        // :neoforge's NeoForgeAttributes (a NeoForge DeferredRegister) and only *resolved* by Attributes
-        // - and a class whose static initialiser resolves a Holder cannot be loaded this early on
-        // NeoForge. On Fabric the loader's own entry point still calls Attributes.registerAll() inside the
-        // writable window; see ParCoolFabric.
+        // NOTE: com.alrex.parcool.api.Attributes is deliberately *not* touched here. 1.21.11 freezes the
+        // built-in registries before the NeoForge mod constructors run, so the two attributes are
+        // registered by :neoforge's NeoForgeAttributes (a NeoForge DeferredRegister) and only
+        // *resolved* by Attributes - and a class whose static initialiser resolves a Holder cannot be
+        // loaded this early on NeoForge. On Fabric the loader's own entry point still calls
+        // Attributes.registerAll() inside the writable window; see ParCoolFabric.
         SoundEvents.registerAll();
         Blocks.registerAll();
         Items.registerAll();

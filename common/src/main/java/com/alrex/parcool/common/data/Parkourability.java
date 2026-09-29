@@ -45,6 +45,19 @@ public class Parkourability {
         info = new ActionInfo();
 	}
 
+	public int getLastActionStateTick() {
+		return lastActionStateTick;
+	}
+
+	public void setLastActionStateTick(int tick) {
+		this.lastActionStateTick = tick;
+	}
+
+	/** True when at least one action believes it is running. */
+	public boolean hasAnyDoingAction() {
+		return actions.stream().anyMatch(Action::isDoing);
+	}
+
 	public <T extends Action> T get(Class<T> action) {
 		T value = (T) actionsMap.getOrDefault(action, null);
 		if (value == null) {
@@ -136,10 +149,6 @@ public class Parkourability {
 		return synchronizeTrialCount;
 	}
 
-	public void incrementSynchronizeTrialCount() {
-		synchronizeTrialCount = Math.min(synchronizeTrialCount + 1, MAX_SYNCHRONIZE_TRIAL_COUNT);
-	}
-
 	/**
 	 * Upper bound on the retry counter. Upstream had none: the counter was only ever compared against
 	 * 5 and kept being incremented, so it grew without limit for as long as a player stayed on a server
@@ -147,22 +156,13 @@ public class Parkourability {
 	 */
 	public static final int MAX_SYNCHRONIZE_TRIAL_COUNT = 5;
 
+	public void incrementSynchronizeTrialCount() {
+		synchronizeTrialCount = Math.min(synchronizeTrialCount + 1, MAX_SYNCHRONIZE_TRIAL_COUNT);
+	}
+
 	public void resetSynchronizeTrialCount() {
 		if (synchronizeTrialCount == 0) return;
 		synchronizeTrialCount = 0;
-	}
-
-	public int getLastActionStateTick() {
-		return lastActionStateTick;
-	}
-
-	public void setLastActionStateTick(int tick) {
-		this.lastActionStateTick = tick;
-	}
-
-	/** True when at least one action believes it is running. */
-	public boolean hasAnyDoingAction() {
-		return actions.stream().anyMatch(Action::isDoing);
 	}
 
 	public int getLimitationMissingTick() {

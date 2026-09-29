@@ -6,24 +6,25 @@ import com.alrex.parcool.common.entity.EntityTypes;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
 import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.common.zipline.ZiplineType;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MoverType;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     private static final EntityDataAccessor<BlockPos> DATA_START_POS;
@@ -121,10 +122,14 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
         return distanceSqr < Zipline.MAXIMUM_HORIZONTAL_DISTANCE * Zipline.MAXIMUM_HORIZONTAL_DISTANCE;
     }
 
-    @Nonnull
-    @Override
-    public AABB getBoundingBoxForCulling() {
-        if (cullingBB == null) return super.getBoundingBoxForCulling();
+    /**
+     * The custom culling box 1.21.1 kept in {@code Entity#getBoundingBoxForCulling()}. 1.21.2 moved
+     * that method onto {@code EntityRenderer} as {@code getBoundingBoxForCulling(T)}, so
+     * {@code ZiplineRopeRenderer} reads the box from here instead; the box and its {@code null}
+     * fallback are unchanged.
+     */
+    @Nullable
+    public AABB getCullingBoundingBox() {
         return cullingBB;
     }
 
@@ -140,6 +145,17 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
 
     @Override
     public void move(MoverType p_19973_, Vec3 p_19974_) {
+    }
+
+    /**
+     * 1.21.2 split {@code Entity#hurt} into a final client/server split: {@code hurt} is now
+     * {@code final void} and every entity implements {@code hurtServer}. The rope is a marker entity
+     * with no hitbox and no health, so it is invulnerable, exactly as it was when it simply had no
+     * {@code hurt} override in 1.21.1.
+     */
+    @Override
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
+        return false;
     }
 
     /*
@@ -198,7 +214,7 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     @Nonnull
     @Override
     public InteractionResult interact(Player player, InteractionHand p_19979_) {
-        return InteractionResult.sidedSuccess(player.level().isClientSide());
+        return player.level().isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
     }
 
     @Override
@@ -219,9 +235,9 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     public void addAdditionalSaveData(@Nonnull CompoundTag compoundNBT) {
         BlockPos startPos = getStartPos();
         BlockPos endPos = getEndPos();
-        // Six distinct keys: the old code wrote "Tile1_X" three times and "Tile2_X" three times, so
-        // only the X component of each end ever reached disk. Y and Z were silently overwritten, and
-        // readAdditionalSaveData - which reads all six - therefore reloaded every rope with
+        // Six distinct keys: the upstream code wrote "Tile1_X" three times and "Tile2_X" three times,
+        // so only the X component of each end ever reached disk. Y and Z were silently overwritten,
+        // and readAdditionalSaveData - which reads all six - therefore reloaded every rope with
         // Tile1_Y/Tile1_Z/Tile2_Y/Tile2_Z = 0, collapsing each zipline onto a 1x0x1 line after a
         // chunk unload/reload.
         compoundNBT.putInt("Tile1_X", startPos.getX());

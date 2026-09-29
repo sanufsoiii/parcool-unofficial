@@ -4,35 +4,68 @@ import com.alrex.parcool.client.renderer.RenderTypes;
 import com.alrex.parcool.common.entity.zipline.ZiplineRopeEntity;
 import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.config.ParCoolConfig;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import javax.annotation.Nonnull;
-import net.minecraft.world.level.LightLayer;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.entity.EntityRenderer;
+import javax.annotation.Nullable;
 
-
-public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity> {
-    private static final ResourceLocation TEXTURE_LOCATION = ResourceLocation.parse("textures/entity/arrow");
+/**
+ * The rope between two zipline hooks.
+ *
+ * <h2>What changed in 1.21.2</h2>
+ * {@code EntityRenderer} became state based: it extracts a render state from the entity
+ * ({@link #extractRenderState}) and then draws it ({@code render(S, PoseStack, MultiBufferSource, int)}).
+ * So the rope data is copied into {@link RopeRenderState} in {@code extractRenderState} and the
+ * geometry is emitted from {@link #render}. The third hook that moved with the rework is handled
+ * here too: {@code getBoundingBoxForCulling} left {@code Entity} and now lives on the renderer as
+ * {@code getBoundingBoxForCulling(T)} (it reads {@link ZiplineRopeEntity#getCullingBoundingBox()}).
+ * The vertex maths is untouched.
+ *
+ * <p>1.21.11 later replaced the draw call with a {@code submitCustomGeometry} hand-off to a
+ * {@code SubmitNodeCollector}; that class does not exist in 1.21.2, so the 1.21.2 renderer draws
+ * through the {@code MultiBufferSource} directly.
+ */
+public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity, ZiplineRopeRenderer.RopeRenderState> {
 
     public ZiplineRopeRenderer(EntityRendererProvider.Context p_i46179_1_) {
         super(p_i46179_1_);
     }
 
-    @Nonnull
     @Override
-    public ResourceLocation getTextureLocation(@Nonnull ZiplineRopeEntity ziplineRopeEntity) {
-        return TEXTURE_LOCATION;
+    public RopeRenderState createRenderState() {
+        return new RopeRenderState();
+    }
+
+    @Override
+    public void extractRenderState(ZiplineRopeEntity entity, RopeRenderState state, float partialTick) {
+        super.extractRenderState(entity, state, partialTick);
+        BlockPos start = entity.getStartPos();
+        BlockPos end = entity.getEndPos();
+        state.startPos = start;
+        state.endPos = end;
+        state.color = entity.getColor();
+        state.zipline = entity.getZipline();
+        state.render3d = ParCoolConfig.Client.Booleans.Enable3DRenderingForZipline.get();
+        // The light has to be sampled while the entity is still around: render() only sees
+        // the render state, so the four levels the vertex maths needs are resolved here, exactly the
+        // values 1.21.1 read inside render().
+        state.startBlockLight = getBlockLightLevel(entity, start);
+        state.endBlockLight = getBlockLightLevel(entity, end);
+        state.startSkyLight = entity.level().getBrightness(LightLayer.SKY, start);
+        state.endSkyLight = entity.level().getBrightness(LightLayer.SKY, end);
     }
 
     @Override
@@ -40,78 +73,78 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity> {
         return entity.shouldRender(x, y, z);
     }
 
-
+    /**
+     * 1.21.1's {@code Entity#getBoundingBoxForCulling()} override: the rope's own box reaches from hook
+     * to hook, which is far bigger than its 0.1 x 0.1 entity box, so without it the rope is culled as
+     * soon as the midpoint leaves the frustum.
+     */
+    @Nonnull
     @Override
-    public void render(@Nonnull ZiplineRopeEntity entity, float p_225623_2_, float partialTick, @Nonnull PoseStack matrixStack, @Nonnull MultiBufferSource multiBufferSource, int p_225623_6_) {
-        renderRope(entity, partialTick, matrixStack, multiBufferSource);
+    protected AABB getBoundingBoxForCulling(@Nonnull ZiplineRopeEntity entity) {
+        AABB culling = entity.getCullingBoundingBox();
+        return culling == null ? super.getBoundingBoxForCulling(entity) : culling;
     }
 
-    private void renderRope(ZiplineRopeEntity entity, float partialTick, PoseStack matrixStack, MultiBufferSource multiBufferSource) {
-        BlockPos start = entity.getStartPos();
-        BlockPos end = entity.getEndPos();
-        // The null test has to run before getZipline() is dereferenced: a rope entity whose start/end
-        // have not been delivered yet has a null zipline and used to NPE inside the world render, which
-        // kills the frame.
-        if (entity.getZipline() == null || (start == BlockPos.ZERO && end == BlockPos.ZERO)) return;
+    @Override
+    public void render(RopeRenderState state, PoseStack matrixStack, MultiBufferSource multiBufferSource,
+                       int packedLight) {
+        BlockPos start = state.startPos;
+        BlockPos end = state.endPos;
+        if (state.zipline == null || (start == BlockPos.ZERO && end == BlockPos.ZERO)) return;
 
-        int color = entity.getColor();
+        int color = state.color;
         float r = ((0xFF0000 & color) >> 16) / 255f;
         float g = ((0x00FF00 & color) >> 8) / 255f;
         float b = (0x0000FF & color) / 255f;
 
-        Vec3 entityPos = entity.position();
-        Zipline zipline = entity.getZipline();
+        Vec3 entityPos = new Vec3(state.x, state.y, state.z);
+        Zipline zipline = state.zipline;
         Vec3 startPos = zipline.getStartPos();
         Vec3 startPosOffset = startPos.subtract(entityPos);
         Vec3 endOffsetFromStart = zipline.getOffsetToEndFromStart();
 
-        boolean render3d = ParCoolConfig.Client.Booleans.Enable3DRenderingForZipline.get();
+        boolean render3d = state.render3d;
+
+        int startBlockLightLevel = state.startBlockLight;
+        int endBlockLightLevel = state.endBlockLight;
+        int startSkyBrightness = state.startSkyLight;
+        int endSkyBrightness = state.endSkyLight;
+
+        int divisionCount = Math.min((int) Math.ceil(endOffsetFromStart.length() / 0.6), 24);
+        float invLengthSqrtXZ = (float) Mth.fastInvSqrt(endOffsetFromStart.x() * endOffsetFromStart.x() + endOffsetFromStart.z() * endOffsetFromStart.z());
+        float unitLengthX = (float) (endOffsetFromStart.x() * invLengthSqrtXZ);
+        float unitLengthZ = (float) (endOffsetFromStart.z() * invLengthSqrtXZ);
 
         matrixStack.pushPose();
-        {
-            matrixStack.translate(startPosOffset.x(), startPosOffset.y(), startPosOffset.z());
-            var vertexConsumer = render3d ?
-                    multiBufferSource.getBuffer(RenderTypes.ZIPLINE_3D) :
-                    multiBufferSource.getBuffer(RenderTypes.ZIPLINE_2D);
-            Matrix4f transformMatrix = matrixStack.last().pose();
+        matrixStack.translate(startPosOffset.x(), startPosOffset.y(), startPosOffset.z());
+        Matrix4f transformMatrix = matrixStack.last().pose();
+        VertexConsumer vertexConsumer = multiBufferSource.getBuffer(render3d ? RenderTypes.ZIPLINE_3D : RenderTypes.ZIPLINE_2D);
 
-            int startBlockLightLevel = this.getBlockLightLevel(entity, start);
-            int endBlockLightLevel = this.getBlockLightLevel(entity, end);
-            int startSkyBrightness = entity.level().getBrightness(LightLayer.SKY, start);
-            int endSkyBrightness = entity.level().getBrightness(LightLayer.SKY, end);
+        for (int i = 0; i < divisionCount; i++) {
+            float colorScale = i % 2 == 0 ? 1f : 0.8f;
 
-
-            int divisionCount = Math.min((int) Math.ceil(endOffsetFromStart.length() / 0.6), 24);
-            float invLengthSqrtXZ = (float) Mth.fastInvSqrt(endOffsetFromStart.x() * endOffsetFromStart.x() + endOffsetFromStart.z() * endOffsetFromStart.z());
-            float unitLengthX = (float) (endOffsetFromStart.x() * invLengthSqrtXZ);
-            float unitLengthZ = (float) (endOffsetFromStart.z() * invLengthSqrtXZ);
-            for (int i = 0; i < divisionCount; i++) {
-                float colorScale = i % 2 == 0 ? 1f : 0.8f;
-
-                for (int j = 0; j < 2; j++) {
-                    if (render3d) {
-                        renderRopeSingleBlock3D(
-                                transformMatrix, vertexConsumer,
-                                zipline,
-                                i, divisionCount,
-                                unitLengthX, unitLengthZ,
-                                startBlockLightLevel, endBlockLightLevel,
-                                startSkyBrightness, endSkyBrightness,
-                                r * colorScale, g * colorScale, b * colorScale//,
-                                //j % 2 == 0
-                        );
-                    } else {
-                        renderRopeSingleBlock2D(
-                                transformMatrix, vertexConsumer,
-                                zipline,
-                                i, divisionCount,
-                                unitLengthX, unitLengthZ,
-                                startBlockLightLevel, endBlockLightLevel,
-                                startSkyBrightness, endSkyBrightness,
-                                r * colorScale, g * colorScale, b * colorScale,
-                                j % 2 == 0
-                        );
-                    }
+            for (int j = 0; j < 2; j++) {
+                if (render3d) {
+                    renderRopeSingleBlock3D(
+                            transformMatrix, vertexConsumer,
+                            zipline,
+                            i, divisionCount,
+                            unitLengthX, unitLengthZ,
+                            startBlockLightLevel, endBlockLightLevel,
+                            startSkyBrightness, endSkyBrightness,
+                            r * colorScale, g * colorScale, b * colorScale
+                    );
+                } else {
+                    renderRopeSingleBlock2D(
+                            transformMatrix, vertexConsumer,
+                            zipline,
+                            i, divisionCount,
+                            unitLengthX, unitLengthZ,
+                            startBlockLightLevel, endBlockLightLevel,
+                            startSkyBrightness, endSkyBrightness,
+                            r * colorScale, g * colorScale, b * colorScale,
+                            j % 2 == 0
+                    );
                 }
             }
         }
@@ -215,12 +248,12 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity> {
             float zOffset = -unitLengthX * width / 1.41421356f;
             vertexList[4 * i] = new Vector3f(
                     (midPoint.x() - xBaseOffset + xOffset),
-                    (midPoint.y() + yOffset),
+                    midPoint.y() + yOffset,
                     (midPoint.z() - zBaseOffset + zOffset)
             );
             vertexList[4 * i + 1] = new Vector3f(
                     (midPoint.x() - xBaseOffset - xOffset),
-                    (midPoint.y() + yOffset),
+                    midPoint.y() + yOffset,
                     (midPoint.z() - zBaseOffset - zOffset)
             );
             vertexList[4 * i + 2] = new Vector3f(
@@ -251,5 +284,24 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity> {
             vertexConsumer.addVertex(transformMatrix, vertexList[6].x(), vertexList[6].y(), vertexList[6].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
             vertexConsumer.addVertex(transformMatrix, vertexList[7].x(), vertexList[7].y(), vertexList[7].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
         }
+    }
+
+    /**
+     * The rope's per-frame data. 1.21.2 entity renderers are state based - the renderer is shared, the
+     * state is not - so everything the geometry needs is copied out of the entity first.
+     */
+    public static class RopeRenderState extends net.minecraft.client.renderer.entity.state.EntityRenderState {
+        @Nullable
+        public BlockPos startPos;
+        @Nullable
+        public BlockPos endPos;
+        public int color;
+        public boolean render3d;
+        public int startBlockLight;
+        public int endBlockLight;
+        public int startSkyLight;
+        public int endSkyLight;
+        @Nullable
+        public Zipline zipline;
     }
 }

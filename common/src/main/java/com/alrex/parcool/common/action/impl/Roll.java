@@ -9,10 +9,11 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.VectorUtil;
-import java.nio.ByteBuffer;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.client.player.LocalPlayer;
+
+import java.nio.ByteBuffer;
 
 public class Roll extends Action {
 	private int creativeCoolTime = 0;
@@ -51,20 +52,21 @@ public class Roll extends Action {
 
 	@Override
 	public boolean canStart(Player player, Parkourability parkourability, ByteBuffer startInfo) {
+		// Plain cast, not a pattern match: a checkcast resolves LocalPlayer only where it is executed,
+		// and canStart runs client-side only.
 		LocalPlayer clientPlayer = (LocalPlayer) player;
 		// LocalPlayer#input is null for a tick or two around a respawn / mount / dimension change;
-		// HorizontalWallRun already guards this, Roll did not and threw out of canStart. A roll with no
-		// input has no direction, so it falls back to Front rather than dereferencing null.
+		// HorizontalWallRun already guards this, Roll did not and threw out of canStart.
 		if (clientPlayer.input == null) {
 			startInfo.putInt(Direction.Front.ordinal());
 			return startRequired;
 		}
 		Direction rollDirection = Direction.Front;
-		if (clientPlayer.input.leftImpulse < -0.5) {
+		if (clientPlayer.input.getMoveVector().x < -0.5) {
 			rollDirection = Direction.Right;
-		} else if (clientPlayer.input.leftImpulse > 0.5) {
+		} else if (clientPlayer.input.getMoveVector().x > 0.5) {
 			rollDirection = Direction.Left;
-		} else if (clientPlayer.input.forwardImpulse < -0.5) {
+		} else if (clientPlayer.input.getMoveVector().y < -0.5) {
 			rollDirection = Direction.Back;
 		}
 		startInfo.putInt(rollDirection.ordinal());
@@ -82,7 +84,7 @@ public class Roll extends Action {
 		startRequired = false;
 		Direction direction = Direction.values()[startData.getInt()];
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new RollAnimator(direction));
+		if (animation != null) animation.setAnimator(RollAnimator.class, direction);
 	}
 
 	@Override
@@ -104,7 +106,7 @@ public class Roll extends Action {
 		}
 		player.setDeltaMovement(vec.x(), 0, vec.z());
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new RollAnimator(direction));
+		if (animation != null) animation.setAnimator(RollAnimator.class, direction);
         parkourability.getBehaviorEnforcer().addMarkerCancellingJump(ID_JUMP_CANCEL, this::isDoing);
 	}
 

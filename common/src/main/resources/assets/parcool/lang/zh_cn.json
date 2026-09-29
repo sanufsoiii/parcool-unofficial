@@ -19,7 +19,7 @@
   "parcool.patchouli.guide.entry.aboutParCool": "关于",
   "parcool.patchouli.guide.entry.credit": "鸣谢",
   "itemGroup.ParCool": "跑酷!",
-  "key.categories.parcool": "跑酷（ParCool）",
+  "key.category.parcool": "跑酷（ParCool）",
   "key.parcool.Enable": "启用跑酷",
   "key.parcool.Breakfall": "受身（落地缓冲）",
   "key.parcool.ClimbPoles": "爬杆",
@@ -175,5 +175,7 @@
   "parcool.config.c.gui_color_theme": "GUI主题颜色",
   "parcool.config.c.parcool_activation": "跑酷激活状态",
   "parcool.config.c.enable_particles_jt_breakfall": "启用完美受身时的粒子效果",
-  "parcool.config.c.enable_just_time_effect_breakfall": "启用完美受身特效"
+  "parcool.config.c.enable_just_time_effect_breakfall": "启用完美受身特效",
+  "item.parcool.wooden_zipline_hook": "木质滑索锁钩",
+  "item.parcool.iron_zipline_hook": "铁质滑索锁钩"
 }

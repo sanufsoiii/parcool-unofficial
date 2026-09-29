@@ -55,9 +55,6 @@ public final class ServerPayloadGuard {
         int used;
     }
 
-    private ServerPayloadGuard() {
-    }
-
     /**
      * @return {@code false} when the sender is over its budget, in which case the packet is dropped.
      */
@@ -90,6 +87,9 @@ public final class ServerPayloadGuard {
         if (value < min) return min;
         if (value > max) return max;
         return value;
+    }
+
+    private ServerPayloadGuard() {
     }
 
     /**

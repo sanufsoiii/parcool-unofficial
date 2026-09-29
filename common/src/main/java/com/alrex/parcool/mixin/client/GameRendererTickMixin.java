@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public abstract class GameRendererTickMixin {
 
-    @Inject(method = "renderLevel", at = @At("HEAD"))
+    @Inject(method = "renderLevel(Lnet/minecraft/client/DeltaTracker;)V", at = @At("HEAD"))
     private void parcool$onRenderFrame(DeltaTracker partialTick, CallbackInfo ci) {
         ClientActionProcessor.onRenderFrame(new CompatEvents.RenderFrameEvent.Pre(partialTick));
     }

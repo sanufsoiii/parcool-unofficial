@@ -3,9 +3,10 @@ package com.alrex.parcool.client.sound;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.config.ParCoolConfig;
-import javax.annotation.Nullable;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.player.Player;
+
+import javax.annotation.Nullable;
 
 /**
  * Owns the single {@link ZiplineRideSoundInstance} that plays while the local player rides a rope.
@@ -31,7 +32,7 @@ public final class ZiplineRideSound {
         stop();
         try {
             if (!ParCoolConfig.Client.Booleans.EnableActionSounds.get()) return;
-            if (!player.level().isClientSide) return;
+            if (!player.level().isClientSide()) return;
             ZiplineRideSoundInstance instance =
                     new ZiplineRideSoundInstance(SoundEvents.ZIPLINE_RIDE.get(), player, speed);
             current = instance;

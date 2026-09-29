@@ -296,7 +296,7 @@ public class DiveAnimationHostAnimator extends Animator {
             double factor = 2 / (1 + Math.exp(exponent)) - 0.9621; // -0.9621 is - 2 / (1+exp(-1)) + 0.5
             if (!Double.isFinite(factor)) return 0;
             return (float) Math.max(0, factor);
-        }
+		}
 
 		@Override
 		public boolean shouldRemoved(Player player, Parkourability parkourability) {

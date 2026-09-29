@@ -1,6 +1,7 @@
 modLoader = "javafml"
 loaderVersion = "[4,)"
 license = "LGPL-3.0"
+LicenseFile = "LICENSE"
 issueTrackerURL = "https://github.com/alRex-U/ParCool/issues"
 
 [[mods]]
@@ -24,21 +25,21 @@ file = "META-INF/accesstransformer.cfg"
 [[dependencies.parcool]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.0.110,)"
+versionRange = "[21.11.0,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.parcool]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.1,1.22)"
+versionRange = "[1.21.11,1.22)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.parcool]]
 modId = "architectury"
 type = "required"
-versionRange = "[13.0.0,)"
+versionRange = "[19.0.0,)"
 ordering = "AFTER"
 side = "BOTH"
 
@@ -47,7 +48,7 @@ side = "BOTH"
 [[dependencies.parcool]]
 modId = "paraglider"
 type = "optional"
-versionRange = "[21.1.3,)"
+versionRange = "[21.11.0-beta.1,)"
 ordering = "AFTER"
 side = "BOTH"
 
@@ -68,7 +69,18 @@ side = "BOTH"
 [[dependencies.parcool]]
 modId = "shouldersurfing"
 type = "optional"
-versionRange = "[1.21.1-4.11.0,)"
+versionRange = "[1.21.11-5.0.0,)"
+ordering = "NONE"
+side = "BOTH"
+
+# PlayerMixin uses llamalad7's @WrapWithCondition. MixinExtras is *bundled inside* both loaders rather
+# than shipped as a mod, so it has to stay optional: declaring it required makes NeoForge refuse to
+# start with "Mod parcool requires mixinextras 0.4 or above", because the loader never lists it as a
+# mod. The entry documents the requirement without turning it into a load-time dependency.
+[[dependencies.parcool]]
+modId = "mixinextras"
+type = "optional"
+versionRange = "[0.4,)"
 ordering = "NONE"
 side = "BOTH"
 
@@ -77,13 +89,4 @@ modId = "patchouli"
 type = "optional"
 versionRange = "*"
 ordering = "AFTER"
-
-# mixinextras supplies the @WrapWithCondition injector used by mixin/common/PlayerMixin. Both loaders
-# bundle it, so it is declared explicitly rather than left as an implicit requirement: on Fabric this
-# is the `custom.mixinextras` block, here it is an optional dependency.
-[[dependencies.parcool]]
-modId = "mixinextras"
-type = "optional"
-versionRange = "[0.4,)"
-ordering = "NONE"
 side = "BOTH"

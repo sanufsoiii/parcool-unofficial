@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.CrawlAnimator;
 import com.alrex.parcool.client.animation.impl.SlidingAnimator;
@@ -11,17 +12,18 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.config.ParCoolConfig;
-import javax.annotation.Nullable;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class Slide extends Action {
@@ -49,7 +51,7 @@ public class Slide extends Action {
 				&& !parkourability.get(Roll.class).isDoing()
 				&& !parkourability.get(Tap.class).isDoing()
 				&& parkourability.get(Crawl.class).isDoing()
-				&& !player.isInWaterOrBubble()
+				&& !EntityUtil.isInWaterOrBubble(player)
 				&& parkourability.get(FastRun.class).getDashTick(parkourability.getAdditionalProperties()) > 5
 				&& player.getDeltaMovement().horizontalDistance() > MIN_SLIDE_SPEED
 		);
@@ -72,7 +74,7 @@ public class Slide extends Action {
             player.playSound(SoundEvents.SLIDE.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new SlidingAnimator());
+			animation.setAnimator(SlidingAnimator.class);
 		}
         parkourability.getBehaviorEnforcer().addMarkerCancellingJump(ID_JUMP_CANCEL, this::isDoing);
 	}
@@ -84,7 +86,7 @@ public class Slide extends Action {
             player.playSound(SoundEvents.SLIDE.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new SlidingAnimator());
+			animation.setAnimator(SlidingAnimator.class);
 		}
 	}
 
@@ -110,7 +112,7 @@ public class Slide extends Action {
 	public void onStopInLocalClient(Player player) {
 		Animation animation = Animation.get(player);
 		if (animation != null && !animation.hasAnimator()) {
-			animation.setAnimator(new CrawlAnimator());
+			animation.setAnimator(CrawlAnimator.class);
 		}
         if (!Parkourability.get(player).get(Crawl.class).isDoing()) {
             player.swimAmount = 0;
@@ -122,7 +124,7 @@ public class Slide extends Action {
 	public void onStopInOtherClient(Player player) {
 		Animation animation = Animation.get(player);
 		if (animation != null && !animation.hasAnimator()) {
-			animation.setAnimator(new CrawlAnimator());
+			animation.setAnimator(CrawlAnimator.class);
 		}
         if (!Parkourability.get(player).get(Crawl.class).isDoing()) {
             player.swimAmount = 0;

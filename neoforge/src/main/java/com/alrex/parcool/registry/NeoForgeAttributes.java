@@ -14,19 +14,16 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * while {@code Bootstrap#bootStrap} runs, and NeoForge closes the built-in registries before the mod
  * constructors are invoked - a direct {@code Registry.registerForHolder} from the common entry point
  * therefore kills the client and the server with
- * {@code IllegalStateException: Registry is already frozen (trying to add key parcool:max_stamina)},
- * which is exactly how this port used to crash on Prism. NeoForge's own {@code DeferredRegister} hooks
- * {@code RegisterEvent}, which is still inside the writable window, so it is the only thing that works
- * here - and it is what upstream ParCool's NeoForge build uses. Architectury's {@code DeferredRegister}
- * is not an option: it rejects {@link Registries#ATTRIBUTE} outright
- * ({@code RegistrarManager._get} asserts on it).
+ * {@code IllegalStateException: Registry is already frozen (trying to add key parcool:max_stamina)}.
+ * NeoForge's own {@code DeferredRegister} hooks {@code RegisterEvent}, which is still inside the
+ * writable window, so it is the only thing that works here - and it is what upstream ParCool's
+ * NeoForge build uses. NeoForge 21.11 has no {@code NeoForgeRegistries.ATTRIBUTES} any more (it went
+ * away with the attribute rework), so the key is {@link Registries#ATTRIBUTE} - the same registry.
  *
- * <p>{@code common/api/Attributes} therefore only <i>resolves</i> the holders on NeoForge, which it
- * does lazily on the first {@code Player#createAttributes} - long after this ran.
- *
- * <p>NeoForge 21.1's {@code DeferredRegister#create} does not attach itself to any bus, so the mod's
- * own bus is handed in explicitly; the {@code @Mod} constructor receives it through the
- * {@link net.neoforged.fml.ModContainer} that FML injects.
+ * <p>Architectury's {@code DeferredRegister} is not an option: it rejects
+ * {@link Registries#ATTRIBUTE} outright ({@code RegistrarManager._get} asserts on it).
+ * {@code common/api/Attributes} therefore only <i>resolves</i> the holders, which it does lazily on
+ * the first {@code Player#createAttributes} - long after this ran.
  */
 public final class NeoForgeAttributes {
 
@@ -38,6 +35,8 @@ public final class NeoForgeAttributes {
                 () -> new RangedAttribute("parcool.max_stamina", 2000, 10, 10000).setSyncable(true));
         ATTRIBUTES.register("stamina_recovery",
                 () -> new RangedAttribute("parcool.stamina_recovery", 20, 0, 10000).setSyncable(true));
+        // NeoForge 21.11's DeferredRegister no longer registers itself on the global bus; the mod's
+        // own bus has to be handed in, which the @Mod constructor receives by injection.
         ATTRIBUTES.register(modEventBus);
     }
 

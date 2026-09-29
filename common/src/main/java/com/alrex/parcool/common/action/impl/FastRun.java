@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.client.animation.impl.FastRunningAnimator;
 import com.alrex.parcool.client.input.KeyBindings;
@@ -11,12 +12,12 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.config.ParCoolConfig;
-import java.nio.ByteBuffer;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+
+import java.nio.ByteBuffer;
 
 public class FastRun extends Action {
 	public enum ControlType {
@@ -75,7 +76,7 @@ public class FastRun extends Action {
 
 	@Override
 	public boolean canContinue(Player player, Parkourability parkourability) {
-		return (!player.isInWaterOrBubble()
+		return (!EntityUtil.isInWaterOrBubble(player)
 				&& player.getVehicle() == null
 				&& !player.isFallFlying()
 				&& !player.getAbilities().flying
@@ -98,7 +99,7 @@ public class FastRun extends Action {
 	public void onWorkingTickInClient(Player player, Parkourability parkourability) {
 		Animation animation = Animation.get(player);
 		if (animation != null && !animation.hasAnimator()) {
-			animation.setAnimator(new FastRunningAnimator());
+			animation.setAnimator(FastRunningAnimator.class);
 		}
 	}
 

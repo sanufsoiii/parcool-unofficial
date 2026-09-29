@@ -8,9 +8,9 @@ import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.MathUtil;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.Tuple;
 import net.minecraft.client.player.LocalPlayer;
 
@@ -79,15 +79,17 @@ public class StaminaHUD {
 		if (staminaScale < 0) staminaScale = 0;
 		if (staminaScale > 1) staminaScale = 1;
 
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.setShaderTexture(0, StaminaHUD.STAMINA);
-		graphics.blit(STAMINA, pos.getA(), pos.getB(), 0, 0, 93, 17, 128, 128);
+		// 1.21.2's GuiGraphics#blit takes the RenderType factory first and the u/v as floats; there is
+		// no overload without the factory any more, and the shader / texture the 1.21.1 code set by
+		// hand (RenderSystem#setShaderColor / #setShaderTexture) is now chosen by that RenderType, so
+		// setting them here would only leak into whatever the *next* draw asks for.
+		graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0f, 0f, 93, 17, 128, 128);
 		if (!stamina.isExhausted()) {
-            graphics.blit(STAMINA, pos.getA(), pos.getB(), 0, 102, (int) Math.ceil(92 * statusScale), 17, 128, 128);
-			graphics.blit(STAMINA, pos.getA(), pos.getB(), 0, 85, Math.round(16 + 69 * shadowScale) + 1, 12, 128, 128);
-			graphics.blit(STAMINA, pos.getA(), pos.getB(), 0, 17 * (renderGageType + 1), Math.round(16 + 69 * staminaScale) + 1, 12, 128, 128);
+            graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0f, 102f, (int) Math.ceil(92 * statusScale), 17, 128, 128);
+			graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0f, 85f, Math.round(16 + 69 * shadowScale) + 1, 12, 128, 128);
+			graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0f, 17f * (renderGageType + 1), Math.round(16 + 69 * staminaScale) + 1, 12, 128, 128);
 		} else {
-			graphics.blit(STAMINA, pos.getA(), pos.getB(), 0, 68, Math.round(16 + 69 * staminaScale) + 1, 17, 128, 128);
+			graphics.blit(RenderType::guiTextured, STAMINA, pos.getA(), pos.getB(), 0f, 68f, Math.round(16 + 69 * staminaScale) + 1, 17, 128, 128);
 		}
 		shadowScale = staminaScale - (staminaScale - shadowScale) / 1.1f;
 	}

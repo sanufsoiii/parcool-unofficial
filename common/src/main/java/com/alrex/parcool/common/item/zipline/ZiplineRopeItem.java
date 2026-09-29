@@ -137,7 +137,9 @@ public class ZiplineRopeItem extends Item {
                         player.playSound(SoundEvents.ZIPLINE_SET.get(), 1, 1);
                     }
                     removeBlockPosition(stack);
-                    return InteractionResult.sidedSuccess(context.getLevel().isClientSide());
+                    // InteractionResult.sidedSuccess was split into the two constants in 1.21.2; this is
+                    // the same "success on the client, consume on the server" pair it used to build.
+                    return context.getLevel().isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
                 } else {
                     removeBlockPosition(stack);
                     if (context.getLevel().isClientSide()) {

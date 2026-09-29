@@ -1,9 +1,11 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.client.animation.impl.ChargeJumpAnimator;
 import com.alrex.parcool.client.animation.impl.JumpChargingAnimator;
+import com.alrex.parcool.client.input.KeyBindings;
 import com.alrex.parcool.client.input.KeyRecorder;
 import com.alrex.parcool.common.action.Action;
 import com.alrex.parcool.common.action.StaminaConsumeTiming;
@@ -12,12 +14,12 @@ import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.VectorUtil;
 import com.alrex.parcool.api.event.ParCoolEventBus;
+
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import com.alrex.parcool.api.event.ParCoolEventBus;
 
 import java.nio.ByteBuffer;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.client.player.LocalPlayer;
 
 public class ChargeJump extends Action {
     public static final int JUMP_ANIMATION_TICK = 10;
@@ -65,7 +67,7 @@ public class ChargeJump extends Action {
             player.playSound(SoundEvents.CHARGE_JUMP.get(), 1, 1);
         Animation animation = Animation.get(player);
         if (animation != null) {
-            animation.setAnimator(new ChargeJumpAnimator());
+            animation.setAnimator(ChargeJumpAnimator.class);
         }
     }
 
@@ -75,28 +77,31 @@ public class ChargeJump extends Action {
             player.playSound(SoundEvents.CHARGE_JUMP.get(), 1, 1);
         Animation animation = Animation.get(player);
         if (animation != null) {
-            animation.setAnimator(new ChargeJumpAnimator());
+            animation.setAnimator(ChargeJumpAnimator.class);
         }
     }
 
     @Override
     public void onClientTick(Player player, Parkourability parkourability) {
-        if (player instanceof LocalPlayer cp) {
-            if (cp.onGround()
+        if (player.isLocalPlayer()) {
+            // Everything below is reached through `player` / KeyBindings rather than through a
+            // `LocalPlayer` local: this class is verified on a dedicated server (Parkourability
+            // instantiates every action), and 1.21.11's verifier then loads LocalPlayer, which is not
+            // present there. isLocalPlayer() is false for every non-local player, so the guard above
+            // means `player` *is* the local player here, and KeyBindings reads exactly the same
+            // `Minecraft.getInstance().player.input` state.
+            if (player.onGround()
                     && coolTimeTick <= 0
                     && parkourability.getActionInfo().can(ChargeJump.class)
-                    && !cp.isVisuallyCrawling()
-                    && !cp.isSprinting()
-                    && !cp.isInWaterOrBubble()
-                    && !cp.input.up
-                    && !cp.input.down
-                    && !cp.input.right
-                    && !cp.input.left
+                    && !player.isVisuallyCrawling()
+                    && !player.isSprinting()
+                    && !EntityUtil.isInWaterOrBubble(player)
+                    && !KeyBindings.isAnyMovingKeyDown()
                     && !parkourability.get(Crawl.class).isDoing()
                     && !ParCoolEventBus.post(new ParCoolActionEvent.TryToStartEvent(player, this)).isCanceled()
                     && !ParCoolEventBus.post(new ParCoolActionEvent.TryToStart(player, this)).isCanceled()
             ) {
-                if (cp.isShiftKeyDown() && KeyRecorder.keySneak.getPreviousTickNotKeyDown() > 5) {
+                if (player.isShiftKeyDown() && KeyRecorder.keySneak.getPreviousTickNotKeyDown() > 5) {
                     chargeTick++;
                     if (chargeTick > JUMP_MAX_CHARGE_TICK) chargeTick = JUMP_MAX_CHARGE_TICK;
                     lastChargeTick = chargeTick;
@@ -124,7 +129,7 @@ public class ChargeJump extends Action {
         if (isCharging()) {
             Animation animation = Animation.get(player);
             if (animation != null && !animation.hasAnimator()) {
-                animation.setAnimator(new JumpChargingAnimator());
+                animation.setAnimator(JumpChargingAnimator.class);
             }
         }
     }
@@ -143,14 +148,11 @@ public class ChargeJump extends Action {
     }
 
     public void onLand(Player player, Parkourability parkourability) {
-        if (player.isLocalPlayer() && player instanceof LocalPlayer cp) {
+        if (player.isLocalPlayer()) {
             if (
                     parkourability.getActionInfo().can(ChargeJump.class)
                             && coolTimeTick <= 0
-                            && !cp.input.up
-                            && !cp.input.down
-                            && !cp.input.right
-                            && !cp.input.left
+                            && !KeyBindings.isAnyMovingKeyDown()
                             && (parkourability.get(FastRun.class).getNotDashTick(parkourability.getAdditionalProperties()) < 15)
             ) {
                 chargeTick = JUMP_MAX_CHARGE_TICK + 5;
@@ -161,12 +163,12 @@ public class ChargeJump extends Action {
     }
 
     @Override
-    public boolean wantsToShowStatusBar(LocalPlayer player, Parkourability parkourability) {
+    public boolean wantsToShowStatusBar(Player player, Parkourability parkourability) {
         return isCharging();
     }
 
     @Override
-    public float getStatusValue(LocalPlayer player, Parkourability parkourability) {
+    public float getStatusValue(Player player, Parkourability parkourability) {
         return ((float) getChargingTick()) / JUMP_MAX_CHARGE_TICK;
     }
 

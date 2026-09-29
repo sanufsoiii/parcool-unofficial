@@ -159,7 +159,10 @@ public class KeyBindings {
 	public static Boolean isKeyJumpDown() {
 		return mc().player != null
 				&& mc().player.input != null
-				&& mc().player.input.jumping;
+				// 1.21.2 moved the boolean presses off ClientInput into the Input record behind
+				// `keyPresses`; the impulses (leftImpulse / forwardImpulse) are still fields and are
+				// still what the game itself uses for movement, so both are read here.
+				&& mc().player.input.keyPresses.jump();
 	}
 
 	public static KeyMapping getKeySneak() {
@@ -182,14 +185,15 @@ public class KeyBindings {
 	public static Boolean isAnyMovingKeyDown() {
 		return mc().player != null
 				&& mc().player.input != null
-				&& (mc().player.input.left
-				|| mc().player.input.right
+				&& (mc().player.input.keyPresses.left()
+				|| mc().player.input.keyPresses.right()
 				|| mc().player.input.forwardImpulse != 0
 				|| mc().player.input.leftImpulse != 0);
 	}
 
 	public static Boolean isLeftAndRightDown() {
-		return mc().player != null && mc().player.input != null && mc().player.input.left && mc().player.input.right;
+		return mc().player != null && mc().player.input != null
+				&& mc().player.input.keyPresses.left() && mc().player.input.keyPresses.right();
 	}
 
 	public static Boolean isKeyForwardDown() {
@@ -197,11 +201,11 @@ public class KeyBindings {
 	}
 
 	public static Boolean isKeyLeftDown() {
-		return mc().player != null && mc().player.input != null && mc().player.input.left;
+		return mc().player != null && mc().player.input != null && mc().player.input.keyPresses.left();
 	}
 
 	public static Boolean isKeyRightDown() {
-		return mc().player != null && mc().player.input != null && mc().player.input.right;
+		return mc().player != null && mc().player.input != null && mc().player.input.keyPresses.right();
 	}
 
 	public static Boolean isKeyBackDown() {

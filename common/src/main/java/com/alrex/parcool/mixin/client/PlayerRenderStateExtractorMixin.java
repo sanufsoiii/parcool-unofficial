@@ -1,0 +1,32 @@
+package com.alrex.parcool.mixin.client;
+
+import com.alrex.parcool.compat.IPlayerRenderStateEntity;
+
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+/**
+ * Stashes the player on the render state, see {@link PlayerRenderStateEntityMixin}.
+ *
+ * <p>1.21.2's {@code PlayerRenderer#extractRenderState(AbstractClientPlayer, PlayerRenderState, float)}
+ * is the only place where the renderer still holds the entity. It runs once per frame before the state
+ * is rendered, so it is the exact equivalent of the entity that 1.21.1's {@code setupRotations} used to
+ * read.
+ */
+@Mixin(PlayerRenderer.class)
+public abstract class PlayerRenderStateExtractorMixin {
+
+    @Inject(method = "extractRenderState(Lnet/minecraft/client/player/AbstractClientPlayer;Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;F)V",
+            at = @At("TAIL"))
+    private void parcool$keepPlayer(AbstractClientPlayer entity, PlayerRenderState state, float partialTick,
+                                    CallbackInfo ci) {
+        if (entity instanceof AbstractClientPlayer player) {
+            ((IPlayerRenderStateEntity) state).parcool$setPlayer(player);
+        }
+    }
+}

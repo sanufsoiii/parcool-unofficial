@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.common.data.Parkourability;
 import net.minecraft.world.entity.player.Player;
 
@@ -64,7 +65,7 @@ public class AdditionalProperties {
 		} else {
 			notCreativeFlyingTick++;
 		}
-        if (player.isInWaterOrBubble()) {
+        if (EntityUtil.isInWaterOrBubble(player)) {
             inWaterTick++;
             notInWaterTick = 0;
         } else {

@@ -1,5 +1,6 @@
 package com.alrex.parcool.platform;
 
+import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.action.impl.Dodge;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.stamina.IParCoolStaminaHandler;
@@ -60,6 +61,41 @@ public class NeoForgeParCoolPlatform implements ParCoolPlatform {
     @Override
     public com.alrex.parcool.platform.ParCoolNetwork getNetwork() {
         return NETWORK;
+    }
+
+    /**
+     * NeoForge freezes the built-in registries before the mod constructors run, so the type has to be
+     * created from a {@code RegisterEvent} - which is what NeoForge's {@code DeferredRegister} hooks.
+     * 1.21.11 deleted {@code BlockEntityType.Builder} but re-opened the constructor on NeoForge, so
+     * the value the deferred register stores is a plain {@code new BlockEntityType<>(...)}.
+     */
+    private static final net.neoforged.neoforge.registries.DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>>
+            BLOCK_ENTITY_TYPES = net.neoforged.neoforge.registries.DeferredRegister.create(
+                    net.minecraft.core.registries.Registries.BLOCK_ENTITY_TYPE, ParCool.MOD_ID);
+
+    private static boolean blockEntityTypesRegistered;
+
+    /**
+     * {@code RegisterEvent} is an {@code IModBusEvent}, so the deferred register has to listen on the
+     * mod's own bus. Called from the mod constructor, before any registration runs.
+     */
+    public void setModEventBus(net.neoforged.bus.api.IEventBus bus) {
+        MOD_EVENT_BUS = bus;
+    }
+
+    private static net.neoforged.bus.api.IEventBus MOD_EVENT_BUS;
+
+    @Override
+    public <T extends net.minecraft.world.level.block.entity.BlockEntity> java.util.function.Supplier<
+            net.minecraft.world.level.block.entity.BlockEntityType<T>> registerBlockEntityType(
+            String name,
+            net.minecraft.world.level.block.entity.BlockEntityType.BlockEntitySupplier<T> factory,
+            java.util.function.Supplier<net.minecraft.world.level.block.Block[]> blocks) {
+        if (!blockEntityTypesRegistered) {
+            blockEntityTypesRegistered = true;
+            BLOCK_ENTITY_TYPES.register(MOD_EVENT_BUS);
+        }
+        return BLOCK_ENTITY_TYPES.register(name, () -> new net.minecraft.world.level.block.entity.BlockEntityType<>(factory, blocks.get()));
     }
 
     @Override

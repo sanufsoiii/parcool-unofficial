@@ -95,6 +95,28 @@ public interface ParCoolPlatform {
     ParCoolNetwork getNetwork();
 
     // ------------------------------------------------------------------
+    // block entity type (1.21.11 removed BlockEntityType.Builder)
+    // ------------------------------------------------------------------
+
+    /**
+     * Registers one {@link net.minecraft.world.level.block.entity.BlockEntityType} and returns a
+     * supplier for it.
+     *
+     * <p>This is a seam because 1.21.11 deleted {@code BlockEntityType.Builder} and left only
+     * {@code BlockEntityType}'s own construction private, while the registry entry still has to be
+     * created inside the writable window - which is the mod constructor on Fabric and the registry
+     * event on NeoForge.
+     *
+     * <p>{@code blocks} is a supplier because the block registry entries do not exist yet when the
+     * caller hands them over on NeoForge.
+     */
+    <T extends net.minecraft.world.level.block.entity.BlockEntity> java.util.function.Supplier<
+            net.minecraft.world.level.block.entity.BlockEntityType<T>> registerBlockEntityType(
+            String name,
+            net.minecraft.world.level.block.entity.BlockEntityType.BlockEntitySupplier<T> factory,
+            java.util.function.Supplier<net.minecraft.world.level.block.Block[]> blocks);
+
+    // ------------------------------------------------------------------
     // shared
     // ------------------------------------------------------------------
 

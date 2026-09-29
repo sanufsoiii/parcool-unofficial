@@ -2,8 +2,9 @@ package com.alrex.parcool.common.zipline;
 
 import com.alrex.parcool.common.zipline.impl.GeneralQuadraticCurveZipline;
 import com.alrex.parcool.common.zipline.impl.StraightZipline;
-import net.minecraft.world.phys.Vec3;
+import com.mojang.serialization.Codec;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.Vec3;
 
 public enum ZiplineType {
     STRAIGHT("parcool.gui.text.zipline.type.tight"),
@@ -16,6 +17,14 @@ public enum ZiplineType {
     }
 
     private final String translationID;
+
+    /**
+     * 1.21.11's block entity save hooks are {@code ValueOutput}/{@code ValueInput} based and therefore
+     * codec based. The wire form is the plain ordinal, exactly what {@link #save()} wrote, so
+     * connections written by 1.21.1 still load.
+     */
+    public static final Codec<ZiplineType> CODEC =
+            Codec.intRange(0, values().length - 1).xmap(i -> ZiplineType.values()[i], ZiplineType::ordinal);
 
     public Component getTranslationName() {
         return Component.translatable(translationID);

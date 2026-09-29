@@ -17,7 +17,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
 import net.minecraft.core.HolderLookup;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -54,7 +54,7 @@ public class ZiplineHookTileEntity extends BlockEntity {
             connectionEntities.values().forEach((it) -> it.remove(Entity.RemovalReason.DISCARDED));
             itemStacks = getConnectionInfo().values().stream().map(it -> {
                 ItemStack stack = new ItemStack(Items.ZIPLINE_ROPE::get);
-                ZiplineRopeItem.setColor(stack, FastColor.ARGB32.color(0xFF, it.getColor()));
+                ZiplineRopeItem.setColor(stack, ARGB.color(0xFF, it.getColor()));
                 return stack;
             }).collect(Collectors.toList());
         }

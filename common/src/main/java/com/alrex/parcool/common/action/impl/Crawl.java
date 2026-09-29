@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.client.animation.impl.CrawlAnimator;
 import com.alrex.parcool.client.input.KeyBindings;
 import com.alrex.parcool.client.input.KeyRecorder;
@@ -9,9 +10,10 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.config.ParCoolConfig;
-import java.nio.ByteBuffer;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
+
+import java.nio.ByteBuffer;
 
 public class Crawl extends Action {
 	public enum ControlType {
@@ -31,7 +33,7 @@ public class Crawl extends Action {
 				&& !parkourability.get(RideZipline.class).isDoing()
 				&& player.getVehicle() == null
                 && (pose == Pose.STANDING || pose == Pose.CROUCHING)
-				&& !player.isInWaterOrBubble()
+				&& !EntityUtil.isInWaterOrBubble(player)
 				&& !player.isFallFlying()
 				&& !player.onClimbable()
 				&& (player.onGround() || ParCoolConfig.Client.Booleans.EnableCrawlInAir.get());
@@ -77,7 +79,7 @@ public class Crawl extends Action {
 				&& !parkourability.get(Dive.class).isDoing()
 				&& parkourability.get(Vault.class).getNotDoingTick() >= 8
 				&& player.getVehicle() == null
-				&& !player.isInWaterOrBubble()
+				&& !EntityUtil.isInWaterOrBubble(player)
 				&& !player.isFallFlying()
 				&& !player.onClimbable()
 				&& (player.onGround() || ParCoolConfig.Client.Booleans.EnableCrawlInAir.get());
@@ -87,7 +89,7 @@ public class Crawl extends Action {
 	public void onWorkingTickInClient(Player player, Parkourability parkourability) {
 		Animation animation = Animation.get(player);
 		if (!animation.hasAnimator()) {
-			animation.setAnimator(new CrawlAnimator());
+			animation.setAnimator(CrawlAnimator.class);
 		}
 	}
 

@@ -8,16 +8,19 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.client.LocalStamina;
 import com.alrex.parcool.common.event.CompatEvents;
 import com.alrex.parcool.config.ParCoolConfig;
-import java.util.List;
-import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.player.LocalPlayer;
+
+import java.util.List;
 
 /**
  * The client-only half of {@link com.alrex.parcool.common.action.ActionProcessor}.

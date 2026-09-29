@@ -2,9 +2,9 @@ package com.alrex.parcool.common.damage;
 
 
 import com.alrex.parcool.ParCool;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageType;
 
 public class DamageSources {

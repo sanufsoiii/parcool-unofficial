@@ -3,12 +3,13 @@ package com.alrex.parcool.client.animation;
 import com.alrex.parcool.api.unstable.animation.AnimationOption;
 import com.alrex.parcool.api.unstable.animation.AnimationPart;
 import com.alrex.parcool.utilities.MathUtil;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.Mth;
 import net.minecraft.client.model.AnimationUtils;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * Using Radians
@@ -21,13 +22,21 @@ public class PlayerModelTransformer {
 	private final float limbSwingAmount;
 	private final float netHeadYaw;
 	private final float headPitch;
+	/**
+	 * 1.21.11 keeps the attack time and the two arm poses on {@code ArmedEntityRenderState} instead of
+	 * on {@code PlayerModel}, so the three values the animators used to read off the model are handed
+	 * to the transformer alongside the pose floats. Same values, same frame.
+	 */
+	private final float attackTime;
+	private final HumanoidModel.ArmPose leftArmPose;
+	private final HumanoidModel.ArmPose rightArmPose;
     private AnimationOption option = new AnimationOption();
 
 	public float getPartialTick() {
 		// The `false` overload, the same one PlayerRendererMixin uses: two different partial ticks in one
 		// frame made the limbs (transformer) and the body rotation (rotator) interpolate against
 		// different clocks, and the model visibly came apart on lag spikes and while the game is paused.
-		return Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
+		return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 	}
 
 	public float getHeadPitch() {
@@ -50,6 +59,21 @@ public class PlayerModelTransformer {
 		return model;
 	}
 
+	/** Was {@code PlayerModel#attackTime}. */
+	public float getAttackTime() {
+		return attackTime;
+	}
+
+	/** Was {@code PlayerModel#leftArmPose}. */
+	public HumanoidModel.ArmPose getLeftArmPose() {
+		return leftArmPose;
+	}
+
+	/** Was {@code PlayerModel#rightArmPose}. */
+	public HumanoidModel.ArmPose getRightArmPose() {
+		return rightArmPose;
+	}
+
 	public PlayerModelTransformer(
 			Player player,
 			PlayerModel model,
@@ -58,7 +82,10 @@ public class PlayerModelTransformer {
 			float limbSwing,
 			float limbSwingAmount,
 			float netHeadYaw,
-			float headPitch
+			float headPitch,
+			float attackTime,
+			HumanoidModel.ArmPose leftArmPose,
+			HumanoidModel.ArmPose rightArmPose
 	) {
 		this.player = player;
 		this.model = model;
@@ -67,6 +94,9 @@ public class PlayerModelTransformer {
 		this.limbSwingAmount = limbSwingAmount;
 		this.netHeadYaw = netHeadYaw;
 		this.headPitch = headPitch;
+		this.attackTime = attackTime;
+		this.leftArmPose = leftArmPose;
+		this.rightArmPose = rightArmPose;
 	}
 
     public void setOption(AnimationOption option) {
@@ -363,13 +393,34 @@ public class PlayerModelTransformer {
     public void end() {
     }
 
+	/**
+	 * Puts the second skin layer (jacket, hat, sleeves, pants) on the limbs.
+	 *
+	 * <h2>Why this no longer copies the body part's transform</h2>
+	 * In 1.21.1 every model part was rendered separately, so the sleeve had to be given the arm's
+	 * transform by hand - that is exactly what {@code ModelPart#copyFrom} was for, and what this method
+	 * did. 1.21.11 turned the model into a tree: {@code left_sleeve} / {@code right_sleeve} /
+	 * {@code left_pants} / {@code right_pants} / {@code jacket} are <i>children</i> of the limb (see
+	 * {@code PlayerModel}'s constructor) and {@code ModelPart#render} recurses into
+	 * {@link ModelPart#children} after applying the parent's own transform. The layer therefore already
+	 * follows the limb, and copying the parent's transform onto it as well applies that transform
+	 * twice - the sleeve ends up at double the arm's rotation and offset, i.e. a second set of arms
+	 * floating beside the real ones. Vanilla 1.21.11 therefore leaves the layer at its initial
+	 * {@code PartPose.ZERO}, and so does this: the layer is reset to identity and inherits the limb.
+	 * The visible result is the same as 1.21.1 - the layer sits exactly on the limb.
+	 */
 	public void copyFromBodyToWear() {
-		model.rightSleeve.copyFrom(model.rightArm);
-		model.leftSleeve.copyFrom(model.leftArm);
-		model.rightPants.copyFrom(model.rightLeg);
-		model.leftPants.copyFrom(model.leftLeg);
-		model.jacket.copyFrom(model.body);
-		model.hat.copyFrom(model.head);
+		resetSecondLayer();
+	}
+
+	/** The layer parts back to their initial (identity) pose, so the tree transform is the only one. */
+	private void resetSecondLayer() {
+		resetModel(model.jacket);
+		resetModel(model.hat);
+		resetModel(model.leftSleeve);
+		resetModel(model.rightSleeve);
+		resetModel(model.leftPants);
+		resetModel(model.rightPants);
 	}
 
 	private void setRotations(ModelPart renderer, float angleX, float angleY, float angleZ) {
@@ -380,39 +431,34 @@ public class PlayerModelTransformer {
 
 	public void reset() {
 		resetModel(model.head);
-		resetModel(model.hat);
-		resetModel(model.jacket);
 		resetModel(model.body);
 		{
 			resetModel(model.rightArm);
             model.rightArm.x = -5.0F;
             model.rightArm.y = 2.0F;
 			model.rightArm.z = 0.0F;
-			model.rightSleeve.copyFrom(model.rightArm);
 		}
 		{
 			resetModel(model.leftArm);
             model.leftArm.x = 5.0F;
             model.leftArm.y = 2.0F;
 			model.leftArm.z = 0.0F;
-			model.leftSleeve.copyFrom(model.leftArm);
 		}
 		{
 			resetModel(model.leftLeg);
 			model.leftLeg.x = 1.9F;
 			model.leftLeg.y = 12.0F;
 			model.leftLeg.z = 0.0F;
-
-			model.leftPants.copyFrom(model.leftLeg);
 		}
 		{
 			resetModel(model.rightLeg);
 			model.rightLeg.x = -1.9F;
 			model.rightLeg.y = 12.0F;
 			model.rightLeg.z = 0.0F;
-
-			model.rightPants.copyFrom(model.rightLeg);
 		}
+		// The sleeve / pants / jacket / hat are children of the limbs in 1.21.11 and inherit their
+		// transform from the tree, so they only have to be back at their initial pose here.
+		resetSecondLayer();
 	}
 
 	public void resetModel(ModelPart model) {

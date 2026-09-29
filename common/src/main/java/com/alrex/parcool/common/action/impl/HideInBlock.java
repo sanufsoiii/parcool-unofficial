@@ -38,13 +38,13 @@ public class HideInBlock extends Action {
     @Nullable
     Vec3 lookDirection = null;
     boolean hidingBlockChanged = false;
-    boolean keyPressed;
-    boolean startedFromDiving;
     /**
      * Set when the server refused the start packet (see {@link #adoptServerSideState}). While it is set
      * the action must not touch the player's position, because the claimed hiding point was discarded.
      */
     private boolean startRejected = false;
+    boolean keyPressed;
+    boolean startedFromDiving;
 
     @Nullable
     public Vec3 getLookDirection() {
@@ -200,7 +200,7 @@ public class HideInBlock extends Action {
         parkourability.getBehaviorEnforcer().addMarkerCancellingShowName(ID_SHOW_NAME, this::isDoing);
         spawnOnHideParticles(player);
         Animation animation = Animation.get(player);
-        animation.setAnimator(new HideInBlockAnimator(stand, startedFromDiving));
+        animation.setAnimator(HideInBlockAnimator.class, stand, startedFromDiving);
     }
 
     @Override
@@ -209,7 +209,7 @@ public class HideInBlock extends Action {
         parkourability.getBehaviorEnforcer().addMarkerCancellingShowName(ID_SHOW_NAME, this::isDoing);
         spawnOnHideParticles(player);
         Animation animation = Animation.get(player);
-        animation.setAnimator(new HideInBlockAnimator(stand, startedFromDiving));
+        animation.setAnimator(HideInBlockAnimator.class, stand, startedFromDiving);
     }
 
 
@@ -275,8 +275,8 @@ public class HideInBlock extends Action {
     @Override
     public void onStopInLocalClient(Player player) {
         final Vec3 hidePos = hidingPoint;
+        if (hidePos == null) return;
         final Vec3 entPos = enterPoint;
-        if (hidePos == null || entPos == null) return;
         Parkourability parkourability = Parkourability.get(player);
         parkourability.getBehaviorEnforcer().setMarkerEnforcePosition(
                 () -> this.getNotDoingTick() <= 1,
@@ -343,7 +343,11 @@ public class HideInBlock extends Action {
                 for (int x = minX; x <= maxX; x++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (!world.isLoaded(pos)) break;
-                    Minecraft.getInstance().particleEngine.destroy(pos, world.getBlockState(pos));
+                    // 1.21.11 moved ParticleEngine#destroy to ClientLevel#addDestroyBlockEffect; it is
+                    // the same terrain-particle burst over the block's shape.
+                    if (world instanceof net.minecraft.client.multiplayer.ClientLevel clientLevel) {
+                        clientLevel.addDestroyBlockEffect(pos, world.getBlockState(pos));
+                    }
                 }
             }
         }

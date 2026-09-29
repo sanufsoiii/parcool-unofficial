@@ -26,13 +26,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Minecraft.class)
 public abstract class MinecraftInputMixin {
 
-    @Inject(method = "startUseItem", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "startUseItem()V", at = @At("HEAD"), cancellable = true)
     private void parcool$suppressUseItem(CallbackInfo ci) {
         if (InputHandler.shouldSuppressUse()) ci.cancel();
     }
 
     /** {@code startAttack} returns a boolean, so a cancellable injection needs the returnable callback. */
-    @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "startAttack()Z", at = @At("HEAD"), cancellable = true)
     private void parcool$suppressAttack(CallbackInfoReturnable<Boolean> cir) {
         if (InputHandler.shouldSuppressAttack()) cir.setReturnValue(false);
     }

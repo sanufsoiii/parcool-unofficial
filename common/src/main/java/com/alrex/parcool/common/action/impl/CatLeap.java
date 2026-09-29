@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.CatLeapAnimator;
 import com.alrex.parcool.client.input.KeyRecorder;
@@ -8,17 +9,17 @@ import com.alrex.parcool.common.action.StaminaConsumeTiming;
 import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.config.ParCoolConfig;
-import java.nio.ByteBuffer;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.util.Mth;
-import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.phys.Vec3;
+
+import java.nio.ByteBuffer;
 
 public class CatLeap extends Action {
 	private int coolTimeTick = 0;
@@ -71,7 +72,7 @@ public class CatLeap extends Action {
     public boolean canContinue(Player player, Parkourability parkourability) {
 		return !((getDoingTick() > 1 && player.onGround())
 				|| player.isFallFlying()
-				|| player.isInWaterOrBubble()
+				|| EntityUtil.isInWaterOrBubble(player)
 				|| player.isInLava()
 		);
 	}
@@ -87,7 +88,7 @@ public class CatLeap extends Action {
         Vec3 motionVec = player.getDeltaMovement();
         player.setDeltaMovement(jumpDirection.x(), motionVec.y() * 1.16667, jumpDirection.z());
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new CatLeapAnimator());
+		if (animation != null) animation.setAnimator(CatLeapAnimator.class);
 	}
 
 	@Override
@@ -97,16 +98,16 @@ public class CatLeap extends Action {
             player.playSound(SoundEvents.CATLEAP.get(), 1, 1);
         spawnJumpEffect(player, jumpDirection);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new CatLeapAnimator());
+		if (animation != null) animation.setAnimator(CatLeapAnimator.class);
 	}
 
 	@Override
-	public boolean wantsToShowStatusBar(LocalPlayer player, Parkourability parkourability) {
+	public boolean wantsToShowStatusBar(Player player, Parkourability parkourability) {
 		return coolTimeTick > 0;
 	}
 
 	@Override
-	public float getStatusValue(LocalPlayer player, Parkourability parkourability) {
+	public float getStatusValue(Player player, Parkourability parkourability) {
 		return coolTimeTick / (float) MAX_COOL_TIME_TICK;
 	}
 

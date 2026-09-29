@@ -3,18 +3,19 @@ package com.alrex.parcool.common.item.recipe.special;
 import com.alrex.parcool.common.item.Items;
 import com.alrex.parcool.common.item.recipe.Recipes;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
-import javax.annotation.Nonnull;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
-import net.minecraft.util.Mth;
-import net.minecraft.util.FastColor;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
+
+import javax.annotation.Nonnull;
 import java.util.LinkedList;
 
 public class ZiplineRopeDyeRecipe extends CustomRecipe {
@@ -64,32 +65,31 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
         int dyeSize = dyeItems.size();
         for (DyeItem dyeItem : dyeItems) {
             int color = dyeItem.getDyeColor().getTextureDiffuseColor();
-            r += FastColor.ARGB32.red(color);
-            g += FastColor.ARGB32.green(color);
-            b += FastColor.ARGB32.blue(color);
+            r += ARGB.red(color);
+            g += ARGB.green(color);
+            b += ARGB.blue(color);
         }
         if (ZiplineRopeItem.hasCustomColor(resultZiplineRope)) {
             dyeSize++;
             int color = ZiplineRopeItem.getColor(resultZiplineRope);
-            r += FastColor.ARGB32.red(color);
-            g += FastColor.ARGB32.green(color);
-            b += FastColor.ARGB32.blue(color);
+            r += ARGB.red(color);
+            g += ARGB.green(color);
+            b += ARGB.blue(color);
         }
         r = Mth.clamp(r / dyeSize, 0, 0xFF);
         g = Mth.clamp(g / dyeSize, 0, 0xFF);
         b = Mth.clamp(b / dyeSize, 0, 0xFF);
-        ZiplineRopeItem.setColor(resultZiplineRope, FastColor.ARGB32.color(r, g, b));
+        ZiplineRopeItem.setColor(resultZiplineRope, ARGB.color(r, g, b));
         return resultZiplineRope;
     }
 
-    @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return width * height >= 2;
-    }
+    // CustomRecipe#canCraftInDimensions is gone as of 1.21.2, so the recipe no longer declares a grid
+    // size limit. `matches` already requires exactly one rope and at least one dye, which is what the
+    // old "width * height >= 2" check was standing in for.
 
     @Nonnull
     @Override
-    public RecipeSerializer<?> getSerializer() {
+    public RecipeSerializer<? extends CustomRecipe> getSerializer() {
         return Recipes.ZIPLINE_ROPE_DYE.get();
     }
 }

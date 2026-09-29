@@ -1,7 +1,7 @@
 package com.alrex.parcool.common.handlers;
 
-import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.api.event.ParCoolEventBus;
+import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.common.event.CompatEvents;
 import com.alrex.parcool.common.action.impl.*;
 import com.alrex.parcool.common.data.Parkourability;
@@ -9,7 +9,6 @@ import com.alrex.parcool.common.network.payload.StartBreakfallEventPayload;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.WorldUtil;
 import com.alrex.parcool.common.network.NetworkRegistries;
-import com.alrex.parcool.api.event.ParCoolEventBus;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;

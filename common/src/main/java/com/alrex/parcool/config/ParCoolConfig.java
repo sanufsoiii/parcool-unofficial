@@ -1018,6 +1018,17 @@ public class ParCoolConfig {
 	 * {@code Item#writeToBuffer}/{@code Item#readFromBuffer} methods (used by the client/server sync
 	 * payloads) are unchanged.
 	 */
+	/**
+	 * Loads (and on first run creates) both documents.
+	 *
+	 * <p>This runs on a dedicated server too, and it initialises the client half, which is what
+	 * {@code Actions} and the animator classes are reached through. That is harmless: the classes
+	 * involved are enums and class literals (ldc), which 1.21.11's verifier does not resolve, and the
+	 * arrays are sized from {@code Actions.LIST}, not from a client-only value. It is written down
+	 * because the claim in common/build.gradle - that every client-only entry point is guarded by
+	 * {@code Platform.getEnvironment() == Env.CLIENT} - is not enforced anywhere in the code, and the
+	 * load has to be explicit about it rather than relying on the comment.
+	 */
 	public static void load() {
 		Path configDir = Platform.getConfigFolder();
 		Path client = configDir.resolve(ParCool.MOD_ID + "-client.json");

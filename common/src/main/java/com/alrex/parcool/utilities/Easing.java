@@ -13,10 +13,14 @@ public class Easing {
         return new Easing(phase);
     }
 
+	/**
+	 * Closed at the upper bound on purpose. The chains below end in a fade-out whose `until` is the last
+	 * frame of the action, so with a half-open interval phase == until matched no segment at all and
+	 * {@link #get()} handed back the raw phase - the action flashed back to its start value for one frame
+	 * instead of finishing. A closed upper bound keeps the first-match-wins ordering: when two segments
+	 * touch, the earlier (the "hold" one) still wins, which is what the chains expect.
+	 */
 	public boolean isInRange(float start, float until) {
-		// Closed upper bound: the chains end in a fade-out whose "until" is the action's last frame, so
-		// a half-open `phase < until` made phase == until match no segment at all and get() handed back
-		// the raw phase - the action flashed back to its start value for one frame instead of finishing.
 		return start <= phase && phase <= until;
 	}
 

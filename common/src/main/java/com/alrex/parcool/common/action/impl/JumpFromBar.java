@@ -33,7 +33,7 @@ public class JumpFromBar extends Action {
 		if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.HANG_DOWN_JUMP.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new JumpFromBarAnimator());
+		if (animation != null) animation.setAnimator(JumpFromBarAnimator.class);
 	}
 
 	@Override
@@ -41,7 +41,7 @@ public class JumpFromBar extends Action {
         if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.HANG_DOWN_JUMP.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new JumpFromBarAnimator());
+		if (animation != null) animation.setAnimator(JumpFromBarAnimator.class);
 	}
 
 	@Override

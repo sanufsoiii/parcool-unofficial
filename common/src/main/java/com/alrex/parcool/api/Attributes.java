@@ -2,13 +2,12 @@ package com.alrex.parcool.api;
 
 import com.alrex.parcool.ParCool;
 import dev.architectury.platform.Platform;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.Objects;
 
@@ -34,7 +33,7 @@ import java.util.Objects;
  *     <li><b>Fabric</b>: the static initialiser below registers the two entries, and it is reached
  *     from {@code Bootstrap#bootStrap} through the mixin.</li>
  *     <li><b>NeoForge</b>: {@code :neoforge}'s {@code NeoForgeAttributes} registers them through
- *     NeoForge's own {@code DeferredRegister} (which fires on {@code RegisterEvent}, while the
+ *     NeoForge's own {@code DeferredRegister} (which fires on {@code NewRegistryEvent}, while the
  *     registry is still open) - exactly what upstream ParCool's NeoForge build does. Architectury's
  *     {@code DeferredRegister} is not an option: it rejects
  *     {@link net.minecraft.core.registries.Registries#ATTRIBUTE} outright
@@ -60,17 +59,8 @@ public class Attributes {
         ResourceLocation key = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, id);
         if (Platform.isNeoForge()) {
             // Registered by :neoforge, so read the holder back instead of creating a second entry.
-            // 1.21.1's Registry#get returns the value directly; the holder comes from getHolder.
-            ResourceKey<Attribute> registryKey =
-                    ResourceKey.create(BuiltInRegistries.ATTRIBUTE.key(), key);
-            var holder = BuiltInRegistries.ATTRIBUTE.getHolder(registryKey);
-            if (holder.isPresent()) return holder.get();
-            // A registry entry registered without an intrusive holder is not in byKey; wrapAsHolder then
-            // returns the existing Reference or a Holder.direct over the same value, and both are what
-            // AttributeSupplier.Builder#add and Player#getAttribute(Holder) consume.
-            Attribute registered = BuiltInRegistries.ATTRIBUTE.get(registryKey);
-            if (registered != null) return BuiltInRegistries.ATTRIBUTE.wrapAsHolder(registered);
-            throw new IllegalStateException("ParCool attribute " + key + " is not registered");
+            return BuiltInRegistries.ATTRIBUTE.get(key)
+                    .orElseThrow(() -> new IllegalStateException("ParCool attribute " + key + " is not registered"));
         }
         return Registry.registerForHolder(
                 BuiltInRegistries.ATTRIBUTE,

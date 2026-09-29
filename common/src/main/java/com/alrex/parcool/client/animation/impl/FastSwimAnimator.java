@@ -27,22 +27,22 @@ public class FastSwimAnimator extends Animator {
         double armFactor = Math.cos(Math.PI * tick / 15.);
 
         HumanoidArm attackHand = player.getMainArm();
-        boolean leftArmAnimatable = attackHand != HumanoidArm.LEFT || transformer.getRawModel().attackTime <= 0f;
-        boolean rightArmAnimatable = attackHand != HumanoidArm.RIGHT || transformer.getRawModel().attackTime <= 0f;
+        boolean leftArmAnimatable = attackHand != HumanoidArm.LEFT || transformer.getAttackTime() <= 0f;
+        boolean rightArmAnimatable = attackHand != HumanoidArm.RIGHT || transformer.getAttackTime() <= 0f;
         if (leftArmAnimatable && ((
-                transformer.getRawModel().leftArmPose != HumanoidModel.ArmPose.EMPTY
-                        && transformer.getRawModel().leftArmPose != HumanoidModel.ArmPose.ITEM
+                transformer.getLeftArmPose() != HumanoidModel.ArmPose.EMPTY
+                        && transformer.getLeftArmPose() != HumanoidModel.ArmPose.ITEM
         )
-                || transformer.getRawModel().rightArmPose.isTwoHanded()
+                || transformer.getRightArmPose().isTwoHanded()
         )
         ) {
             leftArmAnimatable = false;
         }
         if (rightArmAnimatable && ((
-                transformer.getRawModel().rightArmPose != HumanoidModel.ArmPose.EMPTY
-                        && transformer.getRawModel().rightArmPose != HumanoidModel.ArmPose.ITEM
+                transformer.getRightArmPose() != HumanoidModel.ArmPose.EMPTY
+                        && transformer.getRightArmPose() != HumanoidModel.ArmPose.ITEM
         )
-                || transformer.getRawModel().leftArmPose.isTwoHanded()
+                || transformer.getLeftArmPose().isTwoHanded()
         )
         ) {
             rightArmAnimatable = false;

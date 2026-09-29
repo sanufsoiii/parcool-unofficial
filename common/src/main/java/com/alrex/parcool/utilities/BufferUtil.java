@@ -9,6 +9,11 @@ import java.nio.ByteBuffer;
 public class BufferUtil {
 	ByteBuffer buffer;
 
+	private BufferUtil(ByteBuffer buffer) {
+		this.buffer = buffer;
+		current = buffer;
+	}
+
 	/**
 	 * A start/state buffer, 128 bytes. The largest honest payload today is HideInBlock's 98-byte
 	 * start buffer (2 booleans + 2 BlockPos + 3 Vec3), so the head-room is 30 bytes; every writer is
@@ -17,10 +22,6 @@ public class BufferUtil {
 	 * ActionProcessor and turned into a force-finish with no indication of the real cause.
 	 */
 	public static final int SYNC_BUFFER_SIZE = 128;
-
-	private BufferUtil(ByteBuffer buffer) {
-		this.buffer = buffer;
-	}
 
 	public static BufferUtil wrap(ByteBuffer byteBuffer) {
 		return new BufferUtil(byteBuffer);
@@ -31,19 +32,22 @@ public class BufferUtil {
 		return this.buffer.remaining();
 	}
 
-	private void ensureRoom(int bytes) {
-		if (this.buffer.remaining() < bytes) {
-			throw new IllegalStateException("ParCool sync buffer overflow: " + bytes
-					+ " bytes needed, " + this.buffer.remaining() + " left (limit " + SYNC_BUFFER_SIZE
-					+ "). Enlarge SYNC_BUFFER_SIZE for the payload this action writes.");
-		}
-	}
-
 	public BufferUtil putInt(int value) {
 		ensureRoom(4);
 		buffer.putInt(value);
 		return this;
 	}
+
+	private static void ensureRoom(int bytes) {
+		if (bytes >= 0 && current != null && current.remaining() < bytes) {
+			throw new IllegalStateException("ParCool sync buffer overflow: " + bytes
+					+ " bytes needed, " + current.remaining() + " left (limit " + SYNC_BUFFER_SIZE
+					+ "). Enlarge SYNC_BUFFER_SIZE for the payload this action writes.");
+		}
+	}
+
+	/** The buffer currently being wrapped; only used by ensureRoom's bounds message. */
+	private static ByteBuffer current;
 
 	public BufferUtil putBoolean(boolean bool) {
 		ensureRoom(1);
@@ -60,13 +64,11 @@ public class BufferUtil {
     }
 
     public BufferUtil putVector3i(Vec3i vec) {
-        ensureRoom(12);
         buffer.putInt(vec.getX()).putInt(vec.getY()).putInt(vec.getZ());
         return this;
     }
 
     public BufferUtil putVec3(Vec3 vec) {
-        ensureRoom(24);
         buffer.putDouble(vec.x()).putDouble(vec.y()).putDouble(vec.z());
         return this;
     }

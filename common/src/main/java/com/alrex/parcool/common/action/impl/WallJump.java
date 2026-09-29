@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.BackwardWallJumpAnimator;
 import com.alrex.parcool.client.animation.impl.WallJumpAnimator;
@@ -12,16 +13,17 @@ import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.WorldUtil;
-import javax.annotation.Nullable;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class WallJump extends Action {
@@ -108,7 +110,7 @@ public class WallJump extends Action {
 		ClingToCliff cling = parkourability.get(ClingToCliff.class);
 
 		boolean value = (!player.onGround()
-				&& !player.isInWaterOrBubble()
+				&& !EntityUtil.isInWaterOrBubble(player)
 				&& !player.isFallFlying()
 				&& !player.getAbilities().flying
 				&& parkourability.getAdditionalProperties().getNotCreativeFlyingTick() > 10
@@ -185,8 +187,8 @@ public class WallJump extends Action {
 				Mth.floor(player.getBoundingBox().minY + player.getBbHeight() * 0.25),
 				Mth.floor(player.getZ() + wallDirection.z())
 		);
-		float slipperiness = player.getCommandSenderWorld().isLoaded(leanedBlock) ?
-				PlatformServices.get().getFriction(player.getCommandSenderWorld().getBlockState(leanedBlock), player.getCommandSenderWorld(), leanedBlock, player)
+		float slipperiness = player.level().isLoaded(leanedBlock) ?
+				PlatformServices.get().getFriction(player.level().getBlockState(leanedBlock), player.level(), leanedBlock, player)
 				: 0.6f;
 
 		double ySpeed;
@@ -207,13 +209,13 @@ public class WallJump extends Action {
 		if (animation != null) {
 			switch (type) {
 				case Back:
-					animation.setAnimator(new BackwardWallJumpAnimator());
+					animation.setAnimator(BackwardWallJumpAnimator.class);
 					break;
 				case SwingLeftArm:
-					animation.setAnimator(new WallJumpAnimator(false));
+					animation.setAnimator(WallJumpAnimator.class, false);
 					break;
 				case SwingRightArm:
-					animation.setAnimator(new WallJumpAnimator(true));
+					animation.setAnimator(WallJumpAnimator.class, true);
 			}
 		}
 	}
@@ -241,13 +243,13 @@ public class WallJump extends Action {
 		if (animation != null) {
 			switch (type) {
 				case Back:
-					animation.setAnimator(new BackwardWallJumpAnimator());
+					animation.setAnimator(BackwardWallJumpAnimator.class);
 					break;
 				case SwingLeftArm:
-					animation.setAnimator(new WallJumpAnimator(false));
+					animation.setAnimator(WallJumpAnimator.class, false);
 					break;
 				case SwingRightArm:
-					animation.setAnimator(new WallJumpAnimator(true));
+					animation.setAnimator(WallJumpAnimator.class, true);
 			}
 		}
 	}

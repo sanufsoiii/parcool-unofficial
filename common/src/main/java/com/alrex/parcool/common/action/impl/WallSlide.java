@@ -11,17 +11,18 @@ import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.common.damage.DamageSources;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.WorldUtil;
-import javax.annotation.Nullable;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
+
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 ;
@@ -77,7 +78,7 @@ public class WallSlide extends Action {
     public void onWorkingTickInClient(Player player, Parkourability parkourability) {
 		Animation animation = Animation.get(player);
 		if (animation != null && !animation.hasAnimator()) {
-			animation.setAnimator(new WallSlideAnimator());
+			animation.setAnimator(WallSlideAnimator.class);
 		}
         particleSpawnCoolTime--;
         if (particleSpawnCoolTime <= 0) {
@@ -100,8 +101,8 @@ public class WallSlide extends Action {
 					Mth.floor(player.getY() + player.getBbHeight() * 0.75),
 					Mth.floor(player.getZ() + leanedWallDirection.z)
 			);
-			if (!player.getCommandSenderWorld().isLoaded(leanedBlock)) return;
-			float slipperiness = PlatformServices.get().getFriction(player.getCommandSenderWorld().getBlockState(leanedBlock), player.getCommandSenderWorld(), leanedBlock, player);
+			if (!player.level().isLoaded(leanedBlock)) return;
+			float slipperiness = PlatformServices.get().getFriction(player.level().getBlockState(leanedBlock), player.level(), leanedBlock, player);
 			slipperiness = (float) Math.sqrt(slipperiness);
 			player.fallDistance *= slipperiness;
 			player.setDeltaMovement(player.getDeltaMovement().multiply(0.8, slipperiness, 0.8));

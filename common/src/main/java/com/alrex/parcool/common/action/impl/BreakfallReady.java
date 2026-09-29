@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.input.KeyBindings;
 import com.alrex.parcool.common.action.Action;
@@ -8,16 +9,17 @@ import com.alrex.parcool.common.data.ParCoolDataKeys;
 import com.alrex.parcool.common.data.client.LocalStamina;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.config.ParCoolConfig;
-import java.nio.ByteBuffer;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.util.RandomSource;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+
+import java.nio.ByteBuffer;
 
 public class BreakfallReady extends Action {
 	public void startBreakfall(Player player, Parkourability parkourability, boolean justTimed) {
-		if (!(player instanceof LocalPlayer localPlayer)) return;
+		if (!player.isLocalPlayer()) return;
+		LocalPlayer localPlayer = (LocalPlayer) player;
         boolean playSound = false;
 		if (justTimed && ParCoolConfig.Client.Booleans.EnableJustTimeEffectOfBreakfall.get()) {
 			if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
@@ -66,7 +68,7 @@ public class BreakfallReady extends Action {
 		return (KeyBindings.isDown(KeyBindings.getKeyBreakfall())
                 && !ParCoolDataKeys.getStamina(player).isExhausted()
 				&& !parkourability.get(Crawl.class).isDoing()
-				&& !player.isInWaterOrBubble()
+				&& !EntityUtil.isInWaterOrBubble(player)
 				&& (!player.onGround() || parkourability.getAdditionalProperties().getLandingTick() < 3)
 		);
 	}

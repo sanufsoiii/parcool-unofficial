@@ -16,7 +16,12 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -107,5 +112,27 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
     @Override
     public Dodge.DodgeDirection handleDodgeCameraRotation(Dodge.DodgeDirection direction) {
         return direction;
+    }
+
+    /**
+     * Registers the type <b>eagerly</b> and hands back a constant supplier.
+     *
+     * <p>Eager is the whole point: Fabric runs its entry points before the built-in registries freeze,
+     * and that window is the only one left now that 1.21.11 removed {@code BlockEntityType.Builder} and
+     * left the type's only factory private - hence
+     * {@code mixin.common.BlockEntityTypeInvoker}, which reaches
+     * {@code BlockEntityType#register(String, factory, blocks...)} with a full {@code namespace:path}
+     * id. A lazily evaluated supplier instead registers on first use, i.e. on the first block
+     * placement, and dies with "This registry can't create intrusive holders".
+     *
+     * <p>NeoForge is the opposite case and defers to its registry event instead; that asymmetry is why
+     * this lives behind the platform seam.
+     */
+    @Override
+    public <T extends BlockEntity> Supplier<BlockEntityType<T>> registerBlockEntityType(
+            String name, BlockEntityType.BlockEntitySupplier<T> factory, Supplier<Block[]> blocks) {
+        BlockEntityType<T> type = com.alrex.parcool.mixin.common.BlockEntityTypeInvoker.parcool$register(
+                com.alrex.parcool.ParCool.MOD_ID + ":" + name, factory, blocks.get());
+        return () -> type;
     }
 }

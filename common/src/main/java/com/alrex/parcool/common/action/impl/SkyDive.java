@@ -6,12 +6,12 @@ import com.alrex.parcool.common.action.StaminaConsumeTiming;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.VectorUtil;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 import com.alrex.parcool.common.event.CompatEvents;
 
 import java.nio.ByteBuffer;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.phys.Vec3;
-import net.minecraft.client.player.LocalPlayer;
 
 public class SkyDive extends Action {
 	@Override
@@ -28,14 +28,15 @@ public class SkyDive extends Action {
 
 	@Override
     public void onWorkingTickInLocalClient(Player player, Parkourability parkourability) {
-        if (!(player instanceof LocalPlayer clientPlayer)) {
+        if (!player.isLocalPlayer()) {
 			return;
 		}
+		LocalPlayer clientPlayer = (LocalPlayer) player;
 		// null for a tick or two around a respawn / mount / dimension change.
 		if (clientPlayer.input == null) return;
 		Vec3 forwardVec = VectorUtil.fromYawDegree(player.yHeadRot);
-		Vec3 leftVec = forwardVec.yRot((float) Math.PI / 2).scale(clientPlayer.input.leftImpulse * 0.0);
-		forwardVec = forwardVec.scale(clientPlayer.input.forwardImpulse * 0.03);
+		Vec3 leftVec = forwardVec.yRot((float) Math.PI / 2).scale(clientPlayer.input.getMoveVector().x * 0.0);
+		forwardVec = forwardVec.scale(clientPlayer.input.getMoveVector().y * 0.03);
 		clientPlayer.setDeltaMovement(clientPlayer.getDeltaMovement()
 				.multiply(
 						1,

@@ -1,10 +1,10 @@
 package com.alrex.parcool.api;
 
 import com.alrex.parcool.ParCool;
-import dev.architectury.registry.registries.RegistrySupplier;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.core.registries.Registries;
+import dev.architectury.registry.registries.RegistrySupplier;
 import dev.architectury.registry.registries.DeferredRegister;
 
 public class SoundEvents {

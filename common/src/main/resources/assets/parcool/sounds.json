@@ -44,7 +44,7 @@
     "sounds": [
       {
         "name": "parcool:landing",
-        "volume": 0.40,
+        "volume": 0.4,
         "pitch": 0.7
       }
     ]
@@ -54,7 +54,7 @@
     "sounds": [
       {
         "name": "parcool:landing",
-        "volume": 0.40,
+        "volume": 0.4,
         "pitch": 0.7
       }
     ]
@@ -162,9 +162,9 @@
   "zipline.set": {
     "subtitle": "parcool.sound.zipline.set.subtitle",
     "sounds": [
-      "minecraft:entity/leashknot/place1",
-      "minecraft:entity/leashknot/place2",
-      "minecraft:entity/leashknot/place3"
+      "minecraft:entity/leashknot/leash1",
+      "minecraft:entity/leashknot/leash2",
+      "minecraft:entity/leashknot/leash3"
     ]
   },
   "zipline.remove": {

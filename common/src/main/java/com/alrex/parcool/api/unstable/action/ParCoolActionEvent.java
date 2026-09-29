@@ -67,6 +67,17 @@ public class ParCoolActionEvent {
     }
     // ======
 
+    /**
+     * @deprecated superseded by {@link TryToStartEvent}, which is what new code should listen to.
+     *
+     * <p>Both are posted for the same start attempt, so a listener on
+     * {@link com.alrex.parcool.api.event.ParCoolEventBus#actionEvents} sees two events per try, as it
+     * did upstream. That duplication is deliberate and kept for compatibility: removing the deprecated
+     * post would silently stop every add-on that still subscribes to it, which is a worse break than
+     * the double notification. Cancel either one and the attempt is refused - the start path treats a
+     * cancellation from either event as a veto.
+     */
+    @Deprecated
     public static class TryToStart extends ParCoolActionEvent implements CancellableEvent {
         public TryToStart(Player player, Action action) {
             super(player, action);

@@ -28,8 +28,10 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.InteractionResult;
 import java.util.List;
 
 public abstract class ZiplineHookBlock extends DirectionalBlock implements EntityBlock {
@@ -69,10 +71,19 @@ public abstract class ZiplineHookBlock extends DirectionalBlock implements Entit
         super.onRemove(state, world, pos, p_196243_4_, p_196243_5_);
     }
 
+    /**
+     * 1.21.2 already hands the block a {@link ScheduledTickAccess} here instead of a bare
+     * {@code LevelAccessor}, and reorders the arguments around the positions; the check itself is
+     * unchanged. 1.21.11 dropped the branch's siblings at the same time, so this is the one hook in this
+     * class that follows the newer shape while {@link #onRemove} still uses the older one.
+     */
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState state1, LevelAccessor levelAccessor, BlockPos pos, BlockPos pos1) {
+    public BlockState updateShape(BlockState state, LevelReader levelReader, ScheduledTickAccess scheduledTicks,
+                                  BlockPos pos, Direction direction, BlockPos pos1, BlockState state1, RandomSource random) {
         Direction facing = state.getValue(FACING);
-        return direction == facing.getOpposite() && !canSurvive(state, levelAccessor, pos) ? Blocks.AIR.defaultBlockState() : super.updateShape(state, direction, state1, levelAccessor, pos, pos1);
+        return direction == facing.getOpposite() && !canSurvive(state, levelReader, pos)
+                ? Blocks.AIR.defaultBlockState()
+                : super.updateShape(state, levelReader, scheduledTicks, pos, direction, pos1, state1, random);
     }
 
 
@@ -89,19 +100,19 @@ public abstract class ZiplineHookBlock extends DirectionalBlock implements Entit
     }
 
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, @Nonnull BlockHitResult hitResult) {
+    protected InteractionResult useItemOn(ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, @Nonnull BlockHitResult hitResult) {
         if (stack.getItem() instanceof ShearsItem) {
             var tileEntity = player.level().getBlockEntity(pos);
             if (tileEntity instanceof ZiplineHookTileEntity ziplineHookTileEntity) {
                 if (ziplineHookTileEntity.getConnectionPoints().isEmpty())
-                    return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                    return InteractionResult.PASS;
 
                 List<ItemStack> itemStacks = ziplineHookTileEntity.removeAllConnection();
                 if (!itemStacks.isEmpty()) {
                     player.playSound(SoundEvents.ZIPLINE_REMOVE.get(), 1, 1);
                 }
                 if (player.level().isClientSide()) {
-                    return ItemInteractionResult.SUCCESS;
+                    return InteractionResult.SUCCESS;
                 } else {
                     itemStacks.forEach((it) -> Containers.dropItemStack(player.level(), pos.getX(), pos.getY(), pos.getZ(), it));
                     if (!itemStacks.isEmpty()) {
@@ -109,12 +120,12 @@ public abstract class ZiplineHookBlock extends DirectionalBlock implements Entit
                             stack.hurtAndBreak(1, player, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
                         }
                     }
-                    return ItemInteractionResult.CONSUME;
+                    return InteractionResult.CONSUME;
                 }
             }
         }
 
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.PASS;
     }
 
     @Nullable
