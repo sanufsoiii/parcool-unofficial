@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
 /**
  * Fabric implementation of {@link ParCoolPlatform}.
  *
- * <p>Paraglider, EpicFight and BetterThirdPerson have no 1.21.1 Fabric build, so their hooks report
+ * <p>Paraglider, EpicFight and BetterThirdPerson have no 1.21.2 Fabric build, so their hooks report
  * "absent" and ParCool falls back to its own stamina and camera behaviour — exactly as it does when
  * the mod is not installed at all. The swim speed attribute is NeoForge-only, so FastSwim's
  * server-side speed bonus is a no-op here.
@@ -44,7 +44,9 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
     @Override
     @Nullable
     public DamageSource createDamageSource(Player player, ResourceKey<DamageType> type) {
-        // Vanilla 1.21.1 has no Level#damageSources(); DamageSource takes the DamageType directly.
+        // 1.21.2 does have Level#damageSources(), but its source(ResourceKey) overloads are private,
+        // so only the NeoForge access transformer can reach them; the common shape of
+        // DamageSource(Holder<DamageType>) is built by hand here instead.
         Holder<DamageType> holder = player.level().registryAccess()
                 .lookupOrThrow(Registries.DAMAGE_TYPE)
                 .getOrThrow(type);
@@ -64,7 +66,7 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
 
     @Override
     public void setForcedPose(Player player, @Nullable Pose pose) {
-        // Vanilla 1.21.1 has no forced-pose concept; the mixin re-adds NeoForge's one, without which
+        // Vanilla 1.21.2 has no forced-pose concept; the mixin re-adds NeoForge's one, without which
         // Crawl/Slide cannot hold Pose.SWIMMING and Entity#isVisuallyCrawling() never reports true.
         ((IPlayerForcedPose) player).parcool$setForcedPose(pose);
     }
