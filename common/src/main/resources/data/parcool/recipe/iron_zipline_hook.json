@@ -5,9 +5,15 @@
     " h "
   ],
   "key": {
-    "n": "minecraft:iron_nugget",
-    "I": "minecraft:iron_ingot",
-    "h": "minecraft:tripwire_hook"
+    "n": {
+      "item": "minecraft:iron_nugget"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "h": {
+      "item": "minecraft:tripwire_hook"
+    }
   },
   "result": {
     "id": "parcool:iron_zipline_hook",

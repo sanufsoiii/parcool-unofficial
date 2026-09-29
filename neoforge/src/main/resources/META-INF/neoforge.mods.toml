@@ -25,21 +25,21 @@ file = "META-INF/accesstransformer.cfg"
 [[dependencies.parcool]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.11.0,)"
+versionRange = "[21.2,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.parcool]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.11,1.22)"
+versionRange = "[1.21.2,1.22)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.parcool]]
 modId = "architectury"
 type = "required"
-versionRange = "[19.0.0,)"
+versionRange = "[14.0.0,)"
 ordering = "AFTER"
 side = "BOTH"
 
@@ -48,7 +48,7 @@ side = "BOTH"
 [[dependencies.parcool]]
 modId = "paraglider"
 type = "optional"
-versionRange = "[21.11.0-beta.1,)"
+versionRange = "[21.2,)"
 ordering = "AFTER"
 side = "BOTH"
 
@@ -69,7 +69,7 @@ side = "BOTH"
 [[dependencies.parcool]]
 modId = "shouldersurfing"
 type = "optional"
-versionRange = "[1.21.11-5.0.0,)"
+versionRange = "[1.21.2,)"
 ordering = "NONE"
 side = "BOTH"
 

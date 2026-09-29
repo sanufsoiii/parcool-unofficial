@@ -18,8 +18,6 @@ import com.alrex.parcool.common.network.NetworkRegistries;
 import com.alrex.parcool.common.potion.Potions;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.extern.AdditionalMods;
-import com.alrex.parcool.server.command.CommandRegistry;
-import com.alrex.parcool.server.command.args.ParCoolArgumentTypeInfos;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import org.apache.logging.log4j.LogManager;
@@ -62,7 +60,7 @@ public class ParCool {
 
         Effects.registerAll();
         Potions.registerAll();
-        // NOTE: com.alrex.parcool.api.Attributes is deliberately *not* touched here. 1.21.11 freezes the
+        // NOTE: com.alrex.parcool.api.Attributes is deliberately *not* touched here. NeoForge 21.2 freezes the
         // built-in registries before the NeoForge mod constructors run, so the two attributes are
         // registered by :neoforge's NeoForgeAttributes (a NeoForge DeferredRegister) and only
         // *resolved* by Attributes - and a class whose static initialiser resolves a Holder cannot be

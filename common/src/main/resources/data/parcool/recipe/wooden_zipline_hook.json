@@ -6,9 +6,15 @@
     "h"
   ],
   "key": {
-    "n": "minecraft:iron_nugget",
-    "L": "#minecraft:logs",
-    "h": "minecraft:tripwire_hook"
+    "n": {
+      "item": "minecraft:iron_nugget"
+    },
+    "L": {
+      "tag": "minecraft:logs"
+    },
+    "h": {
+      "item": "minecraft:tripwire_hook"
+    }
   },
   "result": {
     "id": "parcool:wooden_zipline_hook",

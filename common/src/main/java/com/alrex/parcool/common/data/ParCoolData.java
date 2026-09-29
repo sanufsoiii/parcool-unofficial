@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.data;
 
-import javax.annotation.Nullable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.nbt.CompoundTag;

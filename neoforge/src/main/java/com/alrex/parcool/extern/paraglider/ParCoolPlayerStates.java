@@ -5,7 +5,6 @@ import com.alrex.parcool.common.action.Action;
 import com.alrex.parcool.common.action.Actions;
 import com.alrex.parcool.common.action.impl.*;
 import com.alrex.parcool.common.data.Parkourability;
-import com.alrex.parcool.extern.AdditionalMods;
 import net.minecraft.resources.ResourceLocation;
 import tictim.paraglider.api.movement.ParagliderPlayerStates;
 import tictim.paraglider.api.movement.PlayerStateCondition;

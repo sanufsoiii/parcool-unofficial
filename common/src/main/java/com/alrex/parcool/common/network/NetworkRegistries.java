@@ -9,7 +9,6 @@ import com.alrex.parcool.common.network.payload.StaminaBroadcastPayload;
 import com.alrex.parcool.common.network.payload.StaminaPayload;
 import com.alrex.parcool.common.network.payload.StaminaProcessOnServerPayload;
 import com.alrex.parcool.common.network.payload.StartBreakfallEventPayload;
-import com.alrex.parcool.platform.ParCoolNetwork;
 import com.alrex.parcool.platform.PlatformServices;
 import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
