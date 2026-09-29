@@ -154,6 +154,34 @@ still old-side, in which case copy the 1.21.1 side.
 | Translation keys | `key.categories.parcool` | `key.category.parcool` |
 | NeoForge mapping naming | **mojmap**, despite the `client-…-srg.jar` filename | mojmap as well (verified against a shipped NeoForge mod) — re-verify for your NeoForge version, do not assume |
 
+**Correction for 1.21.5 (written while doing this port).** The table above is a 1.21.1-vs-1.21.11
+comparison and it does not bracket 1.21.5. Read it as "check the jar", not as "pick a column": 1.21.5
+is on the *old* side of the `ResourceLocation`/`Identifier`, `ValueInput`/`ValueOutput`,
+`RenderSetup`/`RenderPipeline` + public `RenderPipelines#PIPELINES_BY_LOCATION`,
+`submit(...)`/`SubmitNodeCollector`, `client.model.player.PlayerModel` and `AvatarRenderer` rows, and
+on the *new* side of six rows this brief does not list at all:
+
+| Area (missing from the brief) | 1.21.4 | 1.21.5 |
+|---|---|---|
+| NBT getters | `getInt`/`getBoolean`/`getCompound` return the value; `getAllKeys()`; `contains(String, byte)` | all of them return `Optional<T>`, with a `getXOr(key, default)` family beside them; `keySet()` replaces `getAllKeys()`; `contains(String, byte)` is gone |
+| `BlockBehaviour#onRemove` | present | **removed**; `LevelChunk#setBlockState` calls `BlockEntity#preRemoveSideEffects(BlockPos, BlockState)` on the outgoing block entity instead |
+| `ClientInput` | `leftImpulse` / `forwardImpulse` fields | fields gone, `moveVector` is `protected`, `getMoveVector()` is the accessor |
+| `Item#appendHoverText` | `(stack, context, List<Component>, flag)` | `(stack, context, TooltipDisplay, Consumer<Component>, flag)` |
+| `WallBlock` sides | `NORTH_WALL` / `SOUTH_WALL` / `EAST_WALL` / `WEST_WALL` | `NORTH` / `SOUTH` / `EAST` / `WEST` |
+| `LivingEntity#causeFallDamage` | `(float, float, DamageSource)` | `(double, float, DamageSource)` |
+
+Three rows above are also wrong for 1.21.5, for a different reason:
+
+* **Recipe ingredients.** The row is right about 1.21.5 and wrong about 1.21.11: 1.21.5's vanilla
+  recipes really are `"minecraft:chain"` / `"#minecraft:logs"`, verified against
+  `data/minecraft/recipe/*.json` inside `server-1.21.5.jar`. The `{"item": ...}` object form belongs
+  to 1.21.2 - 1.21.4. (The 1.21.4 tree's NOTES.md claims the opposite; it is wrong.)
+* **`pack.mcmeta`.** 1.21.5's `PackMetadataSection` reads `pack_format` plus an optional
+  `supported_formats` range. There is no `min_format` / `max_format` on this version - those arrive
+  with the 1.21.11 shapes above. 1.21.5's own numbers are resource 55 / data 71.
+* **Entity rendering.** `submit(...)` and `SubmitNodeCollector` arrive several versions *after*
+  1.21.5, so 1.21.5 is the `extractRenderState` + `render(S, ...)` shape: 1.21.4, not 1.21.11.
+
 **Do not skip the one-mapping-per-key row.** It is Fabric-only and it is the single most
 player-visible difference between the two reference ports: on a loader where `KeyMapping.MAP` holds
 one mapping per physical key, ParCool silently steals right-click / Space / Left-Ctrl from vanilla
@@ -211,14 +239,29 @@ record why in `NOTES.md`.
 silently behaves like the old code, that cache is stale:
 
 ```bash
-./gradlew --stop
 rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
+
+**Do not run `./gradlew --stop` on this machine.** Several 1.21.x ports build side by side out of
+one shared Gradle home, so stopping the daemon kills their builds too. Deleting the cache directory
+above and re-running the build is the equivalent, and it is all that is needed.
 
 Do this whenever you add a class to `:common`. It will otherwise make you debug a build that is not
 the one you are looking at.
 
 ## 9. Phase 6 — actually run both loaders
+
+> **Out of scope for the 1.21.5 run.** Launching Minecraft (`:fabric:runClient`,
+> `:neoforge:runclient`, a server, a headless client) was explicitly excluded from this task, so the
+> checklist below was **not** performed. The acceptance used instead was: `./gradlew build` succeeds
+> from a cleaned tree, both jars exist, and their contents were inspected (mixin count, access-widener
+> namespace, refmap absence or presence, mapping naming of the bytecode, metadata versions, resource
+> and recipe files). Every mixin target, `@Shadow`, `@Accessor`/`@Invoker` name, `@At` `INVOKE` target
+> and handler signature was re-derived against the 1.21.5 mojmap jar with `javap`, and the NeoForge
+> access transformer was confirmed to have been applied to the recompiled Minecraft. What that leaves
+> unverified is written down in `NOTES.md` §9 — treat a first `:fabric:runClient` as the remaining
+> step before shipping these jars to a player. Everything below this line is the original brief and
+> is left in place for the next port that *is* allowed to run the game.
 
 A port that only compiles is not a port.
 
