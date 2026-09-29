@@ -17,7 +17,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * {@code IllegalStateException: Registry is already frozen (trying to add key parcool:max_stamina)}.
  * NeoForge's own {@code DeferredRegister} hooks {@code RegisterEvent}, which is still inside the
  * writable window, so it is the only thing that works here - and it is what upstream ParCool's
- * NeoForge build uses. NeoForge 21.11 has no {@code NeoForgeRegistries.ATTRIBUTES} any more (it went
+ * NeoForge build uses. NeoForge has no {@code NeoForgeRegistries.ATTRIBUTES} on this line (it went
  * away with the attribute rework), so the key is {@link Registries#ATTRIBUTE} - the same registry.
  *
  * <p>Architectury's {@code DeferredRegister} is not an option: it rejects
@@ -35,7 +35,7 @@ public final class NeoForgeAttributes {
                 () -> new RangedAttribute("parcool.max_stamina", 2000, 10, 10000).setSyncable(true));
         ATTRIBUTES.register("stamina_recovery",
                 () -> new RangedAttribute("parcool.stamina_recovery", 20, 0, 10000).setSyncable(true));
-        // NeoForge 21.11's DeferredRegister no longer registers itself on the global bus; the mod's
+        // NeoForge 21.5+'s DeferredRegister no longer registers itself on the global bus; the mod's
         // own bus has to be handed in, which the @Mod constructor receives by injection.
         ATTRIBUTES.register(modEventBus);
     }
