@@ -6,7 +6,7 @@ import com.alrex.parcool.common.action.Actions;
 import com.alrex.parcool.common.action.impl.*;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.extern.AdditionalMods;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import tictim.paraglider.api.movement.ParagliderPlayerStates;
 import tictim.paraglider.api.movement.PlayerStateCondition;
 
@@ -62,8 +62,8 @@ public class ParCoolPlayerStates {
 
     public record Entry(
             Class<? extends Action> clazz,
-            Identifier stateID,
-            List<Identifier> parentID,
+            ResourceLocation stateID,
+            List<ResourceLocation> parentID,
             int staminaDelta,
             double priority,
             PlayerStateCondition condition
@@ -71,7 +71,7 @@ public class ParCoolPlayerStates {
         private static Entry constant(Class<? extends Action> clazz) {
             return new Entry(
                     clazz,
-                    Identifier.fromNamespaceAndPath(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
+                    ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
                     Arrays.asList(
                             ParagliderPlayerStates.IDLE,
                             ParagliderPlayerStates.RUNNING,
@@ -91,7 +91,7 @@ public class ParCoolPlayerStates {
         private static Entry instant(Class<? extends Action> clazz) {
             return new Entry(
                     clazz,
-                    Identifier.fromNamespaceAndPath(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
+                    ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
                     Arrays.asList(
                             ParagliderPlayerStates.IDLE,
                             ParagliderPlayerStates.RUNNING,
@@ -126,7 +126,7 @@ public class ParCoolPlayerStates {
             return new Entry(clazz, stateID, parentID, value, priority, condition);
         }
 
-        public Entry parentID(Identifier... value) {
+        public Entry parentID(ResourceLocation... value) {
             return new Entry(clazz, stateID, Arrays.stream(value).toList(), staminaDelta, priority, condition);
         }
     }

@@ -11,11 +11,11 @@ public class EntityUtil {
 	}
 
 	/**
-	 * Replaces {@code Entity#isInWaterOrBubble()}, which 1.21.11 removed.
+	 * Replaces {@code Entity#isInWaterOrBubble()}, which 1.21.8 removed.
 	 *
 	 * <p>1.21.1 answered {@code isInWater() || getBubbleColumn()}, where {@code getBubbleColumn} was a
 	 * flag the entity carried while {@code BubbleColumnBlock#entityInside} was running. That flag no
-	 * exists on 1.21.11 - the column is applied imperatively every tick from
+	 * exists on 1.21.8 - the column is applied imperatively every tick from
 	 * {@code entityInside} and nothing stores it - so the block test below is the equivalent query.
 	 * {@code entityInside} fires for the block the entity occupies and for the one directly below it
 	 * (the "above the column" case), which is exactly the two positions checked here.

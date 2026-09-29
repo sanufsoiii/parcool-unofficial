@@ -9,9 +9,18 @@ pluginManagement {
 }
 
 plugins {
+	// Loom 1.17 is the newest published line (https://maven.architectury.dev/dev/architectury/loom/
+	// dev.architectury.loom.gradle.plugin/maven-metadata.xml) and the one architectury-plugin 3.5.170
+	// requires: its `neoForge()`/`common()` handling calls LoomGradleExtension#disableObfuscation(),
+	// which does not exist on the 1.7.x line the 1.21.1 port used.
 	id 'dev.architectury.loom' version '1.17.493' apply false
+	// 3.5.170 is the newest published architectury-plugin
+	// (https://maven.architectury.dev/architectury-plugin/architectury-plugin.gradle.plugin/maven-metadata.xml).
 	id 'architectury-plugin' version '3.5.170' apply false
-	id 'net.neoforged.moddev' version '2.0.147' apply false
+	// ModDevGradle 2.x is the branch that supports NeoForge >= 21.5; 1.0.x stops at the 21.4 line, so
+	// MC 1.21.8 / NeoForge 21.8.x needs 2.x.
+	// (https://maven.neoforged.net/releases/net/neoforged/moddev/net.neoforged.moddev.gradle.plugin/maven-metadata.xml)
+	id 'net.neoforged.moddev' version '2.0.148' apply false
 }
 
 rootProject.name = 'parcool-architectury'

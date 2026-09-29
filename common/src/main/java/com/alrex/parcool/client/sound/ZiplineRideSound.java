@@ -40,7 +40,7 @@ public final class ZiplineRideSound {
             // Read only after play(): AbstractSoundInstance#getVolume needs the resolved Sound, which
             // exists from here on and not before.
             ParCool.LOGGER.debug("[parcool] zipline ride sound started {} volume={} pitch={}",
-                    instance.getIdentifier(), instance.getVolume(), instance.getPitch());
+                    instance.getLocation(), instance.getVolume(), instance.getPitch());
         } catch (RuntimeException | LinkageError e) {
             current = null;
             ParCool.LOGGER.error("[parcool] zipline ride sound could not be started", e);

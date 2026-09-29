@@ -1,5 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
+  "category": "misc",
   "pattern": [
     "wCS",
     "SnS",
@@ -7,7 +8,7 @@
   ],
   "key": {
     "n": "minecraft:iron_nugget",
-    "C": "minecraft:iron_chain",
+    "C": "minecraft:chain",
     "S": "minecraft:string",
     "w": "minecraft:stick"
   },

@@ -24,7 +24,7 @@ public class ZiplineCommand {
     public static ArgumentBuilder<CommandSourceStack, ?> getBuilder() {
         return Commands
                 .literal("zipline")
-                .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                .requires(commandSource -> commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(Commands.literal("set")
                         .then(
                                 Commands.argument(

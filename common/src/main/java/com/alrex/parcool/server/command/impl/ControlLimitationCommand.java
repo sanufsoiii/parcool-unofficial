@@ -223,7 +223,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("set")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(
                                 getLimitationByNameCommands(true, (it) -> {
                                     limitationSetCoreCommands(it, true, true);
@@ -239,7 +239,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("enable")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(
                                 getLimitationByNameCommands(true, (it) -> {
                                     it
@@ -257,7 +257,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("disable")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(
                                 getLimitationByNameCommands(true, (it) -> {
                                     it
@@ -275,7 +275,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("delete")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(Commands
                                 .argument(ARGS_NAME_LIMITATION_ID, LimitationIDArgumentType.limitation())
                                 .executes(ControlLimitationCommand::deleteLimitation)

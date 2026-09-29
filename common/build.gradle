@@ -31,9 +31,12 @@ loom {
 	// the common jar and referenced by both platform mod metadata files.
 	accessWidenerPath = file('src/main/resources/parcool.accesswidener')
 
-	mixin {
-		defaultRefmapName = 'parcool-common-refmap.json'
-	}
+	// No `mixin { defaultRefmapName = ... }` block: Loom 1.17 no longer runs the mixin annotation
+	// processor unless `useLegacyMixinAp` is set, and this port ships no refmap on purpose. Loom
+	// defaults `mixinRemapType = static`, so :common:remapJar rewrites the mixin targets (both the
+	// annotation strings and the @Shadow descriptors) straight into the bytecode, which is why
+	// fabric-api built with the same Loom advertises `Fabric-Loom-Mixin-Remap-Type: static` and ships
+	// none either.
 
 	mods {
 		"${project.mod_id}" {

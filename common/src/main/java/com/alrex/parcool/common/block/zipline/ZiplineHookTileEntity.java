@@ -144,7 +144,7 @@ public class ZiplineHookTileEntity extends BlockEntity {
     }
 
     /**
-     * 1.21.11 replaced the {@code CompoundTag} save hooks with {@link ValueOutput}, so the connection
+     * 1.21.8 replaced the {@code CompoundTag} save hooks with {@link ValueOutput}, so the connection
      * list is written through {@code childrenList}. The on-disk keys are unchanged, so a world written
      * by 1.21.1 still loads: the reader accepts both the relative ({@code rX}/{@code rY}/{@code rZ})
      * and the absolute ({@code X}/{@code Y}/{@code Z}) form, exactly as before.
@@ -195,7 +195,7 @@ public class ZiplineHookTileEntity extends BlockEntity {
     }
 
     /**
-     * Was {@code Block#onRemove} on {@link ZiplineHookBlock}, which 1.21.11 removed: the removal
+     * Was {@code Block#onRemove} on {@link ZiplineHookBlock}, which 1.21.8 removed: the removal
      * side effects now hang off the block entity instead. Called from {@code LevelChunk#setBlockState}
      * on the server right before the block entity is dropped, which is exactly the old {@code onRemove}
      * window, so the linked ropes are still detached and their items returned to the world.
@@ -207,7 +207,7 @@ public class ZiplineHookTileEntity extends BlockEntity {
     }
 
     /**
-     * {@code getUpdateTag}/{@code handleUpdateTag} are vanilla again in 1.21.11, and both route through
+     * {@code getUpdateTag}/{@code handleUpdateTag} are vanilla again in 1.21.8, and both route through
      * {@link #saveAdditional} / {@link #loadAdditional}, so the sync needs no hook of its own - the
      * connections travel to the client through the same ValueInput/ValueOutput pair as on disk.
      */

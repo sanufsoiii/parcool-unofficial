@@ -5,7 +5,7 @@ import dev.architectury.platform.Platform;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 
@@ -24,7 +24,8 @@ import java.util.Objects;
  * <p><b>Why the two loaders register them differently.</b> {@code BuiltInRegistries.ATTRIBUTE} is
  * writable only while {@code Bootstrap#bootStrap} is running, and that pass is the one thing that
  * reaches {@code DefaultAttributes}' static initialiser, i.e. {@code Player#createAttributes}, on
- * Fabric. NeoForge closes the built-in registries before the mod constructors run, so a direct
+ * Fabric. NeoForge (21.7.25-beta and later, the line this port targets) closes the built-in
+ * registries before the mod constructors run, so a direct
  * {@code Registry.registerForHolder} there dies with "Registry is already frozen (trying to add key
  * parcool:max_stamina)" and NeoForge cannot start at all. There is no vanilla hook that sits inside
  * the writable window on both loaders - {@code Bootstrap#validate} runs before the freeze on Fabric
@@ -56,7 +57,7 @@ public class Attributes {
 
     private static Holder<Attribute> resolve(
             String id, String descriptionId, double defaultValue, double min, double max) {
-        Identifier key = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, id);
+        ResourceLocation key = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, id);
         if (Platform.isNeoForge()) {
             // Registered by :neoforge, so read the holder back instead of creating a second entry.
             return BuiltInRegistries.ATTRIBUTE.get(key)

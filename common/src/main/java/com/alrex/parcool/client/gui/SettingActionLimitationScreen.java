@@ -1,6 +1,5 @@
 package com.alrex.parcool.client.gui;
 
-import net.minecraft.client.input.MouseButtonEvent;
 import com.alrex.parcool.common.action.Action;
 import com.alrex.parcool.common.action.Actions;
 import com.alrex.parcool.common.data.Parkourability;
@@ -9,17 +8,17 @@ import com.alrex.parcool.common.info.ClientSetting;
 import com.alrex.parcool.common.network.payload.ClientInformationPayload;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.common.network.NetworkRegistries;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Checkbox;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.chat.Component;
 import com.alrex.parcool.config.ConfigSpec;
 
 
 import java.util.Collections;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Checkbox;
+import net.minecraft.client.player.LocalPlayer;
 
 public class SettingActionLimitationScreen extends ParCoolSettingScreen {
     private final ActionConfigSet[] actionList = new ActionConfigSet[Actions.LIST.size()];
@@ -92,11 +91,11 @@ public class SettingActionLimitationScreen extends ParCoolSettingScreen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClicked) {
+    public boolean mouseClicked(double mouseX, double mouseY, int type) {
         for (Checkbox button : actionButtons) {
-            if (button.mouseClicked(event, doubleClicked)) return true;
+            if (button.mouseClicked(mouseX, mouseY, type)) return true;
         }
-        return super.mouseClicked(event, doubleClicked);
+        return super.mouseClicked(mouseX, mouseY, type);
     }
 
     @Override
