@@ -10,7 +10,9 @@ import org.spongepowered.asm.mixin.Shadow;
 @Mixin(KeyMapping.class)
 public abstract class KeyMappingMixin implements IKeyMappingDuck {
 
-    // 1.21.1 kept `key` private; 1.21.11 made it protected, and a shadow may not narrow access.
+    // Private in 1.21.2 (verified with javap on the mojmap jar). A shadow may neither widen nor
+    // narrow, so this has to track the field exactly; the 1.21.11 tree widened it to `protected`
+    // because that version made the field protected.
     @Shadow
     protected InputConstants.Key key;
 

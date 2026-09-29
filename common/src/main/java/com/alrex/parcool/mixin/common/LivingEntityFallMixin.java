@@ -14,14 +14,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * Replaces {@code LivingEvent.LivingFallEvent}, which has no Architectury counterpart.
  *
- * <p>{@code LivingEntity#causeFallDamage(double, float, DamageSource)} (1.21.11 widened the fall
- * distance from {@code float} to {@code double}) delegates to
+ * <p>{@code LivingEntity#causeFallDamage(float, float, DamageSource)} delegates to
  * {@code super.causeFallDamage}, then computes the amount with {@code calculateFallDamage} and
  * applies it with {@code hurt(source, amount)}. Two hooks reproduce the NeoForge event exactly:
  * <ul>
  *     <li>HEAD + {@code cancellable} for {@link CompatEvents.LivingFallEvent#isCanceled()};</li>
- *     <li>a redirect of the single {@code hurt} call (which 1.21.11 turned into a final
- *     {@code void hurt(DamageSource, float)}) for
+ *     <li>a redirect of the single {@code hurt} call - which <b>1.21.2</b> turned into a final
+ *     {@code void hurt(DamageSource, float)}; 1.21.1 had {@code boolean hurt(...)} - for
  *     {@link CompatEvents.LivingFallEvent#getDamageMultiplier()}. Redirecting {@code hurt} rather
  *     than {@code calculateFallDamage} keeps the fall sound and the method's return value intact
  *     and avoids needing access to the protected damage formula.</li>
@@ -35,13 +34,14 @@ public abstract class LivingEntityFallMixin {
     private float parcool$fallDamageMultiplier = 1.0F;
 
     @Inject(method = "causeFallDamage", at = @At("HEAD"), cancellable = true)
-    private void parcool$onFall(double fallDistance, float damageMultiplier, DamageSource source,
+    // 1.21.2 still takes the fall distance as a float (1.21.11 widened it to double), so the handler
+    // signature has to match that exactly: a mismatch is not a compile error but a mixin that never
+    // applies, and with defaultRequire = 1 that is a hard boot failure.
+    private void parcool$onFall(float fallDistance, float damageMultiplier, DamageSource source,
                                 CallbackInfoReturnable<Boolean> cir) {
-        // The event keeps the 1.21.1 float distance, so the widened vanilla argument is narrowed back;
-        // the parcool event is only compared against small thresholds.
         this.parcool$fallDamageMultiplier = 1.0F;
         CompatEvents.LivingFallEvent event =
-                new CompatEvents.LivingFallEvent((LivingEntity) (Object) this, (float) fallDistance, source);
+                new CompatEvents.LivingFallEvent((LivingEntity) (Object) this, fallDistance, source);
         PlayerDamageHandler.onFall(event);
         if (event.isCanceled()) {
             cir.setReturnValue(false);
@@ -50,9 +50,10 @@ public abstract class LivingEntityFallMixin {
         this.parcool$fallDamageMultiplier = event.getDamageMultiplier();
     }
 
-    // 1.21.11 split Entity#hurt into a final void hurt(...) plus hurtOrSimulate/hurtServer; the call
+    // 1.21.2 split Entity#hurt into a final void hurt(...) plus hurtOrSimulate/hurtServer; the call
     // LivingEntity#causeFallDamage makes is hurt(...), so the redirect target and the handler's return
-    // type follow it to void.
+    // type follow it to void. 1.21.1's target string had the Z suffix instead and its handler
+    // returned boolean.
     @Redirect(
             method = "causeFallDamage",
             at = @At(value = "INVOKE",

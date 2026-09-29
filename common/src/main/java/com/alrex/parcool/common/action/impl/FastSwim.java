@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.client.animation.impl.FastSwimAnimator;
 import com.alrex.parcool.client.input.KeyBindings;
@@ -38,7 +37,7 @@ public class FastSwim extends Action {
 
     @Override
     public boolean canContinue(Player player, Parkourability parkourability) {
-        return (EntityUtil.isInWaterOrBubble(player)
+        return (player.isInWaterOrBubble()
                 && player.getVehicle() == null
                 && !player.isFallFlying()
                 && player.isSprinting()
@@ -55,7 +54,7 @@ public class FastSwim extends Action {
         if (player.isLocalPlayer()) {
             if (ParCoolConfig.Client.getInstance().FastRunControl.get() == FastRun.ControlType.Toggle
                     && parkourability.getAdditionalProperties().getSprintingTick() > 3
-                    && EntityUtil.isInWaterOrBubble(player)
+                    && player.isInWaterOrBubble()
                     && player.isSwimming()
             ) {
                 if (KeyRecorder.keyFastRunning.isPressed())

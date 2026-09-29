@@ -18,12 +18,16 @@ import java.util.function.BiConsumer;
  *     {@code NetworkChannel#register} registered a C2S <i>and</i> an S2C receiver under the same id
  *     ("Cannot register payload … as it is already registered"). A bidirectional message therefore
  *     needs one id per direction (see {@code NetworkRegistries}).</li>
- *     <li><b>Fabric</b>: in Architectury 13 the raw path threw
+ *     <li><b>Fabric</b>: in Architectury 13.0.11 the raw path threw
  *     {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C}, so
  *     {@code NetworkChannel} was the only working path there and the two loaders ended up with
- *     different wire ids. Architectury 19.0.1 removed {@code NetworkChannel} and
- *     {@code architectury-fabric 19.0.1} implements {@code registerS2C}, so the two loaders now share
- *     one path and one set of ids ({@code parcool:payload.*} plus a {@code .c2s} variant).</li>
+ *     different wire ids ({@code parcool:payload.*} on NeoForge, {@code parcool:main/<hash>} on
+ *     Fabric). architectury-fabric <b>14.0.4</b> does implement {@code registerS2C} — verified with
+ *     {@code javap} on the published jar, where {@code NetworkManagerImpl$1} declares both
+ *     {@code registerC2S} and {@code registerS2C}, and {@code NetworkAggregator#registerReceiver}
+ *     still fills {@code C2S_TYPE}/{@code S2C_TYPE} from the id overload. So on this line the two
+ *     loaders share one path and one set of ids ({@code parcool:payload.*} plus a {@code .c2s}
+ *     variant).</li>
  * </ul>
  *
  * <p>Mixing the two overloads is what M4 warns about: the {@code ResourceLocation} one fills
@@ -42,7 +46,7 @@ public interface ParCoolNetwork {
      *
      * @param payloadClass the concrete payload class
      * @param type         the payload's own {@code Type}, used for its identity
-     * @param wireId       the id this message travels under for that direction (NeoForge)
+     * @param wireId       the id this message travels under for that direction
      * @param clientbound  {@code true} for server -&gt; client, {@code false} for client -&gt; server
      * @param codec        the payload codec, used for inbound decoding
      * @param handler      invoked on the game thread with the decoded payload

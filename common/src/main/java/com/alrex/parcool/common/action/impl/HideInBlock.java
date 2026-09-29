@@ -343,8 +343,10 @@ public class HideInBlock extends Action {
                 for (int x = minX; x <= maxX; x++) {
                     BlockPos pos = new BlockPos(x, y, z);
                     if (!world.isLoaded(pos)) break;
-                    // 1.21.11 moved ParticleEngine#destroy to ClientLevel#addDestroyBlockEffect; it is
-                    // the same terrain-particle burst over the block's shape.
+                    // 1.21.2 added ClientLevel#addDestroyBlockEffect, the level-side form of
+                    // ParticleEngine#destroy, and its body is literally a delegation to it - so this
+                    // is the same terrain-particle burst over the block's shape, reached through the
+                    // level so the call no longer has to go through the Minecraft singleton.
                     if (world instanceof net.minecraft.client.multiplayer.ClientLevel clientLevel) {
                         clientLevel.addDestroyBlockEffect(pos, world.getBlockState(pos));
                     }

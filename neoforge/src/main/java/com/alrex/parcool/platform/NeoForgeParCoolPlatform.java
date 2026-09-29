@@ -65,7 +65,7 @@ public class NeoForgeParCoolPlatform implements ParCoolPlatform {
     /**
      * NeoForge freezes the built-in registries before the mod constructors run, so the type has to be
      * created from a {@code RegisterEvent} - which is what NeoForge's {@code DeferredRegister} hooks.
-     * 1.21.11 deleted {@code BlockEntityType.Builder} but re-opened the constructor on NeoForge, so
+     * 1.21.2 deleted {@code BlockEntityType.Builder} but re-opens the constructor on NeoForge, so
      * the value the deferred register stores is a plain {@code new BlockEntityType<>(...)}.
      */
     private static final net.neoforged.neoforge.registries.DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>>

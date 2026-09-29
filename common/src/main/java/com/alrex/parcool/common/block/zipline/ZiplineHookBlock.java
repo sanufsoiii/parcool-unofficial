@@ -74,8 +74,9 @@ public abstract class ZiplineHookBlock extends DirectionalBlock implements Entit
     /**
      * 1.21.2 already hands the block a {@link ScheduledTickAccess} here instead of a bare
      * {@code LevelAccessor}, and reorders the arguments around the positions; the check itself is
-     * unchanged. 1.21.11 dropped the branch's siblings at the same time, so this is the one hook in this
-     * class that follows the newer shape while {@link #onRemove} still uses the older one.
+     * unchanged. 1.21.11 also dropped the branch's siblings, so this is the one hook in this class
+     * that follows the newer shape while {@link #onRemove} - which 1.21.2 still declares, protected -
+     * uses the older one.
      */
     @Override
     public BlockState updateShape(BlockState state, LevelReader levelReader, ScheduledTickAccess scheduledTicks,

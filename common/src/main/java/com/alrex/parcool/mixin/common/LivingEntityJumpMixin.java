@@ -32,7 +32,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * normal one block. TAIL also gives {@code Dive#onJump} the real launch velocity instead of the
  * resting {@code -0.0784}.
  *
- * <p>Verified against 1.21.11's vanilla, which now writes
+ * <p>Verified against 1.21.2's vanilla, which writes
  * {@code setDeltaMovement(vec3.x, Math.max((double) getJumpPower(), vec3.y), vec3.z)}: the jump is
  * still the last thing that touches the vertical velocity inside the method, so the boost
  * {@code ChargeJump} applies from {@code onStartInLocalClient} (after {@code LivingEntity#travel})

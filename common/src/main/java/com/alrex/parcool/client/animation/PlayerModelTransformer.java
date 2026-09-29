@@ -23,9 +23,11 @@ public class PlayerModelTransformer {
 	private final float netHeadYaw;
 	private final float headPitch;
 	/**
-	 * 1.21.11 keeps the attack time and the two arm poses on {@code ArmedEntityRenderState} instead of
-	 * on {@code PlayerModel}, so the three values the animators used to read off the model are handed
-	 * to the transformer alongside the pose floats. Same values, same frame.
+	 * 1.21.2 keeps the attack time and the two arm poses on {@code HumanoidRenderState} instead of on
+	 * {@code PlayerModel}, so the three values the animators used to read off the model are handed to
+	 * the transformer alongside the pose floats. Same values, same frame. The poses themselves have no
+	 * field any more either - 1.21.2 derives them in {@code PlayerRenderer#getArmPose} from the two
+	 * {@code HandState} entries - so the two accessors below are asked for the pose rather than given it.
 	 */
 	private final float attackTime;
 	private final HumanoidModel.ArmPose leftArmPose;
@@ -399,13 +401,14 @@ public class PlayerModelTransformer {
 	 * <h2>Why this no longer copies the body part's transform</h2>
 	 * In 1.21.1 every model part was rendered separately, so the sleeve had to be given the arm's
 	 * transform by hand - that is exactly what {@code ModelPart#copyFrom} was for, and what this method
-	 * did. 1.21.11 turned the model into a tree: {@code left_sleeve} / {@code right_sleeve} /
+	 * did. 1.21.2 turned the model into a tree: {@code left_sleeve} / {@code right_sleeve} /
 	 * {@code left_pants} / {@code right_pants} / {@code jacket} are <i>children</i> of the limb (see
-	 * {@code PlayerModel}'s constructor) and {@code ModelPart#render} recurses into
+	 * {@code PlayerModel}'s constructor, which does {@code leftArm.getChild("left_sleeve")}) and
+	 * {@code ModelPart#render} recurses into
 	 * {@link ModelPart#children} after applying the parent's own transform. The layer therefore already
 	 * follows the limb, and copying the parent's transform onto it as well applies that transform
 	 * twice - the sleeve ends up at double the arm's rotation and offset, i.e. a second set of arms
-	 * floating beside the real ones. Vanilla 1.21.11 therefore leaves the layer at its initial
+	 * floating beside the real ones. Vanilla 1.21.2 therefore leaves the layer at its initial
 	 * {@code PartPose.ZERO}, and so does this: the layer is reset to identity and inherits the limb.
 	 * The visible result is the same as 1.21.1 - the layer sits exactly on the limb.
 	 */
@@ -456,7 +459,7 @@ public class PlayerModelTransformer {
 			model.rightLeg.y = 12.0F;
 			model.rightLeg.z = 0.0F;
 		}
-		// The sleeve / pants / jacket / hat are children of the limbs in 1.21.11 and inherit their
+		// The sleeve / pants / jacket / hat are children of the limbs in 1.21.2 and inherit their
 		// transform from the tree, so they only have to be back at their initial pose here.
 		resetSecondLayer();
 	}

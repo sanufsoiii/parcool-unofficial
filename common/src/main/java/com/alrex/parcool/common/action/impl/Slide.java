@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.CrawlAnimator;
 import com.alrex.parcool.client.animation.impl.SlidingAnimator;
@@ -49,7 +48,7 @@ public class Slide extends Action {
 				&& !parkourability.get(Roll.class).isDoing()
 				&& !parkourability.get(Tap.class).isDoing()
 				&& parkourability.get(Crawl.class).isDoing()
-				&& !EntityUtil.isInWaterOrBubble(player)
+				&& !player.isInWaterOrBubble()
 				&& parkourability.get(FastRun.class).getDashTick(parkourability.getAdditionalProperties()) > 5
 				&& player.getDeltaMovement().horizontalDistance() > MIN_SLIDE_SPEED
 		);

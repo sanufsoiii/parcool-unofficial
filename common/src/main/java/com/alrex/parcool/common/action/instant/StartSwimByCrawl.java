@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.instant;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.client.input.KeyRecorder;
 import com.alrex.parcool.common.action.InstantAction;
 import com.alrex.parcool.common.action.StaminaConsumeTiming;
@@ -12,7 +11,7 @@ import java.nio.ByteBuffer;
 public class StartSwimByCrawl extends InstantAction {
     @Override
     public boolean canStart(Player player, Parkourability parkourability, ByteBuffer startInfo) {
-        return EntityUtil.isInWaterOrBubble(player)
+        return player.isInWaterOrBubble()
                 && !player.isSwimming()
                 && KeyRecorder.keyCrawlState.isPressed();
     }

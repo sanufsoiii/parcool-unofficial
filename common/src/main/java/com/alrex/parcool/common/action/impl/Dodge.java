@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.DodgeAnimator;
 import com.alrex.parcool.client.input.KeyBindings;
@@ -145,9 +144,9 @@ public class Dodge extends Action {
 				&& player.onGround()
 				&& !isInSuccessiveCoolDown(parkourability.getActionInfo())
 				&& coolTime <= 0
-                && !EntityUtil.isInWaterOrBubble(player)
+                && !player.isInWaterOrBubble()
 				&& player.onGround()
-                && !EntityUtil.isInWaterOrBubble(player)
+                && !player.isInWaterOrBubble()
 				&& !player.isShiftKeyDown()
 				&& !parkourability.get(Crawl.class).isDoing()
 				&& !parkourability.get(Roll.class).isDoing()
@@ -160,7 +159,7 @@ public class Dodge extends Action {
 		return !(parkourability.get(Roll.class).isDoing()
 				|| parkourability.get(ClingToCliff.class).isDoing()
 				|| getDoingTick() >= MAX_TICK
-				|| EntityUtil.isInWaterOrBubble(player)
+				|| player.isInWaterOrBubble()
 				|| player.isFallFlying()
 				|| player.getAbilities().flying
 		);

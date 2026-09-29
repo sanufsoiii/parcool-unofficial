@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.client.animation.impl.ChargeJumpAnimator;
@@ -86,7 +85,7 @@ public class ChargeJump extends Action {
         if (player.isLocalPlayer()) {
             // Everything below is reached through `player` / KeyBindings rather than through a
             // `LocalPlayer` local: this class is verified on a dedicated server (Parkourability
-            // instantiates every action), and 1.21.11's verifier then loads LocalPlayer, which is not
+            // instantiates every action), and 1.21.2's verifier then loads LocalPlayer, which is not
             // present there. isLocalPlayer() is false for every non-local player, so the guard above
             // means `player` *is* the local player here, and KeyBindings reads exactly the same
             // `Minecraft.getInstance().player.input` state.
@@ -95,7 +94,7 @@ public class ChargeJump extends Action {
                     && parkourability.getActionInfo().can(ChargeJump.class)
                     && !player.isVisuallyCrawling()
                     && !player.isSprinting()
-                    && !EntityUtil.isInWaterOrBubble(player)
+                    && !player.isInWaterOrBubble()
                     && !KeyBindings.isAnyMovingKeyDown()
                     && !parkourability.get(Crawl.class).isDoing()
                     && !ParCoolEventBus.post(new ParCoolActionEvent.TryToStartEvent(player, this)).isCanceled()
