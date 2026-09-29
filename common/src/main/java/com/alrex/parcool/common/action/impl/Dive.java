@@ -90,7 +90,7 @@ public class Dive extends Action {
         playerYSpeedOld = playerYSpeed = initialYSpeed;
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-            animation.setAnimator(new DiveAnimationHostAnimator(initialYSpeed, BufferUtil.getBoolean(startData)));
+            animation.setAnimator(DiveAnimationHostAnimator.class, initialYSpeed, BufferUtil.getBoolean(startData));
 		}
 	}
 
@@ -104,7 +104,7 @@ public class Dive extends Action {
 					&& parkourability.getAdditionalProperties().getNotLandingTick() >= 5
 					&& player.getDeltaMovement().y() < 0
 			) {
-				animation.setAnimator(new DiveIntoWaterAnimator(parkourability.get(SkyDive.class).isDoing()));
+				animation.setAnimator(DiveIntoWaterAnimator.class, parkourability.get(SkyDive.class).isDoing());
 			}
 		}
 	}
@@ -119,7 +119,7 @@ public class Dive extends Action {
                     && parkourability.getAdditionalProperties().getNotLandingTick() >= 5
                     && player.getDeltaMovement().y() < 0
             ) {
-                animation.setAnimator(new DiveIntoWaterAnimator(parkourability.get(SkyDive.class).isDoing()));
+                animation.setAnimator(DiveIntoWaterAnimator.class, parkourability.get(SkyDive.class).isDoing());
             }
 		}
 	}
@@ -147,7 +147,7 @@ public class Dive extends Action {
         playerYSpeedOld = playerYSpeed = initialYVelocityOfLastJump = initialYSpeed;
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-            animation.setAnimator(new DiveAnimationHostAnimator(initialYSpeed, BufferUtil.getBoolean(startData)));
+            animation.setAnimator(DiveAnimationHostAnimator.class, initialYSpeed, BufferUtil.getBoolean(startData));
 		}
 	}
 }

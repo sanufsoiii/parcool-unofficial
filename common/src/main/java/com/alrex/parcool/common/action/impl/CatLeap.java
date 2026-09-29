@@ -87,7 +87,7 @@ public class CatLeap extends Action {
         Vec3 motionVec = player.getDeltaMovement();
         player.setDeltaMovement(jumpDirection.x(), motionVec.y() * 1.16667, jumpDirection.z());
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new CatLeapAnimator());
+		if (animation != null) animation.setAnimator(CatLeapAnimator.class);
 	}
 
 	@Override
@@ -97,16 +97,16 @@ public class CatLeap extends Action {
             player.playSound(SoundEvents.CATLEAP.get(), 1, 1);
         spawnJumpEffect(player, jumpDirection);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new CatLeapAnimator());
+		if (animation != null) animation.setAnimator(CatLeapAnimator.class);
 	}
 
 	@Override
-	public boolean wantsToShowStatusBar(LocalPlayer player, Parkourability parkourability) {
+	public boolean wantsToShowStatusBar(Player player, Parkourability parkourability) {
 		return coolTimeTick > 0;
 	}
 
 	@Override
-	public float getStatusValue(LocalPlayer player, Parkourability parkourability) {
+	public float getStatusValue(Player player, Parkourability parkourability) {
 		return coolTimeTick / (float) MAX_COOL_TIME_TICK;
 	}
 

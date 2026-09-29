@@ -3,26 +3,22 @@ package com.alrex.parcool.mixin.client;
 
 import com.alrex.parcool.common.action.BehaviorEnforcer;
 import com.alrex.parcool.common.data.Parkourability;
-import com.mojang.authlib.GameProfile;
-import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+// Deliberately does not extend AbstractClientPlayer: a mixin class that extends the target's own
+// supertype forces mixin to validate the inherited constructor at load time, and none of the two handlers
+// below needs it. The cast at the use site is explicit instead.
 @Mixin(LocalPlayer.class)
-public abstract class LocalPlayerMixin extends AbstractClientPlayer {
-
-    public LocalPlayerMixin(ClientLevel p_250460_, GameProfile p_249912_) {
-        super(p_250460_, p_249912_);
-    }
+public abstract class LocalPlayerMixin {
 
     @Inject(method = "isShiftKeyDown", at = @At("HEAD"), cancellable = true)
     public void onIsShiftKeyDown(CallbackInfoReturnable<Boolean> cir) {
@@ -37,29 +33,26 @@ public abstract class LocalPlayerMixin extends AbstractClientPlayer {
     /**
      * Guards the re-entrant {@code Entity#move} call below.
      *
-     * <p>{@code LocalPlayer} does not override {@code move}, so the {@code super.move(…)} call is
-     * a virtual dispatch on the instance straight back into this very injection. The movement enforcer
-     * keeps answering "yes" for as long as it lives, so without a guard the two are mutual recursion
-     * and the client dies with a {@code StackOverflowError} the first time an action enforces a
-     * movement point:
+     * <p>{@code LocalPlayer} does override {@code move}, and the {@code ((Entity) player).move(…)} call
+     * that applies the enforced point is a virtual dispatch, so it lands right back in this injection
+     * at {@code move}'s HEAD. The enforcer keeps answering "yes" for as long as it lives, so without a
+     * guard the two are mutual recursion and the client dies with a {@code StackOverflowError} the
+     * first time an action enforces a movement point:
      *
      * <pre>
-     * at ...EntityMixin.onMove           (injected into Entity#move, HEAD)
      * at ...LocalPlayerMixin.onMove      (this handler)
-     * at ...EntityMixin.onMove           (injected into the same Entity#move, HEAD)
+     * at ...LocalPlayer.move
      * at ...LocalPlayerMixin.onMove      (this handler)
+     * at ...LocalPlayer.move
      * ...
      * </pre>
-     *
-     * <p>Both injections sit on {@code Entity#move} because that is the method the enforcer actually
-     * moves the player with. The flag makes the nested call a no-op for this handler only, so the
-     * re-entrant pass still reaches {@code EntityMixin} - that one is the position enforcer
-     * (HideInBlock) and must keep working on the nested call.
      *
      * <p>The flag lives in {@link BehaviorEnforcer}, not here. An earlier revision declared it as a
      * {@code @Unique private static} field on this mixin, which does not work: Mixin does not carry
      * such a field into the target, and the exported mixed class contained no reference to it at all,
-     * so the guard was compiled away in effect.
+     * so the guard was compiled away in effect and the recursion came straight back. The guard only
+     * silences this handler, so the nested pass still reaches {@code EntityMixin}, which is the
+     * position enforcer (HideInBlock) and has to keep working there.
      */
     @Inject(method = "move", at = @At("HEAD"), cancellable = true)
     public void onMove(MoverType type, Vec3 pos, CallbackInfo ci) {
@@ -73,9 +66,12 @@ public abstract class LocalPlayerMixin extends AbstractClientPlayer {
             ci.cancel();
             var dMove = enforcedMovePos.subtract(player.position());
             player.setDeltaMovement(dMove);
+            // Entity#move, reached through the target: super.move(…) is only spellable from a mixin
+            // class that extends the target's own supertype. This is the call that re-enters the
+            // injection, hence the guard.
             BehaviorEnforcer.setApplyingEnforcedMove(true);
             try {
-                super.move(type, dMove);
+                ((Entity) player).move(type, dMove);
             } finally {
                 BehaviorEnforcer.setApplyingEnforcedMove(false);
             }

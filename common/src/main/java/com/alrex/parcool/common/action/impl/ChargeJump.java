@@ -65,7 +65,7 @@ public class ChargeJump extends Action {
             player.playSound(SoundEvents.CHARGE_JUMP.get(), 1, 1);
         Animation animation = Animation.get(player);
         if (animation != null) {
-            animation.setAnimator(new ChargeJumpAnimator());
+            animation.setAnimator(ChargeJumpAnimator.class);
         }
     }
 
@@ -75,7 +75,7 @@ public class ChargeJump extends Action {
             player.playSound(SoundEvents.CHARGE_JUMP.get(), 1, 1);
         Animation animation = Animation.get(player);
         if (animation != null) {
-            animation.setAnimator(new ChargeJumpAnimator());
+            animation.setAnimator(ChargeJumpAnimator.class);
         }
     }
 
@@ -124,7 +124,7 @@ public class ChargeJump extends Action {
         if (isCharging()) {
             Animation animation = Animation.get(player);
             if (animation != null && !animation.hasAnimator()) {
-                animation.setAnimator(new JumpChargingAnimator());
+                animation.setAnimator(JumpChargingAnimator.class);
             }
         }
     }
@@ -161,12 +161,12 @@ public class ChargeJump extends Action {
     }
 
     @Override
-    public boolean wantsToShowStatusBar(LocalPlayer player, Parkourability parkourability) {
+    public boolean wantsToShowStatusBar(Player player, Parkourability parkourability) {
         return isCharging();
     }
 
     @Override
-    public float getStatusValue(LocalPlayer player, Parkourability parkourability) {
+    public float getStatusValue(Player player, Parkourability parkourability) {
         return ((float) getChargingTick()) / JUMP_MAX_CHARGE_TICK;
     }
 

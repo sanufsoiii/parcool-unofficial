@@ -69,7 +69,7 @@ public class FastSwim extends Action {
     public void onWorkingTickInClient(Player player, Parkourability parkourability) {
         Animation animation = Animation.get(player);
         if (animation != null && !animation.hasAnimator()) {
-            animation.setAnimator(new FastSwimAnimator());
+            animation.setAnimator(FastSwimAnimator.class);
         }
     }
 

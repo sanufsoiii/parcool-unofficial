@@ -200,7 +200,7 @@ public class HideInBlock extends Action {
         parkourability.getBehaviorEnforcer().addMarkerCancellingShowName(ID_SHOW_NAME, this::isDoing);
         spawnOnHideParticles(player);
         Animation animation = Animation.get(player);
-        animation.setAnimator(new HideInBlockAnimator(stand, startedFromDiving));
+        animation.setAnimator(HideInBlockAnimator.class, stand, startedFromDiving);
     }
 
     @Override
@@ -209,7 +209,7 @@ public class HideInBlock extends Action {
         parkourability.getBehaviorEnforcer().addMarkerCancellingShowName(ID_SHOW_NAME, this::isDoing);
         spawnOnHideParticles(player);
         Animation animation = Animation.get(player);
-        animation.setAnimator(new HideInBlockAnimator(stand, startedFromDiving));
+        animation.setAnimator(HideInBlockAnimator.class, stand, startedFromDiving);
     }
 
 

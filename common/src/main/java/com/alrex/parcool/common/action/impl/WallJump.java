@@ -207,13 +207,13 @@ public class WallJump extends Action {
 		if (animation != null) {
 			switch (type) {
 				case Back:
-					animation.setAnimator(new BackwardWallJumpAnimator());
+					animation.setAnimator(BackwardWallJumpAnimator.class);
 					break;
 				case SwingLeftArm:
-					animation.setAnimator(new WallJumpAnimator(false));
+					animation.setAnimator(WallJumpAnimator.class, false);
 					break;
 				case SwingRightArm:
-					animation.setAnimator(new WallJumpAnimator(true));
+					animation.setAnimator(WallJumpAnimator.class, true);
 			}
 		}
 	}
@@ -241,13 +241,13 @@ public class WallJump extends Action {
 		if (animation != null) {
 			switch (type) {
 				case Back:
-					animation.setAnimator(new BackwardWallJumpAnimator());
+					animation.setAnimator(BackwardWallJumpAnimator.class);
 					break;
 				case SwingLeftArm:
-					animation.setAnimator(new WallJumpAnimator(false));
+					animation.setAnimator(WallJumpAnimator.class, false);
 					break;
 				case SwingRightArm:
-					animation.setAnimator(new WallJumpAnimator(true));
+					animation.setAnimator(WallJumpAnimator.class, true);
 			}
 		}
 	}

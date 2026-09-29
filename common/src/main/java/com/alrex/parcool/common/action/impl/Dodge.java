@@ -188,7 +188,7 @@ public class Dodge extends Action {
 		player.setDeltaMovement(dodgeVec);
 
         Animation animation = Animation.get(player);
-        if (animation != null) animation.setAnimator(new DodgeAnimator(dodgeDirection));
+        if (animation != null) animation.setAnimator(DodgeAnimator.class, dodgeDirection);
         parkourability.getBehaviorEnforcer().addMarkerCancellingJump(ID_JUMP_CANCEL, this::isDoing);
         if (!parkourability.getClientInfo().get(ParCoolConfig.Client.Booleans.CanGetOffStepsWhileDodge)) {
             parkourability.getBehaviorEnforcer().addMarkerCancellingDescendFromEdge(ID_DESCEND_EDGE, this::isDoing);
@@ -201,7 +201,7 @@ public class Dodge extends Action {
 		if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
 			player.playSound(SoundEvents.DODGE.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new DodgeAnimator(dodgeDirection));
+		if (animation != null) animation.setAnimator(DodgeAnimator.class, dodgeDirection);
 	}
 
 	public int getCoolTime() {
@@ -226,12 +226,12 @@ public class Dodge extends Action {
 	}
 
 	@Override
-	public boolean wantsToShowStatusBar(LocalPlayer player, Parkourability parkourability) {
+	public boolean wantsToShowStatusBar(Player player, Parkourability parkourability) {
 		return coolTime > 0 || isInSuccessiveCoolDown(parkourability.getActionInfo());
 	}
 
 	@Override
-	public float getStatusValue(LocalPlayer player, Parkourability parkourability) {
+	public float getStatusValue(Player player, Parkourability parkourability) {
 		ActionInfo info = parkourability.getActionInfo();
 		int maxCoolTime = getMaxCoolTime(info);
 		int successiveMaxCoolTime = getSuccessiveCoolTime(info);

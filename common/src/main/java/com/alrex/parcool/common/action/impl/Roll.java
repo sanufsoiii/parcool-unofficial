@@ -82,7 +82,7 @@ public class Roll extends Action {
 		startRequired = false;
 		Direction direction = Direction.values()[startData.getInt()];
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new RollAnimator(direction));
+		if (animation != null) animation.setAnimator(RollAnimator.class, direction);
 	}
 
 	@Override
@@ -104,7 +104,7 @@ public class Roll extends Action {
 		}
 		player.setDeltaMovement(vec.x(), 0, vec.z());
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(new RollAnimator(direction));
+		if (animation != null) animation.setAnimator(RollAnimator.class, direction);
         parkourability.getBehaviorEnforcer().addMarkerCancellingJump(ID_JUMP_CANCEL, this::isDoing);
 	}
 

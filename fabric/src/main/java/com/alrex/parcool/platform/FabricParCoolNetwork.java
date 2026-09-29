@@ -4,7 +4,7 @@ import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.function.BiConsumer;
@@ -18,9 +18,10 @@ import java.util.function.BiConsumer;
  * {@code NetworkManager.registerReceiver} died with
  * {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C}, and the
  * channel - which registers one id per payload class for both directions - was the only working path.
- * Architectury 19.0.1 removed {@code NetworkChannel} entirely and
- * {@code architectury-fabric 19.0.1}'s adaptor implements {@code registerS2C}, so the id-based API is
- * usable and both loaders now share one code path and one set of wire ids.
+ * {@code architectury-fabric 16.1.4}'s adaptor implements {@code registerS2C} (verified against
+ * {@code dev.architectury.networking.fabric.NetworkManagerImpl$1} in that artifact), so the id-based
+ * API is usable and both loaders now share one code path and one set of wire ids.
+ * {@code NetworkChannel} still exists in Architectury 16 and is deliberately not used.
  *
  * <p>This is also what keeps M4 away: registration and sending both address a message by its explicit
  * id, so {@code NetworkAggregator.C2S_TYPE}/{@code S2C_TYPE} - which the id-based send reads - are
@@ -32,7 +33,7 @@ public class FabricParCoolNetwork implements ParCoolNetwork {
     public <T extends CustomPacketPayload> void register(
             Class<T> payloadClass,
             CustomPacketPayload.Type<T> type,
-            Identifier wireId,
+            ResourceLocation wireId,
             StreamCodec<?, T> codec,
             boolean clientbound,
             BiConsumer<T, NetworkManager.PacketContext> handler) {
@@ -51,19 +52,19 @@ public class FabricParCoolNetwork implements ParCoolNetwork {
 
     @Override
     public <T extends CustomPacketPayload> void sendToServer(
-            T payload, Identifier wireId, StreamCodec<?, T> codec) {
+            T payload, ResourceLocation wireId, StreamCodec<?, T> codec) {
         NetworkManager.sendToServer(wireId, ParCoolNetwork.encode(codec, payload));
     }
 
     @Override
     public <T extends CustomPacketPayload> void sendToPlayer(
-            ServerPlayer player, T payload, Identifier wireId, StreamCodec<?, T> codec) {
+            ServerPlayer player, T payload, ResourceLocation wireId, StreamCodec<?, T> codec) {
         NetworkManager.sendToPlayer(player, wireId, ParCoolNetwork.encode(codec, payload));
     }
 
     @Override
     public <T extends CustomPacketPayload> void sendToPlayers(
-            Iterable<ServerPlayer> players, T payload, Identifier wireId, StreamCodec<?, T> codec) {
+            Iterable<ServerPlayer> players, T payload, ResourceLocation wireId, StreamCodec<?, T> codec) {
         NetworkManager.sendToPlayers(players, wireId, ParCoolNetwork.encode(codec, payload));
     }
 }

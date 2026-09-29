@@ -72,7 +72,7 @@ public class Slide extends Action {
             player.playSound(SoundEvents.SLIDE.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new SlidingAnimator());
+			animation.setAnimator(SlidingAnimator.class);
 		}
         parkourability.getBehaviorEnforcer().addMarkerCancellingJump(ID_JUMP_CANCEL, this::isDoing);
 	}
@@ -84,7 +84,7 @@ public class Slide extends Action {
             player.playSound(SoundEvents.SLIDE.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new SlidingAnimator());
+			animation.setAnimator(SlidingAnimator.class);
 		}
 	}
 
@@ -110,7 +110,7 @@ public class Slide extends Action {
 	public void onStopInLocalClient(Player player) {
 		Animation animation = Animation.get(player);
 		if (animation != null && !animation.hasAnimator()) {
-			animation.setAnimator(new CrawlAnimator());
+			animation.setAnimator(CrawlAnimator.class);
 		}
         if (!Parkourability.get(player).get(Crawl.class).isDoing()) {
             player.swimAmount = 0;
@@ -122,7 +122,7 @@ public class Slide extends Action {
 	public void onStopInOtherClient(Player player) {
 		Animation animation = Animation.get(player);
 		if (animation != null && !animation.hasAnimator()) {
-			animation.setAnimator(new CrawlAnimator());
+			animation.setAnimator(CrawlAnimator.class);
 		}
         if (!Parkourability.get(player).get(Crawl.class).isDoing()) {
             player.swimAmount = 0;

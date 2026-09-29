@@ -7,6 +7,7 @@
     "client.ClientPacketListenerMixin",
     "client.ClientWorldMixin",
     "client.GameRendererTickMixin",
+    "client.ItemTintSourcesAccessor",
     "client.KeyMappingMixin",
     "client.KeyboardInputMixin",
     "client.LivingRendererMixin",
@@ -14,16 +15,20 @@
     "client.MinecraftInputMixin",
     "client.OptionsMixin",
     "client.PlayerModelMixin",
-    "client.PlayerRendererMixin"
+    "client.PlayerRendererMixin",
+    "client.PlayerRenderStateEntityMixin",
+    "client.PlayerRenderStateExtractorMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   },
   "mixins": [
     "common.ArgumentTypeInfosMixin",
+    "common.BlockEntityTypeInvoker",
     "common.EntityMixin",
     "common.LevelChunkMixin",
     "common.LivingEntityFallMixin",
+    "common.LivingEntityJumpMixin",
     "common.LivingEntityMixin",
     "common.ParCoolDataHolderMixin",
     "common.ParCoolDataPersistenceMixin",

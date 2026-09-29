@@ -176,7 +176,7 @@ public class HorizontalWallRun extends Action {
             player.playSound(SoundEvents.HORIZONTAL_WALL_RUN.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new HorizontalWallRunAnimator(wallIsRightward));
+			animation.setAnimator(HorizontalWallRunAnimator.class, wallIsRightward);
 		}
 	}
 
@@ -189,7 +189,7 @@ public class HorizontalWallRun extends Action {
         if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.HORIZONTAL_WALL_RUN.get(), 1f, 1f);
 		if (animation != null) {
-			animation.setAnimator(new HorizontalWallRunAnimator(wallIsRightward));
+			animation.setAnimator(HorizontalWallRunAnimator.class, wallIsRightward);
 		}
 	}
 

@@ -138,11 +138,20 @@ public abstract class Action {
 	public void saveSynchronizedState(ByteBuffer buffer) {
 	}
 
-    public boolean wantsToShowStatusBar(LocalPlayer player, Parkourability parkourability) {
+    /**
+     * The status-bar hooks take a plain {@link Player}: the JVM verifier resolves a parameter type when
+     * it checks that a subclass really overrides this method, and {@code Actions}' static initialiser
+     * is reached on a dedicated server - so a {@code LocalPlayer} parameter makes the server die with
+     * "Attempted to load class net.minecraft.client.player.LocalPlayer which is not present on the
+     * dedicated server". No implementation uses anything client-only, and the only callers
+     * ({@code StaminaHUD} / {@code LightStaminaHUD}) already hold the local player.
+     */
+    public boolean wantsToShowStatusBar(Player player, Parkourability parkourability) {
         return false;
     }
 
-    public float getStatusValue(LocalPlayer player, Parkourability parkourability) {
+    /** See {@link #wantsToShowStatusBar} for why this is a {@link Player} and not a {@code LocalPlayer}. */
+    public float getStatusValue(Player player, Parkourability parkourability) {
         return 0;
     }
 

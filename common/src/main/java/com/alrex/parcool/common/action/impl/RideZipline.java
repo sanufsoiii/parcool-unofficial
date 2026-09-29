@@ -114,7 +114,7 @@ public class RideZipline extends Action {
         parkourability.getBehaviorEnforcer().addMarkerCancellingSprint(ID_SPRINT_CANCEL, this::isDoing);
         Animation animation = Animation.get(player);
         if (animation != null) {
-            animation.setAnimator(new RideZiplineAnimator());
+            animation.setAnimator(RideZiplineAnimator.class);
         }
         // Last, and unconditionally: the sound must never be able to keep the ride itself from
         // starting. Started after rideNewZipline so the loop gets the real entry speed.
@@ -125,7 +125,7 @@ public class RideZipline extends Action {
     public void onStartInOtherClient(Player player, Parkourability parkourability, ByteBuffer startData) {
         Animation animation = Animation.get(player);
         if (animation == null) return;
-        animation.setAnimator(new RideZiplineAnimator());
+        animation.setAnimator(RideZiplineAnimator.class);
     }
 
     @Override

@@ -110,7 +110,7 @@ public class VerticalWallRun extends Action {
             player.playSound(SoundEvents.VERTICAL_WALL_RUN.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new VerticalWallRunAnimator());
+			animation.setAnimator(VerticalWallRunAnimator.class);
 		}
 	}
 

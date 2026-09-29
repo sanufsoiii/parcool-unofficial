@@ -77,7 +77,7 @@ public class WallSlide extends Action {
     public void onWorkingTickInClient(Player player, Parkourability parkourability) {
 		Animation animation = Animation.get(player);
 		if (animation != null && !animation.hasAnimator()) {
-			animation.setAnimator(new WallSlideAnimator());
+			animation.setAnimator(WallSlideAnimator.class);
 		}
         particleSpawnCoolTime--;
         if (particleSpawnCoolTime <= 0) {

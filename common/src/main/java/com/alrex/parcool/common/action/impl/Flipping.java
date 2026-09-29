@@ -81,9 +81,9 @@ public class Flipping extends Action {
         if (control != ControlType.TapMovementAndJump) player.jumpFromGround();
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new FlippingAnimator(
+			animation.setAnimator(FlippingAnimator.class,
                     Direction.values()[startData.getInt()]
-			));
+			);
 		}
 	}
 
@@ -92,9 +92,9 @@ public class Flipping extends Action {
         startData.position(4); // skip (int * 1)
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(new FlippingAnimator(
+			animation.setAnimator(FlippingAnimator.class,
                     Direction.values()[startData.getInt()]
-			));
+			);
 		}
 	}
 
