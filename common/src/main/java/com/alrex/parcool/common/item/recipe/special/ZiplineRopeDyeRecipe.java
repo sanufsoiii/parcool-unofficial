@@ -83,7 +83,7 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
         return resultZiplineRope;
     }
 
-    // 1.21.11 dropped CustomRecipe#canCraftInDimensions; the recipe no longer declares a grid size
+    // 1.21.9 dropped CustomRecipe#canCraftInDimensions; the recipe no longer declares a grid size
     // limit. `matches` already requires exactly one rope and at least one dye, which is what the old
     // "width * height >= 2" check was standing in for.
 

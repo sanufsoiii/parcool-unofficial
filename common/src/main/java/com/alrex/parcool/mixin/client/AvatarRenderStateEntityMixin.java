@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Unique;
 /**
  * Carries the rendered player on {@link AvatarRenderState}.
  *
- * <p>1.21.11 entity renderers no longer see the entity while rendering: {@code setupRotations} and
+ * <p>1.21.9 entity renderers no longer see the entity while rendering: {@code setupRotations} and
  * {@code PlayerModel#setupAnim} only get a render state, and a state holds no entity reference.
  * ParCool's animators are keyed on the player (its {@code Animation}, its {@code Parkourability}, its
  * pose and head yaw), so the player has to travel with the state.

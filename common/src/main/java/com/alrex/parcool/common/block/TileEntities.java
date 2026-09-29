@@ -8,7 +8,7 @@ import java.util.function.Supplier;
 public class TileEntities {
 
     /**
-     * 1.21.11 dropped {@code BlockEntityType.Builder} and left the type's own construction private,
+     * 1.21.5 dropped {@code BlockEntityType.Builder} and left the type's own construction private,
      * so this goes through the platform: Fabric can still write the built-in registry directly from
      * its mod initializer, NeoForge has to wait for its registry event, and NeoForge additionally
      * re-opened the constructor. See {@code ParCoolPlatform#registerBlockEntityType}.

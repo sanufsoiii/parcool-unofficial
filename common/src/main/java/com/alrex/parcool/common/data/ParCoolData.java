@@ -69,7 +69,7 @@ public final class ParCoolData {
     /**
      * Writes every {@link DataKey#isPersistent() persistent} slot into the player save tag.
      *
-     * <p>1.21.11's {@code Player#addAdditionalSaveData} is {@code ValueOutput} based, so the whole
+     * <p>1.21.10's {@code Player#addAdditionalSaveData} is {@code ValueOutput} based, so the whole
      * ParCool sub-tree is encoded into one NBT compound and handed over as a single value. The
      * on-disk key ({@code ParCool} -> {@code parcool:...}) is unchanged from 1.21.1.
      */

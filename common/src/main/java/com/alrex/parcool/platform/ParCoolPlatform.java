@@ -95,14 +95,14 @@ public interface ParCoolPlatform {
     ParCoolNetwork getNetwork();
 
     // ------------------------------------------------------------------
-    // block entity type (1.21.11 removed BlockEntityType.Builder)
+    // block entity type (1.21.5 removed BlockEntityType.Builder)
     // ------------------------------------------------------------------
 
     /**
      * Registers one {@link net.minecraft.world.level.block.entity.BlockEntityType} and returns a
      * supplier for it.
      *
-     * <p>This is a seam because 1.21.11 deleted {@code BlockEntityType.Builder} and left only
+     * <p>This is a seam because 1.21.5 deleted {@code BlockEntityType.Builder} and left only
      * {@code BlockEntityType}'s own construction private, while the registry entry still has to be
      * created inside the writable window - which is the mod constructor on Fabric and the registry
      * event on NeoForge.

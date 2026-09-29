@@ -18,7 +18,7 @@ import java.util.function.BiConsumer;
  * {@code NetworkManager.registerReceiver} died with
  * {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C}, and the
  * channel - which registers one id per payload class for both directions - was the only working path.
- * Architectury 19.0.1 removed {@code NetworkChannel} entirely and
+ * Architectury 18.0.8 removed {@code NetworkChannel} entirely and
  * {@code architectury-fabric 19.0.1}'s adaptor implements {@code registerS2C}, so the id-based API is
  * usable and both loaders now share one code path and one set of wire ids.
  *

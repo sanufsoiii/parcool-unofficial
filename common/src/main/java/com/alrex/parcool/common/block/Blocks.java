@@ -17,7 +17,7 @@ public class Blocks {
     private static final DeferredRegister<Block> REGISTER = DeferredRegister.create(ParCool.MOD_ID, Registries.BLOCK);
 
     /**
-     * 1.21.11's {@code BlockBehaviour} constructor resolves the loot table and the description id
+     * 1.21.10's {@code BlockBehaviour} constructor resolves the loot table and the description id
      * from the properties, and both now require the block's registry key to be set
      * ({@code Objects.requireNonNull(this.id, "Block id not set")}) - NeoForge's
      * {@code DeferredRegister.Blocks} does that, Architectury's does not, so the key is set here.

@@ -21,7 +21,7 @@ import java.util.function.BiConsumer;
  *     <li><b>Fabric</b>: in Architectury 13 the raw path threw
  *     {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C}, so
  *     {@code NetworkChannel} was the only working path there and the two loaders ended up with
- *     different wire ids. Architectury 19.0.1 removed {@code NetworkChannel} and
+ *     different wire ids. Architectury 18.0.8 removed {@code NetworkChannel} and
  *     {@code architectury-fabric 19.0.1} implements {@code registerS2C}, so the two loaders now share
  *     one path and one set of ids ({@code parcool:payload.*} plus a {@code .c2s} variant).</li>
  * </ul>

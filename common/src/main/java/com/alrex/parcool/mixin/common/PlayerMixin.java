@@ -41,12 +41,14 @@ public abstract class PlayerMixin extends LivingEntity {
     /**
      * Stops FastRun from being cancelled by the sprint reset that attacking performs.
      *
-     * <p>1.21.1 had that {@code setSprinting(false)} inline in {@code Player#attack}; 1.21.11 extracted
-     * the whole knockback block into {@code Player#causeExtraKnockback}, and the call now lives there -
-     * same call, same order inside it (still only when the knockback is non-zero), so the wrap keeps
-     * its 1.21.1 behaviour.
+     * <p>The {@code setSprinting(false)} this wraps is still inline in {@code Player#attack} on 1.21.10 -
+     * 1.21.11 is what extracts the whole knockback block into {@code Player#causeExtraKnockback} and
+     * moves the call there, so on 1.21.10 the injection point is {@code attack} itself. Verified with
+     * {@code javap -c}: 1.21.10's {@code Player} has no {@code causeExtraKnockback} at all, and the
+     * single {@code invokevirtual setSprinting} in {@code Player} sits at offset 636 inside
+     * {@code attack}, guarded by the same knockback-is-nonzero test as in 1.21.1.
      */
-    @WrapWithCondition(method = "causeExtraKnockback", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V"))
+    @WrapWithCondition(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V"))
     public boolean wrapSetSprinting(Player instance, boolean b) {
         return !Parkourability.get(instance).get(FastRun.class).isDoing();
     }

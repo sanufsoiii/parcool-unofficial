@@ -118,7 +118,7 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
      * Registers the type <b>eagerly</b> and hands back a constant supplier.
      *
      * <p>Eager is the whole point: Fabric runs its entry points before the built-in registries freeze,
-     * and that window is the only one left now that 1.21.11 removed {@code BlockEntityType.Builder} and
+     * and that window is the only one left now that 1.21.5 removed {@code BlockEntityType.Builder} and
      * left the type's only factory private - hence
      * {@code mixin.common.BlockEntityTypeInvoker}, which reaches
      * {@code BlockEntityType#register(String, factory, blocks...)} with a full {@code namespace:path}

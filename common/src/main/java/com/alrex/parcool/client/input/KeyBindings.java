@@ -16,7 +16,7 @@ import org.lwjgl.glfw.GLFW;
 public class KeyBindings {
 
     /**
-     * 1.21.11 replaced the plain category string with a {@link KeyMapping.Category} record, whose
+     * 1.21.9 replaced the plain category string with a {@link KeyMapping.Category} record, whose
      * label is the translation key {@code id.toLanguageKey("key.category")} - so the same ParCool
      * entry moved from {@code key.categories.parcool} to {@code key.category.parcool}.
      */
