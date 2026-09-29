@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.CatLeapAnimator;
 import com.alrex.parcool.client.input.KeyRecorder;
@@ -70,7 +71,7 @@ public class CatLeap extends Action {
     public boolean canContinue(Player player, Parkourability parkourability) {
 		return !((getDoingTick() > 1 && player.onGround())
 				|| player.isFallFlying()
-				|| player.isInWaterOrBubble()
+				|| EntityUtil.isInWaterOrBubble(player)
 				|| player.isInLava()
 		);
 	}

@@ -230,8 +230,10 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
 
     @Override
     public void readAdditionalSaveData(@Nonnull CompoundTag compoundNBT) {
-        setStartPos(new BlockPos(compoundNBT.getInt("Tile1_X"), compoundNBT.getInt("Tile1_Y"), compoundNBT.getInt("Tile1_Z")));
-        setEndPos(new BlockPos(compoundNBT.getInt("Tile2_X"), compoundNBT.getInt("Tile2_Y"), compoundNBT.getInt("Tile2_Z")));
+        // 1.21.5: CompoundTag#getInt returns Optional<Integer>; getIntOr(key, default) is the
+        // replacement for the old "absent key means 0" behaviour.
+        setStartPos(new BlockPos(compoundNBT.getIntOr("Tile1_X", 0), compoundNBT.getIntOr("Tile1_Y", 0), compoundNBT.getIntOr("Tile1_Z", 0)));
+        setEndPos(new BlockPos(compoundNBT.getIntOr("Tile2_X", 0), compoundNBT.getIntOr("Tile2_Y", 0), compoundNBT.getIntOr("Tile2_Z", 0)));
     }
 
     @Override

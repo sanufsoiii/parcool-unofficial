@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.client.animation.impl.DiveAnimationHostAnimator;
 import com.alrex.parcool.client.animation.impl.DiveIntoWaterAnimator;
 import com.alrex.parcool.client.input.KeyRecorder;
@@ -68,7 +69,7 @@ public class Dive extends Action {
     public boolean canContinue(Player player, Parkourability parkourability) {
 		return !(player.isFallFlying()
 				|| player.getAbilities().flying
-				|| player.isInWaterOrBubble()
+				|| EntityUtil.isInWaterOrBubble(player)
 				|| player.isInLava()
 				|| player.isSwimming()
 				|| player.onGround()
@@ -96,7 +97,7 @@ public class Dive extends Action {
 
 	@Override
 	public void onStopInLocalClient(Player player) {
-		if (player.isInWaterOrBubble()) {
+		if (EntityUtil.isInWaterOrBubble(player)) {
 			Animation animation = Animation.get(player);
 			Parkourability parkourability = Parkourability.get(player);
 			if (animation != null
@@ -111,7 +112,7 @@ public class Dive extends Action {
 
 	@Override
 	public void onStopInOtherClient(Player player) {
-		if (player.isInWaterOrBubble()) {
+		if (EntityUtil.isInWaterOrBubble(player)) {
             Animation animation = Animation.get(player);
             Parkourability parkourability = Parkourability.get(player);
             if (animation != null

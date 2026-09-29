@@ -1,7 +1,7 @@
 accessWidener v2 named
 
 # NeoForge exposes these via patches/ATs; on Fabric they need widening. Verified against the
-# mojmap 1.21.4 jar.
+# mojmap 1.21.5 jar.
 accessible field net/minecraft/world/entity/LivingEntity swimAmount F
 accessible field net/minecraft/world/entity/LivingEntity swimAmountO F
 accessible field net/minecraft/world/entity/Entity onGround Z
@@ -15,15 +15,26 @@ accessible method net/minecraft/world/level/storage/LevelResource <init> (Ljava/
 
 # The zipline rope needs its own render types: the rope emits POSITION_COLOR_LIGHTMAP in QUADS and
 # has a culled and an unculled variant (the Enable3DRenderingForZipline config switch), which no
-# vanilla pipeline matches. 1.21.4 still uses the RenderStateShard model, so building the composite
-# state means touching RenderStateShard's shards and RenderType's factory - and 1.21.4 tightened both:
-# `RenderType.create(String, VertexFormat, Mode, int, boolean, boolean, CompositeState)` is now
-# private (1.21.1 still had a package-private five-argument overload that did the same job), and the
-# shards are `protected` rather than public. The NeoForge side gets the same five fields and the same
-# factory through neoforge/src/main/resources/META-INF/accesstransformer.cfg.
-accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;Lcom/mojang/blaze3d/vertex/VertexFormat;Lcom/mojang/blaze3d/vertex/VertexFormat$Mode;IZZLnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+# vanilla pipeline matches.
+#
+# 1.21.5 deleted RenderStateShard's shader and cull shards (RenderStateShard$CullStateShard and
+# RENDERTYPE_LEASH_SHADER are gone from the class) and moved the vertex format, the primitive mode
+# and culling into the RenderPipeline, so the composite state is now built around a pipeline:
+#   - RenderType.create(String, int, RenderPipeline, CompositeState) is package-private,
+#   - CompositeState$CompositeStateBuilder's setters and createCompositeState are protected,
+#   - the two state shards ParCool still uses (NO_TEXTURE, LIGHTMAP) are protected,
+#   - RenderPipelines#MATRICES_COLOR_FOG_SNIPPET - the snippet RenderPipelines.LEASH itself is built
+#     from - is private, and a pipeline whose declared uniform set does not match what
+#     core/rendertype_leash reads fails to compile at first draw,
+#   - RenderPipelines#PIPELINES_BY_LOCATION is private, and it is the map the game precompiles
+#     ShaderManager's pipelines from at every resource reload.
+# The NeoForge side gets the same members through
+# neoforge/src/main/resources/META-INF/accesstransformer.cfg.
+accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;ILcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+accessible method net/minecraft/client/renderer/RenderType$CompositeState$CompositeStateBuilder setTextureState (Lnet/minecraft/client/renderer/RenderStateShard$EmptyTextureStateShard;)Lnet/minecraft/client/renderer/RenderType$CompositeState$CompositeStateBuilder;
+accessible method net/minecraft/client/renderer/RenderType$CompositeState$CompositeStateBuilder setLightmapState (Lnet/minecraft/client/renderer/RenderStateShard$LightmapStateShard;)Lnet/minecraft/client/renderer/RenderType$CompositeState$CompositeStateBuilder;
+accessible method net/minecraft/client/renderer/RenderType$CompositeState$CompositeStateBuilder createCompositeState (Z)Lnet/minecraft/client/renderer/RenderType$CompositeState;
 accessible field net/minecraft/client/renderer/RenderStateShard NO_TEXTURE Lnet/minecraft/client/renderer/RenderStateShard$EmptyTextureStateShard;
-accessible field net/minecraft/client/renderer/RenderStateShard CULL Lnet/minecraft/client/renderer/RenderStateShard$CullStateShard;
-accessible field net/minecraft/client/renderer/RenderStateShard NO_CULL Lnet/minecraft/client/renderer/RenderStateShard$CullStateShard;
 accessible field net/minecraft/client/renderer/RenderStateShard LIGHTMAP Lnet/minecraft/client/renderer/RenderStateShard$LightmapStateShard;
-accessible field net/minecraft/client/renderer/RenderStateShard RENDERTYPE_LEASH_SHADER Lnet/minecraft/client/renderer/RenderStateShard$ShaderStateShard;
+accessible field net/minecraft/client/renderer/RenderPipelines MATRICES_COLOR_FOG_SNIPPET Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;
+accessible field net/minecraft/client/renderer/RenderPipelines PIPELINES_BY_LOCATION Ljava/util/Map;

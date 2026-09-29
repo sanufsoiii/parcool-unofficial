@@ -61,25 +61,15 @@ public abstract class ZiplineHookBlock extends DirectionalBlock implements Entit
     /**
      * Drops the rope items a broken hook was holding.
      *
-     * <p>{@code BlockBehaviour#onRemove} is still overridden here on purpose: 1.21.4 keeps the hook
-     * (vanilla only removed this method in 1.21.9, which is why the 1.21.11 port has no override at
-     * all). Without it a hook that is broken while a rope is attached would delete the rope silently,
-     * because the block entity - and with it the connection list - is destroyed together with the
-     * block and nothing would ever hand the items back.
+     * <p>1.21.4 still overrode {@code BlockBehaviour#onRemove} here; 1.21.5 <b>removed that
+     * method entirely</b> ({@code javap} over the 1.21.5 mojmap jar shows no {@code onRemove} on
+     * {@code Block} nor on {@code BlockBehaviour}), and {@code LevelChunk#setBlockState} now calls
+     * {@link net.minecraft.world.level.block.entity.BlockEntity#preRemoveSideEffects} on the outgoing
+     * block entity just before dropping it. The override therefore moved to
+     * {@link ZiplineHookTileEntity#preRemoveSideEffects}; without it a hook broken while a rope is
+     * attached would delete the rope silently, because the block entity - and with it the
+     * connection list - is destroyed together with the block and nothing would hand the items back.
      */
-    @Override
-    public void onRemove(@Nonnull BlockState state, @Nonnull Level world, @Nonnull BlockPos pos,
-                         @Nonnull BlockState oldState, boolean movedByPiston) {
-        if (!world.isClientSide()) {
-            var tileEntity = world.getBlockEntity(pos);
-            if (tileEntity instanceof ZiplineHookTileEntity ziplineHookTileEntity) {
-                List<ItemStack> itemStacks = ziplineHookTileEntity.removeAllConnection();
-                itemStacks.forEach(it -> Containers.dropItemStack(world, pos.getX(), pos.getY(), pos.getZ(), it));
-            }
-        }
-        super.onRemove(state, world, pos, oldState, movedByPiston);
-    }
-
     @Override
     public BlockState updateShape(BlockState state, LevelReader levelAccessor, ScheduledTickAccess scheduledTicks,
                                   BlockPos pos, Direction direction, BlockPos pos1, BlockState state1, RandomSource random) {

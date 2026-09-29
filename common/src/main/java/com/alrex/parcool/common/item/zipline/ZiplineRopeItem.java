@@ -18,6 +18,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -25,7 +26,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.util.Mth;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.util.List;
+import java.util.function.Consumer;
 
 public class ZiplineRopeItem extends Item {
     /**
@@ -51,17 +52,23 @@ public class ZiplineRopeItem extends Item {
         PERCENT_FORMATTER = new DecimalFormat("##0.0", decimalFormatSymbols);
     }
 
+    /**
+     * 1.21.5 changed the hook's shape: instead of appending into a mutable {@code List<Component>} it
+     * hands the item a {@code TooltipDisplay} and a {@code Consumer<Component>}, so that a display
+     * rule can hide whole components from the tooltip. The lines themselves are unchanged.
+     */
     @Override
-    public void appendHoverText(ItemStack stack, @Nonnull TooltipContext context, @Nonnull List<Component> lines, @Nonnull TooltipFlag tooltipFlag) {
+    public void appendHoverText(ItemStack stack, @Nonnull TooltipContext context, TooltipDisplay display,
+                                @Nonnull Consumer<Component> lines, @Nonnull TooltipFlag tooltipFlag) {
         var posComponent = stack.getComponents().get(DataComponents.ZIPLINE_POSITION.get());
 
         if (posComponent != null) {
-            lines.add(Component.translatable("parcool.gui.text.zipline.bind_pos", posComponent.pos().getX() + ", " + posComponent.pos().getY() + ", " + posComponent.pos().getZ()).withStyle(ChatFormatting.YELLOW));
+            lines.accept(Component.translatable("parcool.gui.text.zipline.bind_pos", posComponent.pos().getX() + ", " + posComponent.pos().getY() + ", " + posComponent.pos().getZ()).withStyle(ChatFormatting.YELLOW));
         } else {
-            lines.add(Component.translatable("parcool.gui.text.zipline.not_bound").withStyle(ChatFormatting.DARK_GRAY));
+            lines.accept(Component.translatable("parcool.gui.text.zipline.not_bound").withStyle(ChatFormatting.DARK_GRAY));
         }
-        lines.add(Component.empty());
-        lines.add(Component.translatable("parcool.gui.text.zipline.tension", getZiplineType(stack).getTranslationName()).withStyle(ChatFormatting.GRAY));
+        lines.accept(Component.empty());
+        lines.accept(Component.translatable("parcool.gui.text.zipline.tension", getZiplineType(stack).getTranslationName()).withStyle(ChatFormatting.GRAY));
         if (hasCustomColor(stack)) {
             /*
             int color = getColor(stack);
@@ -69,12 +76,12 @@ public class ZiplineRopeItem extends Item {
             float r = 100f * ((color & 0xFF0000) >> 16) / 255f;
             float g = 100f * ((color & 0x00FF00) >> 8) / 255f;
             float b = 100f * (color & 0x0000FF) / 255f;
-            lines.add(new StringTextComponent(""));
-            lines.add(new StringTextComponent("R : " + format.format(r) + "%").withStyle(TextFormatting.RED));
-            lines.add(new StringTextComponent("G : " + format.format(g) + "%").withStyle(TextFormatting.GREEN));
-            lines.add(new StringTextComponent("B : " + format.format(b) + "%").withStyle(TextFormatting.BLUE));
+            lines.accept(new StringTextComponent(""));
+            lines.accept(new StringTextComponent("R : " + format.format(r) + "%").withStyle(TextFormatting.RED));
+            lines.accept(new StringTextComponent("G : " + format.format(g) + "%").withStyle(TextFormatting.GREEN));
+            lines.accept(new StringTextComponent("B : " + format.format(b) + "%").withStyle(TextFormatting.BLUE));
              */
-            lines.add(Component.translatable("parcool.gui.text.zipline.colored").withStyle(ChatFormatting.BLUE));
+            lines.accept(Component.translatable("parcool.gui.text.zipline.colored").withStyle(ChatFormatting.BLUE));
         }
     }
 

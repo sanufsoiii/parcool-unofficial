@@ -77,11 +77,17 @@ public final class ParCoolData {
     // persistence
     // ------------------------------------------------------------------
 
-    /** Writes every {@link DataKey#isPersistent() persistent} slot into the player save tag. */
+    /**
+     * Writes every {@link DataKey#isPersistent() persistent} slot into the player save tag.
+     *
+     * <p>1.21.5 turned {@code CompoundTag#getCompound} into an {@link java.util.Optional} getter and
+     * added the {@code getXOr(key, default)} family next to it, so the sub-tree is read with
+     * {@code getCompoundOrEmpty}. The on-disk layout is unchanged from 1.21.4.
+     */
     public static void saveToTag(Player player, CompoundTag tag) {
         Map<DataKey<?>, Object> map = IParCoolDataHolder.of(player);
         if (map == null) return;
-        CompoundTag root = tag.getCompound(ROOT_TAG);
+        CompoundTag root = tag.getCompoundOrEmpty(ROOT_TAG);
         for (Map.Entry<DataKey<?>, Object> e : map.entrySet()) {
             DataKey<?> key = e.getKey();
             if (!key.isPersistent() || e.getValue() == null) continue;
@@ -96,12 +102,13 @@ public final class ParCoolData {
     /** Restores every persistent slot from the player save tag. */
     public static void loadFromTag(Player player, CompoundTag tag) {
         Map<DataKey<?>, Object> map = IParCoolDataHolder.of(player);
-        if (map == null || !tag.contains(ROOT_TAG, CompoundTag.TAG_COMPOUND)) return;
-        CompoundTag root = tag.getCompound(ROOT_TAG);
-        for (String id : root.getAllKeys()) {
+        if (map == null || !tag.contains(ROOT_TAG)) return;
+        CompoundTag root = tag.getCompoundOrEmpty(ROOT_TAG);
+        // getAllKeys() was replaced by keySet() in 1.21.5.
+        for (String id : root.keySet()) {
             DataKey<?> key = ParCoolDataKeys.byId(id);
             if (key == null || !key.isPersistent()) continue;
-            map.put(key, castSerializer(key).read(root.getCompound(id)));
+            map.put(key, castSerializer(key).read(root.getCompoundOrEmpty(id)));
         }
     }
 

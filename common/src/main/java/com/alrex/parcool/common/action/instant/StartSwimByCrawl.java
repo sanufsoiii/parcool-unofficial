@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.instant;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.client.input.KeyRecorder;
 import com.alrex.parcool.common.action.InstantAction;
 import com.alrex.parcool.common.action.StaminaConsumeTiming;
@@ -10,7 +11,7 @@ import net.minecraft.world.entity.player.Player;
 public class StartSwimByCrawl extends InstantAction {
     @Override
     public boolean canStart(Player player, Parkourability parkourability, ByteBuffer startInfo) {
-        return player.isInWaterOrBubble()
+        return EntityUtil.isInWaterOrBubble(player)
                 && !player.isSwimming()
                 && KeyRecorder.keyCrawlState.isPressed();
     }

@@ -33,11 +33,14 @@ public final class ParCoolDataKeys {
             new DataKey.NbtSerializer<>() {
                 @Override
                 public ReadonlyStamina read(CompoundTag tag) {
-                    var value = tag.getCompound("value");
+                    // 1.21.5: the typed NBT getters return Optional<T> and the getXOr(key, default)
+                    // family carries the "absent means default" behaviour that getInt/getBoolean used
+                    // to have, and getCompound() has getCompoundOrEmpty().
+                    var value = tag.getCompoundOrEmpty("value");
                     return new ReadonlyStamina(
-                            value.getBoolean("exhausted"),
-                            value.getInt("stamina"),
-                            value.getInt("max")
+                            value.getBooleanOr("exhausted", false),
+                            value.getIntOr("stamina", 0),
+                            value.getIntOr("max", 0)
                     );
                 }
 

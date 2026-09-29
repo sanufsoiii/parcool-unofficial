@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.client.animation.impl.ChargeJumpAnimator;
@@ -87,7 +88,7 @@ public class ChargeJump extends Action {
                     && parkourability.getActionInfo().can(ChargeJump.class)
                     && !cp.isVisuallyCrawling()
                     && !cp.isSprinting()
-                    && !cp.isInWaterOrBubble()
+                    && !EntityUtil.isInWaterOrBubble(cp)
                     && !cp.input.keyPresses.forward()
                     && !cp.input.keyPresses.backward()
                     && !cp.input.keyPresses.right()

@@ -7,6 +7,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.Containers;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.core.BlockPos;
@@ -164,15 +165,17 @@ public class ZiplineHookTileEntity extends BlockEntity {
             if (!(entry instanceof CompoundTag cTag))
                 continue;
 
+            // 1.21.5: CompoundTag#getInt returns Optional<Integer>; getIntOr(key, default) replaces
+            // the "contains() ? getInt() : 0" pattern the reader used to spell out.
             BlockPos pos;
             if (cTag.contains("rX") && cTag.contains("rY") && cTag.contains("rZ")) {
                 pos = getBlockPos().offset(
-                        cTag.getInt("rX"),
-                        cTag.getInt("rY"),
-                        cTag.getInt("rZ")
+                        cTag.getIntOr("rX", 0),
+                        cTag.getIntOr("rY", 0),
+                        cTag.getIntOr("rZ", 0)
                 );
             } else if (cTag.contains("X") && cTag.contains("Y") && cTag.contains("Z")) {
-                pos = new BlockPos(cTag.getInt("X"), cTag.getInt("Y"), cTag.getInt("Z"));
+                pos = new BlockPos(cTag.getIntOr("X", 0), cTag.getIntOr("Y", 0), cTag.getIntOr("Z", 0));
             } else
                 continue;
             ZiplineInfo info = ZiplineInfo.load(cTag.get("Info"));
@@ -205,6 +208,23 @@ public class ZiplineHookTileEntity extends BlockEntity {
      * routes both the disk load and the client sync through {@link #loadAdditional}, so the restore
      * hook lives there.
      */
+
+    /**
+     * Hands back the rope items when the hook block is removed. 1.21.5 deleted
+     * {@code BlockBehaviour#onRemove} - the vanilla removal hook this used to be reached through -
+     * and {@code LevelChunk#setBlockState} now calls this instead, on the outgoing block entity and
+     * just before it is dropped, and only on the server (which is the same guard the old
+     * {@code !world.isClientSide()} check gave). The base implementation only does something for a
+     * {@code Container}, which this block entity is not, but it is called anyway so a future
+     * supertype change cannot silently drop something.
+     */
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (this.level == null || this.level.isClientSide()) return;
+        List<ItemStack> itemStacks = removeAllConnection();
+        itemStacks.forEach(it -> Containers.dropItemStack(this.level, pos.getX(), pos.getY(), pos.getZ(), it));
+    }
 
     public static void tick(Level level, BlockPos pos, BlockState state, BlockEntity entity) {
         if (!(entity instanceof ZiplineHookTileEntity self)) return;

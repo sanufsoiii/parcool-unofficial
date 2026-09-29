@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.BackwardWallJumpAnimator;
 import com.alrex.parcool.client.animation.impl.WallJumpAnimator;
@@ -108,7 +109,7 @@ public class WallJump extends Action {
 		ClingToCliff cling = parkourability.get(ClingToCliff.class);
 
 		boolean value = (!player.onGround()
-				&& !player.isInWaterOrBubble()
+				&& !EntityUtil.isInWaterOrBubble(player)
 				&& !player.isFallFlying()
 				&& !player.getAbilities().flying
 				&& parkourability.getAdditionalProperties().getNotCreativeFlyingTick() > 10

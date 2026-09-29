@@ -60,11 +60,11 @@ public class Roll extends Action {
 			return startRequired;
 		}
 		Direction rollDirection = Direction.Front;
-		if (clientPlayer.input.leftImpulse < -0.5) {
+		if (clientPlayer.input.getMoveVector().x < -0.5) {
 			rollDirection = Direction.Right;
-		} else if (clientPlayer.input.leftImpulse > 0.5) {
+		} else if (clientPlayer.input.getMoveVector().x > 0.5) {
 			rollDirection = Direction.Left;
-		} else if (clientPlayer.input.forwardImpulse < -0.5) {
+		} else if (clientPlayer.input.getMoveVector().y < -0.5) {
 			rollDirection = Direction.Back;
 		}
 		startInfo.putInt(rollDirection.ordinal());

@@ -33,10 +33,12 @@ public class ZiplineInfo {
 
     public static ZiplineInfo load(@Nullable Tag tag) {
         if (tag instanceof CompoundTag cTag) {
-            int color = cTag.contains("color") ? cTag.getInt("color") : ZiplineRopeItem.DEFAULT_COLOR;
-            ZiplineType type = cTag.contains("type") ?
-                    ZiplineType.values()[cTag.getByte("type") % ZiplineType.values().length] :
-                    ZiplineType.LOOSE;
+            // 1.21.5: the typed NBT getters return Optional<T>; getXOr(key, default) is the direct
+            // replacement for the "contains(...) ? getX(...) : fallback" dance.
+            int color = cTag.getIntOr("color", ZiplineRopeItem.DEFAULT_COLOR);
+            ZiplineType type = cTag.contains("type")
+                    ? ZiplineType.values()[cTag.getByteOr("type", (byte) ZiplineType.LOOSE.ordinal()) % ZiplineType.values().length]
+                    : ZiplineType.LOOSE;
             return new ZiplineInfo(type, color);
         }
         return new ZiplineInfo(ZiplineType.LOOSE, ZiplineRopeItem.DEFAULT_COLOR);

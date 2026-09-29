@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.action.impl;
 
+import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.input.KeyBindings;
 import com.alrex.parcool.common.action.Action;
@@ -65,7 +66,7 @@ public class BreakfallReady extends Action {
 		return (KeyBindings.isDown(KeyBindings.getKeyBreakfall())
                 && !ParCoolDataKeys.getStamina(player).isExhausted()
 				&& !parkourability.get(Crawl.class).isDoing()
-				&& !player.isInWaterOrBubble()
+				&& !EntityUtil.isInWaterOrBubble(player)
 				&& (!player.onGround() || parkourability.getAdditionalProperties().getLandingTick() < 3)
 		);
 	}
