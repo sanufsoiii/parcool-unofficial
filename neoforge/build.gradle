@@ -109,19 +109,27 @@ dependencies {
 	// shipping a second copy of MixinExtras is what the loaders' bundled one would conflict with.
 	compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
-	// Optional integrations, and the only jars that had to move with the port:
-	//   Paraglider       7794499  Paraglider-neoforge-21.11.0-beta.6   (MC 1.21.11)
-	//   ShoulderSurfing  8950509  ShoulderSurfing-NeoForge-1.21.11-5.1.1
-	//   BetterThirdPerson 6455836 the newest NeoForge build (1.21.8)
-	// EpicFight has no 1.21.11 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
-	// latest release), so extern/epicfight is excluded from compilation - see sourceSets below.
-	// Patchouli is only an optional book dependency and is never referenced from source.
-	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7794499"
-	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:7489617"
-	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
-	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:8950509"
+	// Optional integrations. The file ids come from api.cfwidget.com/minecraft/mc-mods/<id>, which
+	// lists the game version each CurseForge file was published for; CurseForge's own API needs a key.
+	//
+	//   Paraglider        289240  7795089  Paraglider-neoforge-21.1.5              (MC 1.21.1)
+	//   EpicFight         405076  8175609  epic-fight-21.17.3.1-mc1.21.1-neoforge  (MC 1.21.1)
+	//   BetterThirdPerson 435044  5859634  BetterThirdPerson-neoforge-1.9.0       (MC 1.21.2/1.21.3)
+	//   ShoulderSurfing   243190  5948017  ShoulderSurfing-NeoForge-1.21.3-4.6.3   (MC 1.21.3)
+	//
+	// Neither Paraglider nor EpicFight ever published a 1.21.2/1.21.3 build: Paraglider jumps straight
+	// from its 1.21.1 line (21.1.x) to 1.21.5 (21.5.x), and EpicFight's latest release is still the
+	// 1.21.1 line 21.17.3.1. Their APIs are unchanged across that gap, and both integrations are
+	// compileOnly + a "is the class loadable" guard at runtime, so the 1.21.1 jar is the right thing to
+	// compile against; on a client that has a matching Paraglider/EpicFight build the integration works,
+	// and on one that has no build at all it reports itself absent. Patchouli is only an optional book
+	// dependency and is never referenced from source.
+	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7795089"
+	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8175609"
+	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:5859634"
+	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:5948017"
 
-	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7794499"
+	parcoolIntegrationsRuntime "curse.maven:paraglider-289240:7795089"
 }
 
 tasks.named('compileJava') {

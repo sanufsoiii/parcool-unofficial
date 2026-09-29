@@ -30,15 +30,13 @@ public class Stamina {
 	}
 
 	public void consume(int value) {
-		if (!player.isLocalPlayer()) return;
-		LocalPlayer localPlayer = (LocalPlayer) player;
+		if (!(player instanceof LocalPlayer localPlayer)) return;
 		var stamina = LocalStamina.get(localPlayer);
 		stamina.consume(localPlayer, value);
 	}
 
 	public void recover(int value) {
-		if (!player.isLocalPlayer()) return;
-		LocalPlayer localPlayer = (LocalPlayer) player;
+		if (!(player instanceof LocalPlayer localPlayer)) return;
 		var stamina = LocalStamina.get(localPlayer);
 		stamina.recover(localPlayer, value);
 	}

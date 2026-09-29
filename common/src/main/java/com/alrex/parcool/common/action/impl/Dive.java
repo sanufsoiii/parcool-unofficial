@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.client.animation.impl.DiveAnimationHostAnimator;
 import com.alrex.parcool.client.animation.impl.DiveIntoWaterAnimator;
 import com.alrex.parcool.client.input.KeyRecorder;
@@ -11,10 +10,9 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.utilities.BufferUtil;
 import com.alrex.parcool.utilities.WorldUtil;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
-
 import java.nio.ByteBuffer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.util.Mth;
 
 public class Dive extends Action {
 	private boolean justJumped = false;
@@ -70,7 +68,7 @@ public class Dive extends Action {
     public boolean canContinue(Player player, Parkourability parkourability) {
 		return !(player.isFallFlying()
 				|| player.getAbilities().flying
-				|| EntityUtil.isInWaterOrBubble(player)
+				|| player.isInWaterOrBubble()
 				|| player.isInLava()
 				|| player.isSwimming()
 				|| player.onGround()
@@ -92,13 +90,13 @@ public class Dive extends Action {
         playerYSpeedOld = playerYSpeed = initialYSpeed;
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-            animation.setAnimator(DiveAnimationHostAnimator.class, initialYSpeed, BufferUtil.getBoolean(startData));
+            animation.setAnimator(new DiveAnimationHostAnimator(initialYSpeed, BufferUtil.getBoolean(startData)));
 		}
 	}
 
 	@Override
 	public void onStopInLocalClient(Player player) {
-		if (EntityUtil.isInWaterOrBubble(player)) {
+		if (player.isInWaterOrBubble()) {
 			Animation animation = Animation.get(player);
 			Parkourability parkourability = Parkourability.get(player);
 			if (animation != null
@@ -106,14 +104,14 @@ public class Dive extends Action {
 					&& parkourability.getAdditionalProperties().getNotLandingTick() >= 5
 					&& player.getDeltaMovement().y() < 0
 			) {
-				animation.setAnimator(DiveIntoWaterAnimator.class, parkourability.get(SkyDive.class).isDoing());
+				animation.setAnimator(new DiveIntoWaterAnimator(parkourability.get(SkyDive.class).isDoing()));
 			}
 		}
 	}
 
 	@Override
 	public void onStopInOtherClient(Player player) {
-		if (EntityUtil.isInWaterOrBubble(player)) {
+		if (player.isInWaterOrBubble()) {
             Animation animation = Animation.get(player);
             Parkourability parkourability = Parkourability.get(player);
             if (animation != null
@@ -121,7 +119,7 @@ public class Dive extends Action {
                     && parkourability.getAdditionalProperties().getNotLandingTick() >= 5
                     && player.getDeltaMovement().y() < 0
             ) {
-                animation.setAnimator(DiveIntoWaterAnimator.class, parkourability.get(SkyDive.class).isDoing());
+                animation.setAnimator(new DiveIntoWaterAnimator(parkourability.get(SkyDive.class).isDoing()));
             }
 		}
 	}
@@ -149,7 +147,7 @@ public class Dive extends Action {
         playerYSpeedOld = playerYSpeed = initialYVelocityOfLastJump = initialYSpeed;
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-            animation.setAnimator(DiveAnimationHostAnimator.class, initialYSpeed, BufferUtil.getBoolean(startData));
+            animation.setAnimator(new DiveAnimationHostAnimator(initialYSpeed, BufferUtil.getBoolean(startData)));
 		}
 	}
 }

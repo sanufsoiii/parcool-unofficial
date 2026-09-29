@@ -30,13 +30,6 @@ public class ActionInfo {
 
     private ServerLimitation serverLimitation = ServerLimitation.UNSYNCED_INSTANCE;
 
-	/**
-	 * The server is the floor for every numeric limit and the veto for every action: the client decides
-	 * what it wants, {@link ServerLimitation} decides what is allowed. Reading only the client setting
-	 * here would let a client with {@code staminaConsumptionOf = 0} undercut the server's minimum, and
-	 * a client with a permissive {@code getPossibilityOf} could re-enable an action the server banned -
-	 * both of which is what the AND and the Math.max in {@link #getStaminaConsumptionOf} exist for.
-	 */
 	public boolean can(Class<? extends Action> action) {
         return getClientSetting().get(ParCoolConfig.Client.Booleans.ParCoolIsActive)
                 && getClientSetting().getPossibilityOf(action)
@@ -55,11 +48,6 @@ public class ActionInfo {
         return forcedStamina;
     }
 
-	/**
-	 * Server-side consumption is a *floor*, not a default: Math.max (rather than the client's value)
-	 * is what stops a client that reports 0 from making an action free against a server that charges
-	 * for it. Reported values are additionally clamped in {@code ServerPayloadGuard}.
-	 */
 	public int getStaminaConsumptionOf(Class<? extends Action> action) {
         return Math.max(
                 getClientSetting().getStaminaConsumptionOf(action),

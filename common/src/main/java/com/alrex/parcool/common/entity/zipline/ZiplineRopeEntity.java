@@ -6,26 +6,24 @@ import com.alrex.parcool.common.entity.EntityTypes;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
 import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.common.zipline.ZiplineType;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityDimensions;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     private static final EntityDataAccessor<BlockPos> DATA_START_POS;
@@ -124,9 +122,9 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     }
 
     /**
-     * The custom culling box 1.21.1 kept in {@code Entity#getBoundingBoxForCulling()}. 1.21.11 moved
-     * that method onto {@code EntityRenderer}, so {@code ZiplineRopeRenderer} reads it from here
-     * instead; the box and its {@code null} fallback are unchanged.
+     * The custom culling box 1.21.1 kept in {@code Entity#getBoundingBoxForCulling()}. The 1.21.2
+     * rework moved that method onto {@code EntityRenderer}, so {@code ZiplineRopeRenderer} reads it
+     * from here instead; the box and its {@code null} fallback are unchanged.
      */
     @Nullable
     public AABB getCullingBoundingBox() {
@@ -148,10 +146,10 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     }
 
     /**
-     * 1.21.11 split {@code Entity#hurt} into a final client/server split: {@code hurt} is now
-     * {@code final void} and every entity implements {@code hurtServer}. The rope is a marker entity
-     * with no hitbox and no health, so it is invulnerable, exactly as it was when it simply had no
-     * {@code hurt} override in 1.21.1.
+     * The 1.21.2 rework split {@code Entity#hurt} into a final client/server pair: {@code hurt} is
+     * now {@code final void} and every entity implements {@code hurtServer}. The rope is a marker
+     * entity with no hitbox and no health, so it is invulnerable, exactly as it was when it simply had
+     * no {@code hurt} override in 1.21.1.
      */
     @Override
     public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
@@ -214,6 +212,8 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     @Nonnull
     @Override
     public InteractionResult interact(Player player, InteractionHand p_19979_) {
+        // 1.21.2 replaced InteractionResult.sidedSuccess(boolean) with the explicit SUCCESS /
+        // SUCCESS_SERVER pair, which is exactly what it expanded to.
         return player.level().isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
     }
 
@@ -226,20 +226,25 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput input) {
-        setStartPos(new BlockPos(input.getIntOr("Tile1_X", 0), input.getIntOr("Tile1_Y", 0), input.getIntOr("Tile1_Z", 0)));
-        setEndPos(new BlockPos(input.getIntOr("Tile2_X", 0), input.getIntOr("Tile2_Y", 0), input.getIntOr("Tile2_Z", 0)));
+    public void readAdditionalSaveData(@Nonnull CompoundTag compoundNBT) {
+        setStartPos(new BlockPos(compoundNBT.getInt("Tile1_X"), compoundNBT.getInt("Tile1_Y"), compoundNBT.getInt("Tile1_Z")));
+        setEndPos(new BlockPos(compoundNBT.getInt("Tile2_X"), compoundNBT.getInt("Tile2_Y"), compoundNBT.getInt("Tile2_Z")));
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput output) {
+    public void addAdditionalSaveData(@Nonnull CompoundTag compoundNBT) {
         BlockPos startPos = getStartPos();
         BlockPos endPos = getEndPos();
-        output.putInt("Tile1_X", startPos.getX());
-        output.putInt("Tile1_Y", startPos.getY());
-        output.putInt("Tile1_Z", startPos.getZ());
-        output.putInt("Tile2_X", endPos.getX());
-        output.putInt("Tile2_Y", endPos.getY());
-        output.putInt("Tile2_Z", endPos.getZ());
+        // Six distinct keys: the old code wrote "Tile1_X" three times and "Tile2_X" three times, so
+        // only the X component of each end ever reached disk. Y and Z were silently overwritten, and
+        // readAdditionalSaveData - which reads all six - therefore reloaded every rope with
+        // Tile1_Y/Tile1_Z/Tile2_Y/Tile2_Z = 0, collapsing each zipline onto a 1x0x1 line after a
+        // chunk unload/reload.
+        compoundNBT.putInt("Tile1_X", startPos.getX());
+        compoundNBT.putInt("Tile1_Y", startPos.getY());
+        compoundNBT.putInt("Tile1_Z", startPos.getZ());
+        compoundNBT.putInt("Tile2_X", endPos.getX());
+        compoundNBT.putInt("Tile2_Y", endPos.getY());
+        compoundNBT.putInt("Tile2_Z", endPos.getZ());
     }
 }

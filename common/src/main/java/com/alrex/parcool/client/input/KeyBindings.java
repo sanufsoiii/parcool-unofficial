@@ -1,27 +1,22 @@
 package com.alrex.parcool.client.input;
 
-import com.alrex.parcool.ParCool;
 import com.alrex.parcool.compat.IKeyMappingDuck;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import com.alrex.parcool.utilities.VectorUtil;
-import com.mojang.blaze3d.platform.InputConstants;
-import com.mojang.blaze3d.platform.Window;
+import org.lwjgl.glfw.GLFW;
+
+import java.lang.reflect.Field;
+import java.util.Map;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.phys.Vec3;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.LocalPlayer;
 
 public class KeyBindings {
-
-    /**
-     * 1.21.11 replaced the plain category string with a {@link KeyMapping.Category} record, whose
-     * label is the translation key {@code id.toLanguageKey("key.category")} - so the same ParCool
-     * entry moved from {@code key.categories.parcool} to {@code key.category.parcool}.
-     */
-    private static final KeyMapping.Category CATEGORY =
-            KeyMapping.Category.register(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "parcool"));
 
 
     /**
@@ -36,22 +31,22 @@ public class KeyBindings {
     private static Options options() {
         return Minecraft.getInstance().options;
     }
-    private static final KeyMapping keyBindEnable = new KeyMapping("key.parcool.Enable", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, CATEGORY);
-	private static final KeyMapping keyBindCrawl = new KeyMapping("key.parcool.Crawl", GLFW.GLFW_KEY_C, CATEGORY);
-	private static final KeyMapping keyBindGrabWall = new KeyMapping("key.parcool.ClingToCliff", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, CATEGORY);
-	private static final KeyMapping keyBindBreakfall = new KeyMapping("key.parcool.Breakfall", GLFW.GLFW_KEY_R, CATEGORY);
-	private static final KeyMapping keyBindFastRunning = new KeyMapping("key.parcool.FastRun", GLFW.GLFW_KEY_LEFT_CONTROL, CATEGORY);
-	private static final KeyMapping keyBindFlipping = new KeyMapping("key.parcool.Flipping", GLFW.GLFW_KEY_UNKNOWN, CATEGORY);
-	private static final KeyMapping keyBindVault = new KeyMapping("key.parcool.Vault", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, CATEGORY);
-	private static final KeyMapping keyBindDodge = new KeyMapping("key.parcool.Dodge", GLFW.GLFW_KEY_R, CATEGORY);
-    private static final KeyMapping keyBindRideZipline = new KeyMapping("key.parcool.RideZipline", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, CATEGORY);
-	private static final KeyMapping keyBindWallJump = new KeyMapping("key.parcool.WallJump", GLFW.GLFW_KEY_SPACE, CATEGORY);
-	private static final KeyMapping keyBindHangDown = new KeyMapping("key.parcool.HangDown", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, CATEGORY);
-	private static final KeyMapping keyBindWallSlide = new KeyMapping("key.parcool.WallSlide", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, CATEGORY);
-    private static final KeyMapping keyBindHideInBlock = new KeyMapping("key.parcool.HideInBlock", GLFW.GLFW_KEY_C, CATEGORY);
-	private static final KeyMapping keyBindHorizontalWallRun = new KeyMapping("key.parcool.HorizontalWallRun", GLFW.GLFW_KEY_R, CATEGORY);
-	private static final KeyMapping keyBindQuickTurn = new KeyMapping("key.parcool.QuickTurn", GLFW.GLFW_KEY_UNKNOWN, CATEGORY);
-	private static final KeyMapping keyBindOpenSettings = new KeyMapping("key.parcool.openSetting", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, CATEGORY);
+    private static final KeyMapping keyBindEnable = new KeyMapping("key.parcool.Enable", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "key.categories.parcool");
+	private static final KeyMapping keyBindCrawl = new KeyMapping("key.parcool.Crawl", GLFW.GLFW_KEY_C, "key.categories.parcool");
+	private static final KeyMapping keyBindGrabWall = new KeyMapping("key.parcool.ClingToCliff", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, "key.categories.parcool");
+	private static final KeyMapping keyBindBreakfall = new KeyMapping("key.parcool.Breakfall", GLFW.GLFW_KEY_R, "key.categories.parcool");
+	private static final KeyMapping keyBindFastRunning = new KeyMapping("key.parcool.FastRun", GLFW.GLFW_KEY_LEFT_CONTROL, "key.categories.parcool");
+	private static final KeyMapping keyBindFlipping = new KeyMapping("key.parcool.Flipping", GLFW.GLFW_KEY_UNKNOWN, "key.categories.parcool");
+	private static final KeyMapping keyBindVault = new KeyMapping("key.parcool.Vault", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, "key.categories.parcool");
+	private static final KeyMapping keyBindDodge = new KeyMapping("key.parcool.Dodge", GLFW.GLFW_KEY_R, "key.categories.parcool");
+    private static final KeyMapping keyBindRideZipline = new KeyMapping("key.parcool.RideZipline", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, "key.categories.parcool");
+	private static final KeyMapping keyBindWallJump = new KeyMapping("key.parcool.WallJump", GLFW.GLFW_KEY_SPACE, "key.categories.parcool");
+	private static final KeyMapping keyBindHangDown = new KeyMapping("key.parcool.HangDown", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, "key.categories.parcool");
+	private static final KeyMapping keyBindWallSlide = new KeyMapping("key.parcool.WallSlide", InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_RIGHT, "key.categories.parcool");
+    private static final KeyMapping keyBindHideInBlock = new KeyMapping("key.parcool.HideInBlock", GLFW.GLFW_KEY_C, "key.categories.parcool");
+	private static final KeyMapping keyBindHorizontalWallRun = new KeyMapping("key.parcool.HorizontalWallRun", GLFW.GLFW_KEY_R, "key.categories.parcool");
+	private static final KeyMapping keyBindQuickTurn = new KeyMapping("key.parcool.QuickTurn", GLFW.GLFW_KEY_UNKNOWN, "key.categories.parcool");
+	private static final KeyMapping keyBindOpenSettings = new KeyMapping("key.parcool.openSetting", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_P, "key.categories.parcool");
 	private static final Vec3 forwardVector = new Vec3(0, 0, 1);
 
     /** All ParCool bindings, in registration order. */
@@ -89,14 +84,13 @@ public class KeyBindings {
         InputConstants.Key key = keyOf(mapping);
         if (key.getType() == InputConstants.Type.MOUSE) return false;
         if (!isPollableKeysym(key)) return false;
-        Window window = mc().getWindow();
         boolean modifierDown = switch (modifier) {
-            case GLFW.GLFW_MOD_CONTROL -> InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_CONTROL);
-            case GLFW.GLFW_MOD_ALT -> InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_ALT);
+            case GLFW.GLFW_MOD_CONTROL -> Screen.hasControlDown();
+            case GLFW.GLFW_MOD_ALT -> Screen.hasAltDown();
             default -> true;
         };
         if (!modifierDown) return false;
-        return InputConstants.isKeyDown(window, key.getValue());
+        return InputConstants.isKeyDown(mc().getWindow().getWindow(), key.getValue());
     }
 
     /** Ctrl + the enable binding. */
@@ -143,10 +137,10 @@ public class KeyBindings {
 
     public static boolean isDown(KeyMapping mapping) {
         InputConstants.Key key = keyOf(mapping);
-        Window window = mc().getWindow();
+        long window = mc().getWindow().getWindow();
         return switch (key.getType()) {
             case KEYSYM -> isPollableKeysym(key) && InputConstants.isKeyDown(window, key.getValue());
-            case MOUSE -> GLFW.glfwGetMouseButton(window.handle(), key.getValue()) == GLFW.GLFW_PRESS;
+            case MOUSE -> GLFW.glfwGetMouseButton(window, key.getValue()) == GLFW.GLFW_PRESS;
             // A raw scancode binding cannot be polled through the keycode API; fall back to the
             // mapping's own state, which is correct as long as the key is not shared.
             case SCANCODE -> mapping.isDown();
@@ -195,8 +189,7 @@ public class KeyBindings {
 	}
 
 	public static Boolean isLeftAndRightDown() {
-		return mc().player != null && mc().player.input != null
-				&& mc().player.input.keyPresses.left() && mc().player.input.keyPresses.right();
+		return mc().player != null && mc().player.input != null && mc().player.input.keyPresses.left() && mc().player.input.keyPresses.right();
 	}
 
 	public static Boolean isKeyForwardDown() {
@@ -292,7 +285,88 @@ public class KeyBindings {
 		for (KeyMapping mapping : ALL) {
 			KeyMappingRegistry.register(mapping);
 		}
+		restoreVanillaBindings();
 	}
+
+    /**
+     * Hands every key ParCool shares with vanilla back to the other mapping.
+     *
+     * <p>Minecraft 1.21.1 stores bindings in {@code KeyMapping.MAP} with exactly one
+     * {@link KeyMapping} per physical key, and every {@code new KeyMapping(...)} overwrites that
+     * entry. ParCool binds 16 keys vanilla also owns (the right mouse button five times, {@code R}
+     * three times, {@code C} twice, plus {@code Space}, {@code P} and left-control), so registering
+     * them can evict {@code keyUse} / {@code keySprint} from the map — and a mapping that is not in
+     * the map never receives press or release events. That is exactly why right-click stopped
+     * placing blocks and left-control stopped sprinting; unbinding ParCool's keys in the Controls
+     * screen restored vanilla, which confirms the diagnosis.
+     *
+     * <p>Called both right after registration and once more on the first client tick, because on
+     * Fabric the client entrypoint runs before {@code Options} exists, so vanilla's mappings are
+     * still created after us.
+     *
+     * <h4>Why reflection instead of a {@code @Accessor} mixin</h4>
+     * The two fields are read reflectively because they are not the same on both loaders. NeoForge
+     * replaces {@code KeyMapping#MAP}'s {@code Map<Key, KeyMapping>} with its own
+     * {@code KeyMappingLookup}, which already allows several mappings per physical key - so the whole
+     * repair is a no-op there, while a shared mixin declaring {@code Map} for that field aborts the
+     * whole NeoForge client with
+     * {@code InvalidAccessorException: No candidates were found matching MAP:Ljava/util/Map;}.
+     */
+    public static void restoreVanillaBindings() {
+        Object map = readStaticMap(BINDING_MAP);
+        Object all = readStaticMap(ALL_BINDINGS);
+        if (map == null || all == null) {
+            // Expected on NeoForge; on Fabric it means the field layout changed again.
+            com.alrex.parcool.ParCool.LOGGER.debug("[parcool] KeyMapping has no single-mapping-per-key table on this loader; shared keys need no repair");
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        Map<InputConstants.Key, KeyMapping> bindingMap = (Map<InputConstants.Key, KeyMapping>) map;
+        @SuppressWarnings("unchecked")
+        Map<String, KeyMapping> everyMapping = (Map<String, KeyMapping>) all;
+
+        int restored = 0;
+        for (KeyMapping mapping : ALL) {
+            InputConstants.Key key = keyOf(mapping);
+            KeyMapping owner = bindingMap.get(key);
+            if (owner != null && !isParCool(owner)) continue;
+
+            for (KeyMapping candidate : everyMapping.values()) {
+                if (isParCool(candidate)) continue;
+                if (keyOf(candidate).equals(key)) {
+                    bindingMap.put(key, candidate);
+                    restored++;
+                    break;
+                }
+            }
+        }
+        com.alrex.parcool.ParCool.LOGGER.debug("[parcool] vanilla bindings restored on {} shared keys", restored);
+    }
+
+    /** {@code KeyMapping.MAP} — which single {@link KeyMapping} currently receives events for a key. */
+    private static final Field BINDING_MAP = findStaticField("MAP");
+    /** {@code KeyMapping.ALL} — every registered mapping, by name. */
+    private static final Field ALL_BINDINGS = findStaticField("ALL");
+
+    private static Field findStaticField(String name) {
+        try {
+            Field field = KeyMapping.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
+
+    private static Object readStaticMap(Field field) {
+        if (field == null) return null;
+        try {
+            Object value = field.get(null);
+            return value instanceof Map<?, ?> ? value : null;
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            return null;
+        }
+    }
 
     private static boolean isParCool(KeyMapping mapping) {
         return mapping.getName().startsWith("key.parcool.");

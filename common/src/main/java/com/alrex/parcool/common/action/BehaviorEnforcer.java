@@ -8,19 +8,13 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Supplier;
 
 public class BehaviorEnforcer {
-
     /**
      * Re-entrancy guard for the movement enforcer, set while a move is being applied on the enforcer's
      * behalf.
      *
      * <p>It lives here, in a plain mod class, rather than as a {@code @Unique} field on the mixin that
-     * needs it: Mixin does not carry a {@code @Unique static} field over from a mixin class that does
-     * not extend its target. Verified by exporting the mixed class with {@code -Dmixin.debug.export}:
-     * {@code LocalPlayer.handler$…$parcool$onMove} came out with no {@code getstatic}/{@code putstatic}
-     * for the flag at all, so the guard silently did nothing and {@code ((Entity) player).move(…)} -
-     * a virtual dispatch back into {@code LocalPlayer#move}, which {@code LocalPlayer} does override -
-     * recursed until the stack blew. This class is never merged into anything, so plain Java
-     * semantics apply and the flag is guaranteed to be seen by the recursive pass.
+     * needs it: Mixin does not carry a {@code @Unique static} field over from a mixin class into the
+     * target, so the flag was silently never read or written and the guard did nothing.
      *
      * <p>A {@link ThreadLocal} rather than a plain boolean: the enforcers are per-player and the flag
      * must not leak between the render thread and the server thread.

@@ -1,26 +1,25 @@
 package com.alrex.parcool.common.network.payload;
 
 import com.alrex.parcool.ParCool;
-import com.alrex.parcool.common.data.Parkourability;
-import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.common.network.ServerPayloadGuard;
 import com.alrex.parcool.common.data.ParCoolDataKeys;
+import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.common.network.StaminaSynchronizationBroadcaster;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Player;
 import dev.architectury.networking.NetworkManager;
 
 import javax.annotation.Nonnull;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
 import java.util.UUID;
 
 public record StaminaPayload(UUID playerID, ReadonlyStamina stamina) implements CustomPacketPayload {
     public static final Type<StaminaPayload> TYPE
-            = new Type<>(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina"));
+            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina"));
     public static final StreamCodec<ByteBuf, StaminaPayload> CODEC = StreamCodec.composite(
             UUIDUtil.STREAM_CODEC,
             StaminaPayload::playerID,

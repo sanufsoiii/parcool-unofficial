@@ -1,11 +1,11 @@
 package com.alrex.parcool.common.potion;
 
 import com.alrex.parcool.ParCool;
-import net.minecraft.core.registries.Registries;
+import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.alchemy.Potion;
-import dev.architectury.registry.registries.RegistrySupplier;
+import net.minecraft.core.registries.Registries;
 import dev.architectury.registry.registries.DeferredRegister;
 
 public class Potions {

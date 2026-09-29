@@ -1,13 +1,9 @@
 package com.alrex.parcool.common.data;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
+import javax.annotation.Nullable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
-
-import javax.annotation.Nullable;
+import net.minecraft.nbt.CompoundTag;
 import java.util.Map;
 
 /**
@@ -60,34 +56,33 @@ public final class ParCoolData {
         if (map != null) map.remove(key);
     }
 
+    /**
+     * Drops every ParCool slot from the entity. Called when a player entity is discarded so that a
+     * recycled entity object can never inherit the previous occupant's action state.
+     */
+    public static void clear(Entity entity) {
+        Map<DataKey<?>, Object> map = IParCoolDataHolder.of(entity);
+        if (map != null) map.clear();
+    }
 
+    /** Copies the persistent + non-persistent slots of {@code from} onto {@code to}. */
+    public static void copyAll(Entity from, Entity to) {
+        Map<DataKey<?>, Object> src = IParCoolDataHolder.of(from);
+        Map<DataKey<?>, Object> dst = IParCoolDataHolder.of(to);
+        if (src == null || dst == null) return;
+        dst.clear();
+        dst.putAll(src);
+    }
 
     // ------------------------------------------------------------------
     // persistence
     // ------------------------------------------------------------------
 
-    /**
-     * Writes every {@link DataKey#isPersistent() persistent} slot into the player save tag.
-     *
-     * <p>1.21.11's {@code Player#addAdditionalSaveData} is {@code ValueOutput} based, so the whole
-     * ParCool sub-tree is encoded into one NBT compound and handed over as a single value. The
-     * on-disk key ({@code ParCool} -> {@code parcool:...}) is unchanged from 1.21.1.
-     */
-    private static void applyFromTag(Player player, CompoundTag tag) {
+    /** Writes every {@link DataKey#isPersistent() persistent} slot into the player save tag. */
+    public static void saveToTag(Player player, CompoundTag tag) {
         Map<DataKey<?>, Object> map = IParCoolDataHolder.of(player);
         if (map == null) return;
-        CompoundTag root = tag.getCompoundOrEmpty(ROOT_TAG);
-        for (String id : root.keySet()) {
-            DataKey<?> key = ParCoolDataKeys.byId(id);
-            if (key == null || !key.isPersistent()) continue;
-            map.put(key, castSerializer(key).read(root.getCompoundOrEmpty(id)));
-        }
-    }
-
-    public static void saveToOutput(Player player, ValueOutput output) {
-        Map<DataKey<?>, Object> map = IParCoolDataHolder.of(player);
-        if (map == null) return;
-        CompoundTag root = new CompoundTag();
+        CompoundTag root = tag.getCompound(ROOT_TAG);
         for (Map.Entry<DataKey<?>, Object> e : map.entrySet()) {
             DataKey<?> key = e.getKey();
             if (!key.isPersistent() || e.getValue() == null) continue;
@@ -96,17 +91,20 @@ public final class ParCoolData {
             serializer.write(e.getValue(), child);
             root.put(key.id(), child);
         }
-        if (!root.isEmpty()) output.store(ROOT_TAG, CompoundTag.CODEC, root);
+        if (!root.isEmpty()) tag.put(ROOT_TAG, root);
     }
 
     /** Restores every persistent slot from the player save tag. */
-    public static void loadFromInput(Player player, ValueInput input) {
+    public static void loadFromTag(Player player, CompoundTag tag) {
         Map<DataKey<?>, Object> map = IParCoolDataHolder.of(player);
-        if (map == null) return;
-        input.read(ROOT_TAG, CompoundTag.CODEC).ifPresent(tag -> applyFromTag(player, tag));
+        if (map == null || !tag.contains(ROOT_TAG, CompoundTag.TAG_COMPOUND)) return;
+        CompoundTag root = tag.getCompound(ROOT_TAG);
+        for (String id : root.getAllKeys()) {
+            DataKey<?> key = ParCoolDataKeys.byId(id);
+            if (key == null || !key.isPersistent()) continue;
+            map.put(key, castSerializer(key).read(root.getCompound(id)));
+        }
     }
-
-
 
     // ------------------------------------------------------------------
     // unchecked plumbing

@@ -23,17 +23,14 @@ public class EpicFightManager extends ModManager {
         return instance;
     }
 
-    public IParCoolStaminaHandler newStaminaHandlerFor(Player player) {
-        // EpicFight has no 1.21.11 build, so a client that asks for EPIC_FIGHT stamina reaches this
-        // without EpicFight on the classpath. Handing out the handler would then NoClassDefFoundError as
-        // soon as its getPlayerPatch() signature is resolved.
-        if (isEpicFightUsable() && isUsingEpicFightStamina(Parkourability.get(player))) {
-            return new EpicFightStaminaHandler();
-        }
-        return new ParCoolStaminaHandler();
-    }
-
-    /** True only when EpicFight's own classes are actually loadable, not merely advertised. */
+    /**
+     * True only when EpicFight's own classes are actually loadable, not merely advertised.
+     *
+     * <p>{@link #isInstalled()} only reports that the mod id shows up in the loader's list. If the jar
+     * is absent, partial or built for another version, every class reference below is a
+     * {@code NoClassDefFoundError} on first use - so the guard is a loadability check, and every
+     * EpicFight entry point consults it before touching an EpicFight type.
+     */
     public static boolean isEpicFightUsable() {
         try {
             Class.forName("yesman.epicfight.world.capabilities.EpicFightCapabilities", false,
@@ -42,6 +39,13 @@ public class EpicFightManager extends ModManager {
         } catch (ClassNotFoundException | LinkageError e) {
             return false;
         }
+    }
+
+    public IParCoolStaminaHandler newStaminaHandlerFor(Player player) {
+        if (isEpicFightUsable() && isUsingEpicFightStamina(Parkourability.get(player))) {
+            return new EpicFightStaminaHandler();
+        }
+        return new ParCoolStaminaHandler();
     }
 
     @Nullable

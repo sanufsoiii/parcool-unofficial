@@ -3,12 +3,12 @@ package com.alrex.parcool.common.entity;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.entity.zipline.ZiplineRopeEntity;
 import com.alrex.parcool.common.zipline.Zipline;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
+import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import dev.architectury.registry.registries.RegistrySupplier;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import dev.architectury.registry.registries.DeferredRegister;
 
 public class EntityTypes {
@@ -21,7 +21,7 @@ public class EntityTypes {
             .updateInterval(Integer.MAX_VALUE)
             .sized(0.1f, 0.1f)
             .noSummon()
-            .build(ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "zipline_rope")))
+            .build(ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "zipline_rope")))
     );
 
     public static void registerAll() {

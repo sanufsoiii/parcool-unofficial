@@ -218,15 +218,8 @@ public final class CompatEvents {
      * after vanilla mitigation; ParCool only needs a "cancel this incoming hit" veto, which is what
      * this event models. Returning {@code true} from a listener cancels the damage.
      */
-    /**
-     * The NeoForge damage event ParCool used to publish. Nothing ever constructed a {@link Listener}
-     * and nothing dispatched one, so it was an empty shell that add-ons could implement and never hear
-     * from; it is kept only so the type name still resolves for source compatibility.
-     */
-    @Deprecated
     public static class LivingIncomingDamageEvent {
 
-        @Deprecated
         public interface Listener {
             boolean onIncomingDamage(LivingEntity entity, DamageSource source);
         }

@@ -94,7 +94,7 @@ public class ClingToCliff extends Action {
 		if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.CLING_TO_CLIFF.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(ClingToCliffAnimator.class);
+		if (animation != null) animation.setAnimator(new ClingToCliffAnimator());
 	}
 
 	@Override
@@ -105,7 +105,7 @@ public class ClingToCliff extends Action {
         if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.CLING_TO_CLIFF.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(ClingToCliffAnimator.class);
+		if (animation != null) animation.setAnimator(new ClingToCliffAnimator());
 	}
 
 	@Override

@@ -1,6 +1,5 @@
 package com.alrex.parcool.common.action.impl;
 
-import com.alrex.parcool.utilities.EntityUtil;
 import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.client.animation.impl.DodgeAnimator;
 import com.alrex.parcool.client.input.KeyBindings;
@@ -14,11 +13,11 @@ import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.extern.AdditionalMods;
 import com.alrex.parcool.utilities.VectorUtil;
-import net.minecraft.client.Minecraft;
+import java.nio.ByteBuffer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-
-import java.nio.ByteBuffer;
+import net.minecraft.client.Minecraft;
 
 public class Dodge extends Action {
 	public static final int MAX_TICK = 11;
@@ -145,9 +144,9 @@ public class Dodge extends Action {
 				&& player.onGround()
 				&& !isInSuccessiveCoolDown(parkourability.getActionInfo())
 				&& coolTime <= 0
-                && !EntityUtil.isInWaterOrBubble(player)
+                && !player.isInWaterOrBubble()
 				&& player.onGround()
-                && !EntityUtil.isInWaterOrBubble(player)
+                && !player.isInWaterOrBubble()
 				&& !player.isShiftKeyDown()
 				&& !parkourability.get(Crawl.class).isDoing()
 				&& !parkourability.get(Roll.class).isDoing()
@@ -160,7 +159,7 @@ public class Dodge extends Action {
 		return !(parkourability.get(Roll.class).isDoing()
 				|| parkourability.get(ClingToCliff.class).isDoing()
 				|| getDoingTick() >= MAX_TICK
-				|| EntityUtil.isInWaterOrBubble(player)
+				|| player.isInWaterOrBubble()
 				|| player.isFallFlying()
 				|| player.getAbilities().flying
 		);
@@ -188,7 +187,7 @@ public class Dodge extends Action {
 		player.setDeltaMovement(dodgeVec);
 
         Animation animation = Animation.get(player);
-        if (animation != null) animation.setAnimator(DodgeAnimator.class, dodgeDirection);
+        if (animation != null) animation.setAnimator(new DodgeAnimator(dodgeDirection));
         parkourability.getBehaviorEnforcer().addMarkerCancellingJump(ID_JUMP_CANCEL, this::isDoing);
         if (!parkourability.getClientInfo().get(ParCoolConfig.Client.Booleans.CanGetOffStepsWhileDodge)) {
             parkourability.getBehaviorEnforcer().addMarkerCancellingDescendFromEdge(ID_DESCEND_EDGE, this::isDoing);
@@ -201,7 +200,7 @@ public class Dodge extends Action {
 		if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
 			player.playSound(SoundEvents.DODGE.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(DodgeAnimator.class, dodgeDirection);
+		if (animation != null) animation.setAnimator(new DodgeAnimator(dodgeDirection));
 	}
 
 	public int getCoolTime() {

@@ -3,8 +3,6 @@ package com.alrex.parcool.mixin.common;
 import com.alrex.parcool.common.data.ParCoolData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -21,17 +19,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Player.class)
 public abstract class ParCoolDataPersistenceMixin {
 
-    // 1.21.11's player save hooks are ValueOutput / ValueInput based. ParCool's persistent slots are
-    // small and flat, so they are written as one NBT compound under a single key - which keeps the
-    // on-disk key ({@code parcool}) and the round trip identical to 1.21.1. The key itself lives in
-    // ParCoolData#ROOT_TAG; a second copy of it here was never read by anything.
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
-    private void parcool$saveData(ValueOutput output, CallbackInfo ci) {
-        ParCoolData.saveToOutput((Player) (Object) this, output);
+    private void parcool$saveData(CompoundTag tag, CallbackInfo ci) {
+        ParCoolData.saveToTag((Player) (Object) this, tag);
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
-    private void parcool$loadData(ValueInput input, CallbackInfo ci) {
-        ParCoolData.loadFromInput((Player) (Object) this, input);
+    private void parcool$loadData(CompoundTag tag, CallbackInfo ci) {
+        ParCoolData.loadFromTag((Player) (Object) this, tag);
     }
 }

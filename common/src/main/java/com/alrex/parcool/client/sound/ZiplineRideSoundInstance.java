@@ -2,10 +2,10 @@ package com.alrex.parcool.client.sound;
 
 import com.alrex.parcool.ParCool;
 import net.minecraft.client.resources.sounds.AbstractTickableSoundInstance;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.player.Player;
 
 /**
  * The rope-sliding loop for {@code RideZipline}.
@@ -65,7 +65,7 @@ public class ZiplineRideSoundInstance extends AbstractTickableSoundInstance {
 
     @Override
     public void tick() {
-        if (player.isRemoved() || !player.isAlive() || player.level() != null && !player.level().isClientSide()) {
+        if (player.isRemoved() || !player.isAlive() || player.level() != null && !player.level().isClientSide) {
             stopPlayback();
             return;
         }

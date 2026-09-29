@@ -2,12 +2,12 @@ package com.alrex.parcool.common.item.recipe;
 
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.item.recipe.special.ZiplineRopeDyeRecipe;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.CustomRecipe;
 import dev.architectury.registry.registries.DeferredRegister;
 
 import java.util.function.Supplier;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.core.registries.Registries;
 
 public class Recipes {
     private static final DeferredRegister<RecipeSerializer<?>> RECIPES = DeferredRegister.create(ParCool.MOD_ID, Registries.RECIPE_SERIALIZER);

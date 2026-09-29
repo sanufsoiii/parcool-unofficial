@@ -3,19 +3,18 @@ package com.alrex.parcool.common.item.recipe.special;
 import com.alrex.parcool.common.item.Items;
 import com.alrex.parcool.common.item.recipe.Recipes;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.util.ARGB;
-import net.minecraft.util.Mth;
+import javax.annotation.Nonnull;
 import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
-
-import javax.annotation.Nonnull;
+import net.minecraft.util.Mth;
+import net.minecraft.util.ARGB;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
 import java.util.LinkedList;
 
 public class ZiplineRopeDyeRecipe extends CustomRecipe {
@@ -83,9 +82,9 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
         return resultZiplineRope;
     }
 
-    // 1.21.11 dropped CustomRecipe#canCraftInDimensions; the recipe no longer declares a grid size
-    // limit. `matches` already requires exactly one rope and at least one dye, which is what the old
-    // "width * height >= 2" check was standing in for.
+    // The 1.21.2 rework dropped CustomRecipe#canCraftInDimensions: the recipe no longer declares a grid
+    // size limit. `matches` already requires exactly one rope and at least one dye, which is what the
+    // old "width * height >= 2" check was standing in for.
 
     @Nonnull
     @Override

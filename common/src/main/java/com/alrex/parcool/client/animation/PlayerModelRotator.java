@@ -30,10 +30,12 @@ public class PlayerModelRotator {
 		this.player = player;
 		this.partial = partial;
         this.givenYRot = yRot;
-		// One value for three poses made every startBasedCenter() roll spin around 0.3 instead of 0.75
-		// while sneaking, and around 0.6 instead of 0.2 while sleeping. These are the vanilla bounding
-		// box heights (0.6 / 1.5 / 0.2), which is what the roll has to pivot on to look right.
 		switch (player.getPose()) {
+			// One value for three poses, and no break at all, made every startBasedCenter() roll spin
+			// around 0.6 instead of 0.75 while sneaking, and around 0.6 instead of 0.2 while sleeping;
+			// any other pose left the field at its previous value (initially 1.8). These are the
+			// vanilla bounding box heights (0.6 / 1.5 / 0.2), which is what the roll has to pivot on
+			// to look right.
 			case SWIMMING:
 				playerHeight = 0.6;
 				break;
@@ -64,6 +66,9 @@ public class PlayerModelRotator {
 		return this;
 	}
 
+    public PoseStack getRawStack() {
+        return stack;
+    }
 
 	public PlayerModelRotator translateY(float offset) {
 		stack.translate(0, offset, 0);
@@ -95,11 +100,6 @@ public class PlayerModelRotator {
         return this;
     }
 
-    /** The raw PoseStack, for the few animators that need to compose transforms themselves. */
-    public PoseStack getRawStack() {
-        return stack;
-    }
-
 	public void end() {
 		if (basedCenter) {
 			stack.translate(0, -playerHeight / 2, 0);
@@ -109,9 +109,6 @@ public class PlayerModelRotator {
 		}
 	}
 
-
-
-	/** Closes the grounded-leg group opened by startBasedTop(); kept for animators that pair the two. */
 	public void endEnabledLegGrounding() {
 		end();
 	}

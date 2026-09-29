@@ -5,18 +5,19 @@ import com.alrex.parcool.api.client.gui.ParCoolHUDEvent;
 import com.alrex.parcool.common.data.ParCoolDataKeys;
 import com.alrex.parcool.common.data.client.LocalStamina;
 import com.alrex.parcool.common.data.Parkourability;
+import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.api.event.ParCoolEventBus;
-import net.minecraft.client.DeltaTracker;
+import javax.annotation.Nonnull;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.gui.LayeredDraw;
+import net.minecraft.client.DeltaTracker;
 
-import javax.annotation.Nonnull;
-
-public class StaminaHUDController {
-	public static Identifier ID = Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "hud.stamina");
+public class StaminaHUDController implements LayeredDraw.Layer {
+	public static ResourceLocation ID = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "hud.stamina");
 	LightStaminaHUD lightStaminaHUD;
 	StaminaHUD staminaHUD;
 
@@ -32,6 +33,7 @@ public class StaminaHUDController {
 		staminaHUD.onTick(player);
 	}
 
+	@Override
 	public void render(@Nonnull GuiGraphics graphics, @Nonnull DeltaTracker partialTick) {
 		var player = Minecraft.getInstance().player;
 		if (player == null) return;

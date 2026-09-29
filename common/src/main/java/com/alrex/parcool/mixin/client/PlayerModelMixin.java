@@ -1,11 +1,14 @@
 package com.alrex.parcool.mixin.client;
 
 import com.alrex.parcool.client.animation.PlayerModelTransformer;
-import com.alrex.parcool.compat.IAvatarRenderStateEntity;
+import com.alrex.parcool.compat.IPlayerRenderStateEntity;
 import com.alrex.parcool.common.data.client.Animation;
-import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.player.PlayerRenderer;
+import net.minecraft.client.renderer.entity.state.PlayerRenderState;
+import net.minecraft.world.entity.HumanoidArm;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -18,18 +21,22 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Runs ParCool's model animation ({@code Animation#animatePre} / {@code animatePost}) around
  * {@code PlayerModel#setupAnim}.
  *
- * <h2>What 1.21.11 changed</h2>
- * {@code PlayerModel} moved to {@code net.minecraft.client.model.player}, lost its type parameter
- * (it extends {@code HumanoidModel<AvatarRenderState>} now), and its setup hook takes a single
- * {@link AvatarRenderState} instead of
+ * <h2>What the 1.21.2 rework changed</h2>
+ * {@code PlayerModel} is now {@code HumanoidModel<PlayerRenderState>}: it kept its own class but lost
+ * its type parameter, and its setup hook takes a single {@link PlayerRenderState} instead of
  * {@code (entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch)}. The five floats are
  * still there on the state under the names {@code walkAnimationPos}, {@code walkAnimationSpeed},
  * {@code ageInTicks}, {@code yRot} and {@code xRot}, and they carry the same values, so
  * {@link PlayerModelTransformer} is fed straight from it.
  *
- * <p>The state holds no entity, so the player comes from {@link AvatarRenderStateEntityMixin}; and
- * {@code ear} is not a model part any more in 1.21.11 (it became the {@code showExtraEars} flag), so
- * the 1.21.1 shadow of that field - which was never read - is gone.
+ * <p>{@code attackTime} also moved to the state ({@code HumanoidRenderState#attackTime}). The two arm
+ * poses did not: 1.21.3 keeps deriving them from the state's two hand states, and the derivation is
+ * {@code PlayerRenderer#getArmPose(PlayerRenderState, HumanoidArm)} - a public static - so the mixin
+ * calls exactly the function {@code setupAnim} itself is about to call, which keeps the animators'
+ * "is this arm actually holding something" test in step with the pose vanilla is about to apply.
+ *
+ * <p>The state holds no entity, so the player comes from
+ * {@link PlayerRenderStateExtractorMixin}.
  */
 @Mixin(PlayerModel.class)
 public abstract class PlayerModelMixin {
@@ -38,20 +45,16 @@ public abstract class PlayerModelMixin {
     @Final
     private boolean slim;
 
-
-
-
-
-
     @Unique
     private PlayerModelTransformer parCool$transformer = null;
 
-    // Explicit descriptor: 1.21.11 gives PlayerModel three setupAnim overloads
-    // (AvatarRenderState + the two bridges), and a name-only target lets mixin pick the wrong one.
-    @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V",
+    // Explicit descriptor: 1.21.3 declares setupAnim(PlayerRenderState) on PlayerModel and also
+    // inherits the bridge from HumanoidModel/HumanoidRenderState, and a name-only target lets mixin
+    // pick the wrong one - which silently drops the animation entirely.
+    @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V",
             at = @At("HEAD"), cancellable = true)
-    protected void onSetupAnimHead(AvatarRenderState state, CallbackInfo info) {
-        if (!(((IAvatarRenderStateEntity) state).parcool$getPlayer() instanceof AbstractClientPlayer player)) return;
+    protected void onSetupAnimHead(PlayerRenderState state, CallbackInfo info) {
+        if (!(((IPlayerRenderStateEntity) state).parcool$getPlayer() instanceof AbstractClientPlayer player)) return;
         PlayerModel model = (PlayerModel) (Object) this;
 
         parCool$transformer = new PlayerModelTransformer(
@@ -64,8 +67,8 @@ public abstract class PlayerModelMixin {
                 state.yRot,
                 state.xRot,
                 state.attackTime,
-                state.leftArmPose,
-                state.rightArmPose
+                PlayerRenderer.getArmPose(state, HumanoidArm.LEFT),
+                PlayerRenderer.getArmPose(state, HumanoidArm.RIGHT)
         );
         parCool$transformer.reset();
 
@@ -80,10 +83,10 @@ public abstract class PlayerModelMixin {
         }
     }
 
-    @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V",
+    @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/PlayerRenderState;)V",
             at = @At("TAIL"))
-    protected void onSetupAnimTail(AvatarRenderState state, CallbackInfo info) {
-        if (!(((IAvatarRenderStateEntity) state).parcool$getPlayer() instanceof AbstractClientPlayer player)) return;
+    protected void onSetupAnimTail(PlayerRenderState state, CallbackInfo info) {
+        if (!(((IPlayerRenderStateEntity) state).parcool$getPlayer() instanceof AbstractClientPlayer player)) return;
 
         Animation animation = Animation.get(player);
         if (animation == null) {

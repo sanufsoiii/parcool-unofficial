@@ -6,10 +6,18 @@
     "SCw"
   ],
   "key": {
-    "n": "minecraft:iron_nugget",
-    "C": "minecraft:iron_chain",
-    "S": "minecraft:string",
-    "w": "minecraft:stick"
+    "n": {
+      "item": "minecraft:iron_nugget"
+    },
+    "C": {
+      "item": "minecraft:chain"
+    },
+    "S": {
+      "item": "minecraft:string"
+    },
+    "w": {
+      "item": "minecraft:stick"
+    }
   },
   "result": {
     "id": "parcool:zipline_rope",

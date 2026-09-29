@@ -59,7 +59,9 @@ dependencies {
 
 	// ShoulderSurfing is genuinely multiloader, so its plugin API stays in :common.
 	// runtimeOnly in the loader modules so an absent ShoulderSurfing is not a hard dependency.
-	compileOnly "curse.maven:ShoulderSurfing-243190:6496668"
+	// 5948017 = ShoulderSurfing-NeoForge-1.21.3-4.6.3.jar, the last file CurseForge published for the
+	// 1.21.2/1.21.3 line; the 5.x line is 1.21.1/1.21.11 only.
+	compileOnly "curse.maven:ShoulderSurfing-243190:5948017"
 }
 
 def LOADER_IMPORT_PATTERNS = [

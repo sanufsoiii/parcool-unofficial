@@ -11,18 +11,18 @@ import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.utilities.VectorUtil;
 import com.alrex.parcool.utilities.WorldUtil;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.BlockParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.RenderShape;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
 import com.alrex.parcool.common.event.CompatEvents;
 
 import java.nio.ByteBuffer;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.util.Mth;
 
 public class VerticalWallRun extends Action {
 	private double playerYSpeed = 0;
@@ -64,8 +64,8 @@ public class VerticalWallRun extends Action {
 							Mth.floor(player.getBoundingBox().minY + player.getBbHeight() * 0.5),
 							Mth.floor(player.getZ() + wall.z())
 					);
-					if (!player.level().isLoaded(targetBlock)) return false;
-					float slipperiness = PlatformServices.get().getFriction(player.level().getBlockState(targetBlock), player.level(), targetBlock, player);
+					if (!player.getCommandSenderWorld().isLoaded(targetBlock)) return false;
+					float slipperiness = PlatformServices.get().getFriction(player.getCommandSenderWorld().getBlockState(targetBlock), player.getCommandSenderWorld(), targetBlock, player);
 					startInfo.putDouble(height);
 					startInfo.putFloat(slipperiness);
 					startInfo.putDouble(wall.x());
@@ -110,7 +110,7 @@ public class VerticalWallRun extends Action {
             player.playSound(SoundEvents.VERTICAL_WALL_RUN.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
 		if (animation != null) {
-			animation.setAnimator(VerticalWallRunAnimator.class);
+			animation.setAnimator(new VerticalWallRunAnimator());
 		}
 	}
 

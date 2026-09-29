@@ -9,7 +9,7 @@
   "key.parcool.WallSlide": "Deslizar na Parede",
   "key.parcool.HorizontalWallRun": "Corrida Horizontal na Parede",
   "key.parcool.openSetting": "Abrir Configurações",
-  "key.category.parcool": "ParCool",
+  "key.categories.parcool": "ParCool",
   "parcool.action.CatLeap": "Salto do Gato",
   "parcool.action.Crawl": "Rastejar",
   "parcool.action.Dodge": "Esquivar",
@@ -25,7 +25,5 @@
   "item.minecraft.potion.effect.poor_energy_drink": "Bebida Energética de Baixa Qualidade",
   "item.minecraft.potion.effect.energy_drink": "Bebida Energética",
   "item.parcool.parcool_guide": "§bGuia ParCool",
-  "itemGroup.ParCool": "ParCool!",
-  "item.parcool.wooden_zipline_hook": "Wooden Zipline Hook",
-  "item.parcool.iron_zipline_hook": "Iron Zipline Hook"
+  "itemGroup.ParCool": "ParCool!"
 }

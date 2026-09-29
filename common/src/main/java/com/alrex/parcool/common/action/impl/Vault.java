@@ -106,13 +106,13 @@ public class Vault extends Action {
 		if (animation != null && currentAnimation != null) {
 			switch (currentAnimation) {
 				case SPEED_VAULT_RIGHT:
-					animation.setAnimator(SpeedVaultAnimator.class, SpeedVaultAnimator.Type.Right);
+					animation.setAnimator(new SpeedVaultAnimator(SpeedVaultAnimator.Type.Right));
 					break;
 				case SPEED_VAULT_LEFT:
-					animation.setAnimator(SpeedVaultAnimator.class, SpeedVaultAnimator.Type.Left);
+					animation.setAnimator(new SpeedVaultAnimator(SpeedVaultAnimator.Type.Left));
 					break;
 				case KONG_VAULT:
-					animation.setAnimator(KongVaultAnimator.class);
+					animation.setAnimator(new KongVaultAnimator());
 					break;
 			}
 		}
@@ -127,13 +127,13 @@ public class Vault extends Action {
 		if (animation != null && currentAnimation != null) {
 			switch (currentAnimation) {
 				case SPEED_VAULT_RIGHT:
-					animation.setAnimator(SpeedVaultAnimator.class, SpeedVaultAnimator.Type.Right);
+					animation.setAnimator(new SpeedVaultAnimator(SpeedVaultAnimator.Type.Right));
 					break;
 				case SPEED_VAULT_LEFT:
-					animation.setAnimator(SpeedVaultAnimator.class, SpeedVaultAnimator.Type.Left);
+					animation.setAnimator(new SpeedVaultAnimator(SpeedVaultAnimator.Type.Left));
 					break;
 				case KONG_VAULT:
-					animation.setAnimator(KongVaultAnimator.class);
+					animation.setAnimator(new KongVaultAnimator());
 					break;
 			}
 		}

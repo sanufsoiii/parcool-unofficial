@@ -1,10 +1,9 @@
 package com.alrex.parcool.common.data;
 
-import net.minecraft.nbt.CompoundTag;
+import javax.annotation.Nullable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-
-import javax.annotation.Nullable;
+import net.minecraft.nbt.CompoundTag;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -34,11 +33,11 @@ public final class ParCoolDataKeys {
             new DataKey.NbtSerializer<>() {
                 @Override
                 public ReadonlyStamina read(CompoundTag tag) {
-                    var value = tag.getCompoundOrEmpty("value");
+                    var value = tag.getCompound("value");
                     return new ReadonlyStamina(
-                            value.getBooleanOr("exhausted", false),
-                            value.getIntOr("stamina", 0),
-                            value.getIntOr("max", 0)
+                            value.getBoolean("exhausted"),
+                            value.getInt("stamina"),
+                            value.getInt("max")
                     );
                 }
 

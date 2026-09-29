@@ -35,7 +35,7 @@ public class ClimbUp extends Action {
 		if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.CLING_TO_CLIFF_JUMP.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(ClimbUpAnimator.class);
+		if (animation != null) animation.setAnimator(new ClimbUpAnimator());
 	}
 
 	@Override
@@ -43,7 +43,7 @@ public class ClimbUp extends Action {
         if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())
             player.playSound(SoundEvents.CLING_TO_CLIFF_JUMP.get(), 1f, 1f);
 		Animation animation = Animation.get(player);
-		if (animation != null) animation.setAnimator(ClimbUpAnimator.class);
+		if (animation != null) animation.setAnimator(new ClimbUpAnimator());
 	}
 
 	@Override

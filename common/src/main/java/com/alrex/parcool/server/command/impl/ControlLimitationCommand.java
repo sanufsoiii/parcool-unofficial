@@ -22,9 +22,8 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-
+import net.minecraft.server.MinecraftServer;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
@@ -223,7 +222,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("set")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(2))
                         .then(
                                 getLimitationByNameCommands(true, (it) -> {
                                     limitationSetCoreCommands(it, true, true);
@@ -239,7 +238,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("enable")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(2))
                         .then(
                                 getLimitationByNameCommands(true, (it) -> {
                                     it
@@ -257,7 +256,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("disable")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(2))
                         .then(
                                 getLimitationByNameCommands(true, (it) -> {
                                     it
@@ -275,7 +274,7 @@ public class ControlLimitationCommand {
                 )
                 .then(Commands
                         .literal("delete")
-                        .requires(commandSource -> Commands.LEVEL_GAMEMASTERS.check(commandSource.permissions()))
+                        .requires(commandSource -> commandSource.hasPermission(2))
                         .then(Commands
                                 .argument(ARGS_NAME_LIMITATION_ID, LimitationIDArgumentType.limitation())
                                 .executes(ControlLimitationCommand::deleteLimitation)

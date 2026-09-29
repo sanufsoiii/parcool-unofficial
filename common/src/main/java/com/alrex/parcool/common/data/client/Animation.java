@@ -33,36 +33,6 @@ public class Animation {
 		this.animator = animator;
 	}
 
-	/**
-	 * Builds the animator and hands it to {@link #setAnimator(Animator)}.
-	 *
-	 * <p>The {@link Action} implementations live in {@code common} and are therefore loaded - and
-	 * linked, i.e. verified - on a dedicated server, where {@code Parkourability} instantiates all of
-	 * them. Verification resolves the target of every {@code new}, so a {@code new ChargeJumpAnimator()}
-	 * inside {@code ChargeJump} drags the whole client-only animation package - and through it
-	 * {@code LocalPlayer} - into the server, which dies with "Attempted to load class
-	 * net.minecraft.client.player.LocalPlayer which is not present on the dedicated server". A
-	 * {@code ldc} of a class constant is <i>not</i> resolved during verification, so the action
-	 * implementations now pass the animator class and this client-only class does the construction.
-	 * Same animator, same constructor arguments, same result.
-	 */
-	public void setAnimator(Class<? extends Animator> type, Object... args) {
-		setAnimator(instantiate(type, args));
-	}
-
-	private static Animator instantiate(Class<? extends Animator> type, Object[] args) {
-		for (var constructor : type.getConstructors()) {
-			if (constructor.getParameterCount() != args.length) continue;
-			try {
-				return type.cast(constructor.newInstance(args));
-			} catch (ReflectiveOperationException | IllegalArgumentException e) {
-				throw new IllegalStateException("Could not create the animator " + type.getName(), e);
-			}
-		}
-		throw new IllegalStateException(
-				"No constructor of " + type.getName() + " takes " + args.length + " arguments");
-	}
-
 	public boolean animatePre(Player player, PlayerModelTransformer modelTransformer) {
 		Parkourability parkourability = Parkourability.get(player);
         if (animator != null && animator.shouldRemoved(player, parkourability)) animator = null;

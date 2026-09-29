@@ -14,13 +14,13 @@ import com.alrex.parcool.common.entity.zipline.ZiplineRopeEntity;
 import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.utilities.BufferUtil;
 import com.alrex.parcool.utilities.VectorUtil;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import javax.annotation.Nullable;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-
-import javax.annotation.Nullable;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.client.player.LocalPlayer;
 import java.nio.ByteBuffer;
 
 public class RideZipline extends Action {
@@ -114,7 +114,7 @@ public class RideZipline extends Action {
         parkourability.getBehaviorEnforcer().addMarkerCancellingSprint(ID_SPRINT_CANCEL, this::isDoing);
         Animation animation = Animation.get(player);
         if (animation != null) {
-            animation.setAnimator(RideZiplineAnimator.class);
+            animation.setAnimator(new RideZiplineAnimator());
         }
         // Last, and unconditionally: the sound must never be able to keep the ride itself from
         // starting. Started after rideNewZipline so the loop gets the real entry speed.
@@ -125,7 +125,7 @@ public class RideZipline extends Action {
     public void onStartInOtherClient(Player player, Parkourability parkourability, ByteBuffer startData) {
         Animation animation = Animation.get(player);
         if (animation == null) return;
-        animation.setAnimator(RideZiplineAnimator.class);
+        animation.setAnimator(new RideZiplineAnimator());
     }
 
     @Override
@@ -141,8 +141,8 @@ public class RideZipline extends Action {
         if (ridingZipline == null) return;
         var speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (speedAttr == null) return;
-        if (!player.isLocalPlayer()) return;
-        LocalPlayer localPlayer = (LocalPlayer) player;
+        if (!(player instanceof LocalPlayer localPlayer)) return;
+        // null for a tick or two around a respawn / mount / dimension change.
         if (localPlayer.input == null) return;
         double oldSpeed = speed;
         Zipline zipline = ridingZipline.getZipline();
@@ -152,7 +152,7 @@ public class RideZipline extends Action {
         speed *= 0.98;
         if (player.isInWater()) speed *= 0.8;
         speed -= gravity * slope * (Mth.invSqrt(slope * slope + 1));
-        Vec3 input = new Vec3(-localPlayer.input.getMoveVector().x, 0., localPlayer.input.getMoveVector().y);
+        Vec3 input = new Vec3(-localPlayer.input.leftImpulse, 0., localPlayer.input.forwardImpulse);
         Vec3 offset = zipline.getOffsetToEndFromStart();
         if (input.lengthSqr() > 0.01) {
             double dot = player.getLookAngle()

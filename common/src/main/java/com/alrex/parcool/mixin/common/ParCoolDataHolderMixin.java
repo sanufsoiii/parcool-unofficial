@@ -24,12 +24,6 @@ public abstract class ParCoolDataHolderMixin implements IParCoolDataHolder {
     @Unique
     private Map<DataKey<?>, Object> parcool$data;
 
-    /**
-     * The map is created on first touch, and the first {@code Parkourability} read on that entity
-     * therefore allocates all 27 Action instances. That is once per entity, not per access, so it is
-     * left as it is: making Parkourability itself lazy would change every accessor on this class, and
-     * a null check in each of them is a worse trade than one allocation per player.
-     */
     @Override
     public Map<DataKey<?>, Object> parcool$getDataMap() {
         Map<DataKey<?>, Object> map = this.parcool$data;

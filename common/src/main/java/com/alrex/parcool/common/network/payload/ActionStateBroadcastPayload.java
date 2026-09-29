@@ -3,18 +3,18 @@ package com.alrex.parcool.common.network.payload;
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.network.ListStreamCodec;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import dev.architectury.networking.NetworkManager;
 
 import java.util.List;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
 
 public record ActionStateBroadcastPayload(List<ActionStatePayload> payloads) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<ActionStateBroadcastPayload> TYPE
-            = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state.broadcast"));
+            = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state.broadcast"));
 
     public static final StreamCodec<ByteBuf, ActionStateBroadcastPayload> CODEC = StreamCodec.composite(
             new ListStreamCodec<>(ActionStatePayload.CODEC),

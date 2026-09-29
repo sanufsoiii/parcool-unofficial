@@ -30,6 +30,13 @@ import javax.annotation.Nonnull;
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin extends Entity {
 
+	/**
+	 * Replaces {@code NeoForgeConfig.SERVER.fullBoundingBoxLadders.get()}. See
+	 * {@link #parCool$isLivingOnCustomLadder} for why it is hard-wired.
+	 */
+	@Unique
+	private static final boolean FULL_BOUNDING_BOX_LADDERS = false;
+
 	public LivingEntityMixin(EntityType<?> p_i48580_1_, Level p_i48580_2_) {
 		super(p_i48580_1_, p_i48580_2_);
 	}
@@ -73,12 +80,34 @@ public abstract class LivingEntityMixin extends Entity {
 	public boolean parCool$isLivingOnCustomLadder(@Nonnull BlockState state, @Nonnull Level world, @Nonnull BlockPos pos, @Nonnull LivingEntity entity) {
 		boolean isSpectator = (entity instanceof Player && entity.isSpectator());
 		if (isSpectator) return false;
-		// Per the approved port plan (section 3.6) the full-bounding-box branch is gone: its gate was
-		// the NeoForge-only NeoForgeConfig.SERVER.fullBoundingBoxLadders, so vanilla behaviour (the
-		// single-block test below) is what runs. It was deleted rather than left behind as dead code
-		// because the branch carried two bugs of its own - an int < double comparison that let a block
-		// on floor(maxY) pass, and a bounds check against pos where it meant the scanned position.
-		return parCool$isCustomLadder(state, world, pos, entity);
+		// Per the approved port plan (§3.6) the full-bounding-box branch is disabled permanently:
+		// it was read from the NeoForge-only `NeoForgeConfig.SERVER.fullBoundingBoxLadders`, and the
+		// plan fixes vanilla behaviour (single-block test) without touching the packet wire format.
+		// `parCool$isLivingOnCustomLadderFullBox` is kept so the branch can be re-enabled by flipping
+		// this constant instead of re-introducing a NeoForge config dependency.
+		if (!FULL_BOUNDING_BOX_LADDERS) {
+			return parCool$isCustomLadder(state, world, pos, entity);
+		} else {
+			AABB bb = entity.getBoundingBox();
+			int mX = Mth.floor(bb.minX);
+			int mY = Mth.floor(bb.minY);
+			int mZ = Mth.floor(bb.minZ);
+			for (int y2 = mY; y2 < bb.maxY; y2++) {
+				for (int x2 = mX; x2 < bb.maxX; x2++) {
+					for (int z2 = mZ; z2 < bb.maxZ; z2++) {
+						BlockPos tmp = new BlockPos(x2, y2, z2);
+						if (!world.isLoaded(pos)) {
+							return false;
+						}
+						state = world.getBlockState(tmp);
+						if (parCool$isCustomLadder(state, world, tmp, entity)) {
+							return true;
+						}
+					}
+				}
+			}
+			return false;
+		}
 	}
 
 	@Unique

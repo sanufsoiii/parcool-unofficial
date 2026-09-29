@@ -4,18 +4,18 @@ import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.network.ServerPayloadGuard;
 import com.alrex.parcool.common.stamina.StaminaType;
 import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Player;
 import dev.architectury.networking.NetworkManager;
 
 import javax.annotation.Nonnull;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
 
 public record StaminaProcessOnServerPayload(StaminaType stamina, int value) implements CustomPacketPayload {
     public static final Type<StaminaProcessOnServerPayload> TYPE
-            = new Type<>(Identifier.fromNamespaceAndPath(ParCool.MOD_ID, "payload.custom_stamina"));
+            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.custom_stamina"));
     public static final StreamCodec<ByteBuf, StaminaProcessOnServerPayload> CODEC = StreamCodec.composite(
             StaminaType.STREAM_CODEC,
             StaminaProcessOnServerPayload::stamina,

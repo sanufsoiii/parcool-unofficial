@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Options.class)
 public abstract class OptionsMixin {
-    @Inject(method = "getCameraType()Lnet/minecraft/client/CameraType;", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getCameraType", at = @At("HEAD"), cancellable = true)
     public void onGetCameraType(CallbackInfoReturnable<CameraType> cir) {
         var cameraType = RenderBehaviorEnforcer.getEnforcedCameraType();
         if (cameraType != null) {
