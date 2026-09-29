@@ -124,7 +124,32 @@ target in this tree must be caught (it is).
 * The 25 unused imports are upstream (present in both reference trees); only imports this port
   introduced were removed.
 
-## 5. What the next port should not trust
+## 5. Build / acceptance status
+
+`./gradlew :common:build` then `./gradlew build` from a deleted `build/` + `.gradle/`: **BUILD
+SUCCESSFUL**, no `Cannot remap` line, `checkCommonLoaderIndependence` passes, 29/29 mixin targets
+resolve. Published:
+
+```
+d53483bbe9f3ca795c62915d0fce6bea52866d82bf7d0e7106c9652736cccba9  0.1-mc1.21.6fabric-3.4.3.3.jar
+67ed925f1b0ed6b5e6a0746c1b9f44352e3aeace1a15259b99c01aeab9407061  0.1-mc1.21.6neoforge-3.4.3.3.jar
+```
+
+Verified in the jars by inspection: the Fabric one carries `accessWidener v2 intermediary`, contains
+no refmap, has zero `net/minecraft/<name>` references (intermediary only) and has its mixin targets
+rewritten to `method_…` in the bytecode; the NeoForge one is mojmap-only (zero `class_` refs), keeps
+`method = ["attack"]` verbatim, ships the 9-line `accesstransformer.cfg` and the correct
+`pack.mcmeta`.
+
+**Not verified: the game.** No client, no dedicated server, no headless run and no Prism instance was
+started — that was out of scope for this run. So the following are unproven and are listed in
+BUILDING.md under "What still has to be checked by hand": both loaders booting, the attribute
+resolution on the first `Player#createAttributes`, the absence of `GL ERROR` / `Invalid key` in the
+log, the key bindings in Options → Controls, the `KeyMapping.MAP` repair in a live client, one action
+of each family, the two string-form recipes actually loading in a datapack, the camera roll, and two
+clients on one server.
+
+## 6. What the next port should not trust
 
 * **`minecraft-merged-*-sources.jar` in the Loom cache lies about visibility.** It is generated with
   the project's access widener already applied. Use `javap` on the mojmap/named jar.
