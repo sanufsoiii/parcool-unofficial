@@ -24,13 +24,20 @@ a Minecraft this old and is not an error.
 ## Building
 
 ```bash
-./gradlew build   # from a clean checkout; the root build bootstraps :common itself
+./gradlew build   # everything, once :common has been built at least once
 ```
 
-The two steps are needed because Architectury Loom resolves the `:common` project dependency while it
-*configures* the loader modules, so `:common` has to have been built once. The root `build` task
-depends on the `bootstrap` task (an alias of `:common:build`), which covers every case except a truly
-fresh checkout.
+**On a truly fresh checkout (`rm -rf build .gradle`) the first invocation has to be
+`./gradlew :common:build`.** `gradle build` matches the `build` task in *every* project, so `:fabric`
+has to be *configured* before any task runs, and Architectury Loom resolves `:common`'s jar while
+configuring it. The root `bootstrap` task (an alias of `:common:build`) cannot help: task execution
+only starts once configuration has finished. On the second invocation the root `build` task's
+dependency on `bootstrap` does cover the rest, so the sequence is
+
+```bash
+./gradlew :common:build   # ~9 s
+./gradlew build           # ~26 s
+```
 
 **If you add a new class to `:common` and the loader module then reports
 `cannot find symbol` for it, Loom's cached remap of `:common` is stale.** Clear it once:

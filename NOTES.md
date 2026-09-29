@@ -271,7 +271,46 @@ TYPE_VAR = re.compile(r"^(L)?[A-Z](\$.*)?$")     # javap prints T, S, M where a 
 
 ---
 
-## 8. What was NOT verified
+## 8. The published artifacts
+
+```
+0.1-mc1.21.2fabric-3.4.3.3.jar     <- fabric/build/libs/parcool-1.21.2-3.4.3.3-fabric.jar
+0.1-mc1.21.2neoforge-3.4.3.3.jar   <- neoforge/build/libs/parcool-neoforge.jar
+```
+
+both copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
+
+Verified in the shipped jars, not only in the build tree: 350 classes in the Fabric jar, all
+intermediary (`net/minecraft/class_*`), `parcool.accesswidener` in `v2 intermediary`, 28 mixins listed
+in `parcool-common.mixins.json`, `fabric.mod.json` at `1.21.2-3.4.3.3` with
+`minecraft: ~1.21.2` / `architectury: >=14.0.0`; 360 mojmap classes in the NeoForge jar,
+`neoforge.mods.toml` at `3.4.3.3` with `[1.21.2,1.22)` / `[21.2,)`, the string-form recipe
+ingredients, the `supported_formats` pack format, and one `ServiceLoader` binding per jar.
+
+### A fresh checkout needs two invocations
+
+`./gradlew build` on its own **fails on a truly clean checkout** (after `rm -rf build .gradle`):
+
+```
+A problem occurred configuring project ':fabric'.
+> Failed to setup Minecraft, ... NoSuchFileException: common/build/libs/parcool-1.21.2-3.4.3.3.jar
+```
+
+`gradle build` matches the `build` task in *every* project, so `:fabric` has to be **configured**
+before any task runs - and Architectury Loom resolves `:common`'s jar while configuring it. The root
+`bootstrap` task cannot help, because task execution starts only after configuration finishes. This
+is inherited from the 1.21.11 layout and is not specific to 1.21.2; the documented sequence is
+
+```bash
+./gradlew :common:build   # 9 s
+./gradlew build           # 26 s
+```
+
+and both were verified from an empty `build/` + `.gradle/` for this port.
+
+---
+
+## 9. What was NOT verified
 
 The build was accepted without launching the game, because the brief for this port forbids running
 Minecraft. Concretely, these PROMPT phase-6 items are **untested**:
