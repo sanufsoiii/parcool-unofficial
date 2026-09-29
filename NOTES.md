@@ -282,3 +282,21 @@ is open. None of the following was executed:
    `:fabric:distJar` drops the common copy and takes the fabric module's.
 9. **The one-shot `./gradlew build` on a clean checkout still does not work** (see §1). Run
    `:common:build` first; do not "fix" it.
+
+## Recipe `category` field (added by the orchestrator, after the port was built)
+
+All five `data/parcool/recipe/*.json` were missing `category`, which the vanilla
+`ShapedRecipe` / `ShapelessRecipe` codec declares as `Codec.fieldOf("category")` --
+a *required* field, not an optional one. Verified on this version's mojmap jar with
+`javap -c 'net.minecraft.world.item.crafting.ShapedRecipe$Serializer'`: the CODEC builder
+uses `Codec.fieldOf` for the key `category` while `group` and `show_notification` go
+through `optionalFieldOf`. Without it the datapack loader reports `Missing field category`
+and drops the recipe, so every ParCool item is uncraftable in game -- a build-time-clean,
+boot-time-broken bug that only shows up in a running client.
+
+`"category": "misc"` was added to all five files. It is harmless on
+`parcool:zipline_rope_dye` (ParCool's own `CustomRecipe` codec ignores unknown keys).
+
+This is **inherited, not original**: the same omission exists in the read-only reference
+trees `parcool-Architectury-API-1.21.1` and `parcool-Architectury-API-1.21.11`, and it is
+inherited from upstream ParCool. Any port starting from those trees will reproduce it.
