@@ -12,7 +12,6 @@ import java.nio.ByteBuffer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.util.RandomSource;
 import net.minecraft.client.player.LocalPlayer;
 
 public class BreakfallReady extends Action {

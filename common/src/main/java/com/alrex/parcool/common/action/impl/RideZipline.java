@@ -15,7 +15,6 @@ import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.utilities.BufferUtil;
 import com.alrex.parcool.utilities.VectorUtil;
 import javax.annotation.Nullable;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.util.Mth;

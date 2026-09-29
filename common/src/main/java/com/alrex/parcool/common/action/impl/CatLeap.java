@@ -18,7 +18,6 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.util.Mth;
-import net.minecraft.client.player.LocalPlayer;
 
 public class CatLeap extends Action {
 	private int coolTimeTick = 0;

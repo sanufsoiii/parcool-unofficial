@@ -4,28 +4,28 @@ A multiloader port of the Minecraft mod **ParCool** by **alRex_U** (LGPL-3.0), o
 NeoForge, reworked onto the [Architectury API](https://github.com/architectury/architectury-api) so
 that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
-Minecraft **1.21.11**, Java **21**, Gradle **9.4.1**.
+Minecraft **1.21.4**, Java **21**, Gradle **9.4.1**.
 
-Ported from Minecraft 1.21.1, which is the baseline the loader versions below were moved from. The
-port is functionally complete on both loaders: 27 vanilla mixins, 26 actions, the zipline/hook blocks
-and the full animation set all work, and the four optional NeoForge integrations are wired.
+The mod itself is unchanged: 26 actions, the zipline and hook blocks, the stamina system, the full
+animation set and the settings screens are all there, and the four optional NeoForge integrations are
+wired. See [NOTES.md](NOTES.md) for what had to be retargeted and what was verified.
 
 ### Packaging
 
 The Fabric distributable is built from `:common`'s `remapJar` output, so it ships intermediary
-bytecode and the mixin targets remapped in place. There is deliberately **no refmap**: Loom 1.17
-defaults to `mixinRemapType = static`, and fabric-api 0.141.6 - built with the same Loom - ships none
-either and advertises `Fabric-Loom-Mixin-Remap-Type: static` in its manifest.
+bytecode with the mixin targets statically remapped into it, and there is deliberately **no
+refmap**: Loom 1.17 defaults to `mixinRemapType = static` and fabric-api ships none either. The
+access widener in the Fabric jar is in `v2 intermediary`, which is what a production Fabric client
+requires.
 
 The NeoForge distributable ships mojmap-named bytecode, because that is what the NeoForge production
-runtime loads: NeoForge 21.11 has no SRG step in front of a mod jar. `accesstransformer.cfg` is
+runtime loads: NeoForge 21.4 has no SRG step in front of a mod jar. `accesstransformer.cfg` is
 written in the same naming. architectury-plugin's `neoForge()` transform is therefore not used; it
-needs a Loom-based NeoForge setup, which cannot merge the Mojang and NeoForge mappings.
+needs a Loom-based NeoForge setup, and the assembly is done explicitly instead.
 
-**Known limitation:** the ShoulderSurfing integration is NeoForge-only in practice. ShoulderSurfing
-1.21.11 ships a `PluginLoader` for NeoForge and none for Fabric, so the `shouldersurfing_plugin.json`
-in the Fabric jar is simply never read. The decoupled-camera hook is therefore absent on Fabric rather
-than broken there.
+**Known limitation:** the ShoulderSurfing integration is NeoForge-only in practice. If ShoulderSurfing
+ships a `PluginLoader` for NeoForge and none for Fabric, the `shouldersurfing_plugin.json` in the
+Fabric jar is never read, and the decoupled-camera hook is absent on Fabric rather than broken there.
 
 > This repository contains a *port*, not alRex_U's original sources. The original project lives at
 > <https://github.com/alRex-U/ParCool> and on CurseForge at
@@ -42,7 +42,8 @@ than broken there.
 
 There is intentionally **no source-set split**: ParCool is client-authoritative, and NeoForge ships a
 merged jar, so `common` stays a single tree. The two loader modules differ only in their entrypoints
-and their platform implementation.
+and their platform implementation. `./gradlew :common:checkCommonLoaderIndependence` fails the build
+if `common/src/main` ever imports `net.fabricmc.*` or `net.neoforged.*`.
 
 ## Requirements
 
@@ -51,7 +52,7 @@ and their platform implementation.
 ## Building
 
 ```bash
-./gradlew :common:build   # once on a fresh checkout, ~15 s
+./gradlew :common:build   # on a clean checkout, once
 ./gradlew build           # from then on
 ```
 
@@ -63,31 +64,36 @@ loader-independence check.
 
 Drop the matching jar into `mods/`:
 
-* Fabric — `fabric/build/libs/parcool-fabric.jar`
+* Fabric — `fabric/build/libs/parcool-1.21.4-3.4.3.3-fabric.jar`
 * NeoForge — `neoforge/build/libs/parcool-neoforge.jar`
 
 ## Dependencies
 
 **Required**
 
-* Architectury API 19.0.1 or newer
-* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.141.6+1.21.11
-* NeoForge 21.11.45 or newer
-* MixinExtras 0.4+ — bundled by both loaders, declared as a required dependency in both mod
-  descriptors because `common/…/mixin/common/PlayerMixin` uses `@WrapWithCondition` from it
+* Architectury API 16.1.4 or newer
+* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.119.4+1.21.4, Fabric Loader 0.16.14+
+* NeoForge 21.4.0 or newer
+* MixinExtras 0.4+ — bundled by both loaders, declared as an *optional* dependency in both mod
+  descriptors because `common/…/mixin/common/PlayerMixin` uses `@WrapWithCondition` from it. It stays
+  optional on purpose: declaring it required makes NeoForge refuse to start, because the loaders
+  bundle it rather than listing it as a mod.
 
 **Optional**
 
 * [Patchouli](https://modrinth.com/mod/patchouli) — in-game guide
-* [ShoulderSurfing](https://www.curseforge.com/minecraft/mc-mods/shouldersurfing)
+* [ShoulderSurfing](https://www.curseforge.com/minecraft/mc-mods/shouldersurfing) — compiled against
+  the 1.21.4 build; a version for a different Minecraft version reports itself absent and ParCool
+  falls back to its own camera handling
 * [EpicFight](https://www.curseforge.com/minecraft/mc-mods/epicfight) — NeoForge only. **EpicFight has
-  no 1.21.11 build**, so the integration is compiled against its 1.21.1 API but reports itself absent at
-  runtime (`EpicFightManager#isEpicFightUsable` checks the class is loadable) and ParCool falls back to
-  its own stamina system.
-* BetterThirdPerson — NeoForge only. The newest published build targets 1.21.8; it is compiled against
-  and used the same way, and is reported absent on a client that does not have it.
-* [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only, built against
-  `21.11.0-beta.6`, the 1.21.11 line.
+  no 1.21.4 build on CurseForge**, so the integration is compiled against its 1.21.1 API but reports
+  itself absent at runtime (`EpicFightManager#isEpicFightUsable` checks the class is loadable) and
+  ParCool falls back to its own stamina system.
+* BetterThirdPerson — NeoForge only, compiled against its 1.21.4 build and reported absent on a
+  client that does not have it
+* [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only. **Paraglider
+  has no 1.21.4 build in the CurseForge listing this port could reach**, so the integration is
+  compiled against its 1.21.1 API and reports itself absent otherwise.
 
 ## Attribution and license
 

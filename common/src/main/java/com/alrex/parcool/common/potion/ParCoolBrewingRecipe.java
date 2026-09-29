@@ -3,7 +3,6 @@ package com.alrex.parcool.common.potion;
 import com.alrex.parcool.ParCool;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potion;

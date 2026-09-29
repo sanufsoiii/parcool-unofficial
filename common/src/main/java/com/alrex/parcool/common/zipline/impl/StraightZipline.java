@@ -2,7 +2,6 @@ package com.alrex.parcool.common.zipline.impl;
 
 import com.alrex.parcool.common.zipline.Zipline;
 import net.minecraft.util.Mth;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 public class StraightZipline extends Zipline {

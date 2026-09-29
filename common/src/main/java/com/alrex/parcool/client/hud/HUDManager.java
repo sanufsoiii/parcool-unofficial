@@ -3,7 +3,6 @@ package com.alrex.parcool.client.hud;
 import com.alrex.parcool.client.hud.impl.StaminaHUDController;
 import com.alrex.parcool.common.data.ParCoolDataKeys;
 import dev.architectury.event.events.client.ClientGuiEvent;
-import dev.architectury.event.events.client.ClientTickEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;

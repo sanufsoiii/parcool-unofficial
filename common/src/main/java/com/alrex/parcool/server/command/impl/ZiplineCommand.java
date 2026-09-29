@@ -13,10 +13,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.CompoundTagArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 
 public class ZiplineCommand {

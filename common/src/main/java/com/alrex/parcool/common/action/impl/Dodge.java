@@ -14,11 +14,9 @@ import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.extern.AdditionalMods;
 import com.alrex.parcool.utilities.VectorUtil;
 import java.nio.ByteBuffer;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.LocalPlayer;
 
 public class Dodge extends Action {
 	public static final int MAX_TICK = 11;

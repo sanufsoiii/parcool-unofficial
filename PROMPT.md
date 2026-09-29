@@ -134,6 +134,15 @@ target version is on the old or the new side** (the decompiled sources or the ma
 cache are the authority), then port accordingly. Copy the 1.21.11 side unless you find the target is
 still old-side, in which case copy the 1.21.1 side.
 
+> **Correction, added while porting 1.21.4 (see `NOTES.md` §4 for the full evidence): the target
+> version is often on neither side.** 1.21.4 already has `EntityRenderer<T, S>` render states,
+> `ItemTintSource`/`ItemTintSources`, `GuiGraphics#blit(RenderType, …)`, `ClientInput`,
+> `Entity#hurtServer`, `BlockEntityType` without a builder, item model definitions, the
+> `InteractionResult` interface, `LayeredDraw.Layer` and the 8-argument `BlockBehaviour#updateShape` —
+> all of which the table below files under "1.21.11". Where this port had to choose, it was decided
+> against `javap` output of the 1.21.4 mojmap jar, not against this table. Two rows below are wrong
+> even for their own versions and are marked.
+
 | Area | 1.21.1 (old side) | 1.21.11 (new side) |
 |---|---|---|
 | `ResourceLocation` vs `Identifier` | `net.minecraft.resources.ResourceLocation` | `net.minecraft.resources.Identifier` |
@@ -142,10 +151,10 @@ still old-side, in which case copy the 1.21.1 side.
 | Entity / BlockEntity save | `CompoundTag` (`readAdditionalSaveData` / `addAdditionalSaveData`) | `ValueInput` / `ValueOutput` |
 | `BlockEntityType` construction | `BlockEntityType.Builder` | `Builder` deleted; the port reaches the private constructor through `mixin.common.BlockEntityTypeInvoker` and `ParCoolPlatform#registerBlockEntityType` |
 | Render types | `RenderStateShard` in `RenderType` | `RenderSetup` around a `RenderPipeline`; `RenderPipelines#PIPELINES_BY_LOCATION` |
-| Entity rendering | `EntityRenderer#render(...)` draws directly | `extractRenderState` / `submit(...)` with a `SubmitNodeCollector`; renderers are stateless; `AvatarRenderer` + `IAvatarRenderStateEntity` |
+| Entity rendering | `EntityRenderer#render(...)` draws directly | `extractRenderState` / `submit(...)` with a `SubmitNodeCollector`; renderers are stateless; `AvatarRenderer` + `IAvatarRenderStateEntity` — **note 1.21.4 sits between the two**: it has the render state (`EntityRenderer<T extends Entity, S extends EntityRenderState>`, `extractRenderState`, `render(S, PoseStack, MultiBufferSource, int)`) but neither `submit` nor `SubmitNodeCollector`, and its classes are `PlayerRenderer` / `PlayerModel` / `PlayerRenderState`, not `AvatarRenderer` / `PlayerModel` in `net.minecraft.client.model.player` / `AvatarRenderState` |
 | Key mappings | category is a `String`; `KeyMapping.MAP` is `Map<Key, KeyMapping>` — **one mapping per physical key** | `KeyMapping.Category` record; `KeyMapping.MAP` is `Map<Key, List<KeyMapping>>` |
 | The one-mapping-per-key conflict | 1.21.1 needs `KeyBindings#restoreVanillaBindings()` (reflection into `KeyMapping.MAP`/`ALL`) because ParCool binds 16 keys that vanilla also owns, and the last registration evicts vanilla's mapping | the table allows several mappings per key, so the repair is dead code and 1.21.11 deleted it |
-| Recipe ingredients (changed in 1.21.5) | string form, e.g. `"minecraft:chain"` | object form, e.g. `{"item": "minecraft:iron_chain"}` |
+| Recipe ingredients (changed in 1.21.5) — **the two columns were swapped; the 1.21.1 side is the object form** | object form, e.g. `{"item": "minecraft:chain"}` | string form, e.g. `"minecraft:iron_chain"` |
 | `pack.mcmeta` | `pack_format: 34` | `pack_format: 81` plus `min_format`/`max_format`/`supported_formats` |
 | `Entity#isInWaterOrBubble` | present | removed; the 1.21.11 port reimplements it in `utilities/EntityUtil` |
 | `Player#canInteractWithEntity` | present | removed; the port targets `LivingEntity#getVisibilityPercent` instead |
@@ -185,6 +194,27 @@ Every mixin target must be re-derived for the target version — a `@Inject(meth
 silently stops matching is a runtime no-op, and with `defaultRequire: 1` a wrong one is a hard boot
 failure instead. Verify by actually booting, in phase 6.
 
+## 7b. Phase 4b — the toolchain is not free (added while porting 1.21.4)
+
+Three things in the table in §4 turn out to be coupled, and the coupling decides the whole toolchain:
+
+* **Loom must be new enough for the Architectury artifact.** `Loom` refuses to set up a mod built
+  with a newer Loom than its own, so `architectury-fabric <target line>` sets a *floor*.
+* **architectury-plugin sets the ceiling.** The newest published `architectury-plugin` calls
+  `LoomGradleExtension#disableObfuscation()`, which only exists in Loom 1.17.x.
+* **Loom 1.17.x sets the Gradle floor** (8.11+; the 1.21.11 port uses 9.4.1).
+
+For 1.21.4 that resolves to Loom 1.17.493 + Gradle 9.4.1 + architectury-plugin 3.5.170 — the same
+Loom and Gradle as the 1.21.11 port, even though 1.21.4 is seven versions earlier. Re-derive the
+chain per target instead of copying a neighbour's numbers.
+
+Also: **ModDevGradle 1.0.x does not install `https://libraries.minecraft.net/` or
+`https://maven.neoforged.net/mojang-meta/` on Gradle 9.** Write them into `neoforge/build.gradle`
+yourself, or `:neoforge` fails with "Could not find com.mojang:jtracy:<version>".
+
+And: **`curse.maven` compile dependencies have to be mojmap builds.** A `compileOnly` Maven
+dependency is not remapped by Loom, so a Fabric jar of the integration cannot be compiled against.
+
 ## 8. Phase 5 — build and packaging
 
 Copy the 1.21.11 `build.gradle` files. The two loaders are **not** built the same way and the reasons
@@ -211,7 +241,8 @@ record why in `NOTES.md`.
 silently behaves like the old code, that cache is stale:
 
 ```bash
-./gradlew --stop
+# Do NOT run `./gradlew --stop` here: sibling ports build in parallel and share the Gradle home.
+# Delete the caches instead.
 rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
 
@@ -297,6 +328,11 @@ did not create.
 ## 12. Definition of done
 
 - [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
+      **Caveat found while porting 1.21.4: on a truly clean checkout this needs two invocations**
+      (`./gradlew :common:build`, then `./gradlew build`), because Architectury Loom resolves
+      `:common`'s jar while it *configures* `:fabric` and the root `build` → `bootstrap` dependency is
+      only evaluated after configuration. Both reference ports have the same behaviour. See
+      `BUILDING.md` and `NOTES.md` §8.7.
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev.
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no

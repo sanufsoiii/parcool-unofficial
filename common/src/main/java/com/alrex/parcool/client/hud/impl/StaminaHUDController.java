@@ -5,7 +5,6 @@ import com.alrex.parcool.api.client.gui.ParCoolHUDEvent;
 import com.alrex.parcool.common.data.ParCoolDataKeys;
 import com.alrex.parcool.common.data.client.LocalStamina;
 import com.alrex.parcool.common.data.Parkourability;
-import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.api.event.ParCoolEventBus;
 import javax.annotation.Nonnull;

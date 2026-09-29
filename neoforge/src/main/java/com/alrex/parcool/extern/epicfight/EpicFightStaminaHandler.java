@@ -4,7 +4,6 @@ import com.alrex.parcool.common.data.ReadonlyStamina;
 import com.alrex.parcool.common.network.payload.StaminaProcessOnServerPayload;
 import com.alrex.parcool.common.stamina.IParCoolStaminaHandler;
 import com.alrex.parcool.common.stamina.StaminaType;
-import com.alrex.parcool.extern.AdditionalMods;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Player;
 

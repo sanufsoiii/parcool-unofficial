@@ -19,8 +19,6 @@ import com.alrex.parcool.common.network.NetworkRegistries;
 import com.alrex.parcool.common.potion.Potions;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.extern.AdditionalMods;
-import com.alrex.parcool.server.command.CommandRegistry;
-import com.alrex.parcool.server.command.args.ParCoolArgumentTypeInfos;
 import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import org.apache.logging.log4j.LogManager;

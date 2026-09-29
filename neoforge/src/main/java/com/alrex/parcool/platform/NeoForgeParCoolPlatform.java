@@ -4,7 +4,6 @@ import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.action.impl.Dodge;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.stamina.IParCoolStaminaHandler;
-import com.alrex.parcool.common.stamina.handlers.ParCoolStaminaHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.damagesource.DamageSource;
