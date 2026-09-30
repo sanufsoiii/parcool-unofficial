@@ -180,6 +180,9 @@ public class HideInBlock extends Action {
         parkourability.getBehaviorEnforcer().addMarkerCancellingSneak(ID_SNEAK, this::isDoing);
         player.setPose(Pose.STANDING);
         player.noPhysics = true;
+        // Claim the flag: EntityMixin's cleanup only gives back a noPhysics that ParCool raised, so a
+        // spectator's own noPhysics (Player#tick assigns it from isSpectator()) is never cleared.
+        parkourability.getBehaviorEnforcer().setNoPhysicsRaisedByParCool(true);
         player.playSound(player.level()
                         .getBlockState(
                                 new BlockPos(
@@ -268,6 +271,7 @@ public class HideInBlock extends Action {
     public void onWorkingTick(Player player, Parkourability parkourability) {
         player.setDeltaMovement(Vec3.ZERO);
         player.noPhysics = true;
+        parkourability.getBehaviorEnforcer().setNoPhysicsRaisedByParCool(true);
         player.setSprinting(false);
         player.setPose(Pose.STANDING);
     }
@@ -327,6 +331,11 @@ public class HideInBlock extends Action {
         hidingArea = null;
         lookDirection = null;
         player.noPhysics = false;
+        // onStop only gets the player, so the enforcer is looked up rather than passed in.
+        Parkourability parcool$parkourability = Parkourability.get(player);
+        if (parcool$parkourability != null) {
+            parcool$parkourability.getBehaviorEnforcer().setNoPhysicsRaisedByParCool(false);
+        }
     }
 
     private void spawnOnHideParticles(Player player) {
