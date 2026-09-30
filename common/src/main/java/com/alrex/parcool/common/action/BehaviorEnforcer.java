@@ -118,6 +118,29 @@ public class BehaviorEnforcer {
     private final TreeMap<ID, Marker> showNameCancelMarks = new TreeMap<>();
     @Nullable
     private Enforcer<Vec3> movementEnforcer = null;
+
+    /**
+     * Whether ParCool itself is the reason {@link net.minecraft.world.entity.Entity#noPhysics} is
+     * set on this player.
+     *
+     * <p>The flag on {@code Entity} is shared with vanilla, and vanilla owns it: {@code Player#tick}
+     * runs {@code noPhysics = isSpectator()} every tick, which is the entire mechanism behind
+     * spectator noclip. A cleanup that clears {@code noPhysics} whenever nothing is being enforced
+     * therefore wipes out vanilla's flag and breaks flying through blocks in spectator mode, on
+     * every version, and Ctrl+P does not help because no action has to be running for it to fire.
+     *
+     * <p>So ParCool records that it was the one who raised the flag, and only ever gives it back
+     * when the flag is its own. Verified against the 1.21.9 mojmap jar:
+     *
+     * <pre>
+     * javap -c net.minecraft.world.entity.player.Player     # in tick()
+     *        2: invokevirtual isSpectator:()Z
+     *        5: putfield      noPhysics:Z
+     * </pre>
+     *
+     * @see com.alrex.parcool.mixin.common.EntityMixin
+     */
+    private boolean noPhysicsRaisedByParCool = false;
     @Nullable
     private Enforcer<Vec3> positionEnforcer = null;
 
@@ -218,6 +241,14 @@ public class BehaviorEnforcer {
     }
 
     @Nullable
+    public boolean isNoPhysicsRaisedByParCool() {
+        return this.noPhysicsRaisedByParCool;
+    }
+
+    public void setNoPhysicsRaisedByParCool(boolean raised) {
+        this.noPhysicsRaisedByParCool = raised;
+    }
+
     public Vec3 getEnforcedPosition() {
         if (positionEnforcer != null && remainsOrRelease(positionEnforcer)) {
             return positionEnforcer.getBehavior();
