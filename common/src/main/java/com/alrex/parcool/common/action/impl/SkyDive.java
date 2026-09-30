@@ -28,9 +28,16 @@ public class SkyDive extends Action {
 
 	@Override
     public void onWorkingTickInLocalClient(Player player, Parkourability parkourability) {
-        if (!(player instanceof LocalPlayer clientPlayer)) {
+        // isLocalPlayer() + cast rather than a pattern match on LocalPlayer: this class is linked on a
+        // dedicated server (Actions' static initialiser runs at mod init through ParCoolConfig.Client),
+        // and the verifier resolves the target of an `instanceof`, which loads the client-only
+        // LocalPlayer and dies with "Cannot load class net.minecraft.client.player.LocalPlayer in
+        // environment type SERVER". The test itself is unchanged: Player#isLocalPlayer() is true only
+        // on LocalPlayer. The cast is a checkcast, resolved lazily, and clientPlayer is used only below.
+        if (!player.isLocalPlayer()) {
 			return;
 		}
+		LocalPlayer clientPlayer = (LocalPlayer) player;
 		// null for a tick or two around a respawn / mount / dimension change.
 		if (clientPlayer.input == null) return;
 		Vec3 forwardVec = VectorUtil.fromYawDegree(player.yHeadRot);

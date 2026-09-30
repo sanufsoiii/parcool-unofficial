@@ -138,7 +138,14 @@ public class HorizontalWallRun extends Action {
     public boolean canContinue(Player player, Parkourability parkourability) {
 		Vec3 wallDirection = WorldUtil.getRunnableWall(player, player.getBbWidth() * 0.65f);
 		if (wallDirection == null) return false;
-		if (!(player instanceof LocalPlayer localPlayer)) return false;
+		// isLocalPlayer() + cast rather than a pattern match on LocalPlayer: this class is linked on a
+		// dedicated server (Actions' static initialiser runs at mod init through ParCoolConfig.Client),
+		// and the verifier resolves the target of an `instanceof`, which loads the client-only
+		// LocalPlayer and dies with "Cannot load class net.minecraft.client.player.LocalPlayer in
+		// environment type SERVER". The test itself is unchanged: Player#isLocalPlayer() is true only
+		// on LocalPlayer. The cast is a checkcast, resolved lazily, and localPlayer is used only below.
+		if (!player.isLocalPlayer()) return false;
+		LocalPlayer localPlayer = (LocalPlayer) player;
 		if (localPlayer.input == null) return false;
 		var moveVector = localPlayer.input.getMoveVector();
 		var actualInputVector

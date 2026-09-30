@@ -33,7 +33,14 @@ public record LimitationPayload(ServerLimitation limitation) implements CustomPa
             var player = context.getPlayer();
             Parkourability parkourability = Parkourability.get(player);
             parkourability.getActionInfo().setServerLimitation(payload.limitation());
-            if (player instanceof LocalPlayer localPlayer) {
+            // isLocalPlayer() + cast rather than a pattern match on LocalPlayer: this payload class
+            // is linked on a dedicated server too (the server registers the payload type), and the
+            // verifier resolves the target of an `instanceof`, which loads the client-only LocalPlayer
+            // and dies with "Cannot load class net.minecraft.client.player.LocalPlayer in environment
+            // type SERVER". The test itself is unchanged: Player#isLocalPlayer() is true only on
+            // LocalPlayer. The cast is a checkcast, resolved lazily, and handleClient runs on a client.
+            if (player.isLocalPlayer()) {
+                LocalPlayer localPlayer = (LocalPlayer) player;
                 parkourability.getActionInfo().updateStaminaType(LocalStamina.get(localPlayer), localPlayer);
             }
         });

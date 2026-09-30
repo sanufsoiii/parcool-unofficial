@@ -17,7 +17,16 @@ import net.minecraft.client.player.LocalPlayer;
 
 public class BreakfallReady extends Action {
 	public void startBreakfall(Player player, Parkourability parkourability, boolean justTimed) {
-		if (!(player instanceof LocalPlayer localPlayer)) return;
+		// Player#isLocalPlayer(), not `player instanceof LocalPlayer`: this class is linked on a
+		// dedicated server (Actions' static initialiser is reached from ParCoolConfig.Client's
+		// initialiser, which ParCool.init runs on both sides), and the verifier has to resolve the
+		// target of an `instanceof` - which loads the client-only LocalPlayer and dies with
+		// "Cannot load class net.minecraft.client.player.LocalPlayer in environment type SERVER".
+		// Player#isLocalPlayer() is false on the server and true on LocalPlayer, so it is exactly
+		// the same test; the cast stays, because a checkcast is resolved lazily and every use below
+		// runs only on the local client. Same shape as Action#wantsToShowStatusBar takes a Player.
+		if (!player.isLocalPlayer()) return;
+		LocalPlayer localPlayer = (LocalPlayer) player;
         boolean playSound = false;
 		if (justTimed && ParCoolConfig.Client.Booleans.EnableJustTimeEffectOfBreakfall.get()) {
 			if (ParCoolConfig.Client.Booleans.EnableActionSounds.get())

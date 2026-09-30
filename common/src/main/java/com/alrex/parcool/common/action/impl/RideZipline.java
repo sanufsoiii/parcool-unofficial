@@ -140,7 +140,14 @@ public class RideZipline extends Action {
         if (ridingZipline == null) return;
         var speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (speedAttr == null) return;
-        if (!(player instanceof LocalPlayer localPlayer)) return;
+        // isLocalPlayer() + cast rather than a pattern match on LocalPlayer: this class is linked on a
+        // dedicated server (Actions' static initialiser runs at mod init through ParCoolConfig.Client),
+        // and the verifier resolves the target of an `instanceof`, which loads the client-only
+        // LocalPlayer and dies with "Cannot load class net.minecraft.client.player.LocalPlayer in
+        // environment type SERVER". The test itself is unchanged: Player#isLocalPlayer() is true only
+        // on LocalPlayer. The cast is a checkcast, resolved lazily, and localPlayer is used only below.
+        if (!player.isLocalPlayer()) return;
+        LocalPlayer localPlayer = (LocalPlayer) player;
         // null for a tick or two around a respawn / mount / dimension change.
         if (localPlayer.input == null) return;
         double oldSpeed = speed;

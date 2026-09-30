@@ -30,13 +30,22 @@ public class Stamina {
 	}
 
 	public void consume(int value) {
-		if (!(player instanceof LocalPlayer localPlayer)) return;
+		// isLocalPlayer() + cast rather than a pattern match on LocalPlayer: every Action subclass
+		// reaches this class, so it is linked on a dedicated server too (Actions' static initialiser
+		// runs at mod init through ParCoolConfig.Client), and the verifier resolves the target of an
+		// `instanceof`, which loads the client-only LocalPlayer and dies with "Cannot load class
+		// net.minecraft.client.player.LocalPlayer in environment type SERVER". The test itself is
+		// unchanged: Player#isLocalPlayer() is true only on LocalPlayer, and the cast is a checkcast
+		// that is resolved lazily. See Action#wantsToShowStatusBar for the same decision.
+		if (!player.isLocalPlayer()) return;
+		LocalPlayer localPlayer = (LocalPlayer) player;
 		var stamina = LocalStamina.get(localPlayer);
 		stamina.consume(localPlayer, value);
 	}
 
 	public void recover(int value) {
-		if (!(player instanceof LocalPlayer localPlayer)) return;
+		if (!player.isLocalPlayer()) return;
+		LocalPlayer localPlayer = (LocalPlayer) player;
 		var stamina = LocalStamina.get(localPlayer);
 		stamina.recover(localPlayer, value);
 	}

@@ -268,9 +268,60 @@ A port that only compiles is not a port.
 
 ```bash
 ./gradlew build
+./gradlew :fabric:runServer     # <-- not optional, see below
 ./gradlew :fabric:runClient
 ./gradlew :neoforge:runclient
 ```
+
+**The dedicated Fabric server is the one launch that cannot be replaced by anything else.** Architectury's
+`NetworkAggregator.Adaptor#registerS2C` carries `@Environment(EnvType.CLIENT)`, and Fabric Loader's
+`EnvironmentStripper` deletes such members on a dedicated server, so
+`NetworkManager.registerReceiver(Side.S2C, ...)` dies at mod init with
+
+```
+java.lang.AbstractMethodError: Receiver class
+  dev.architectury.networking.fabric.NetworkManagerImpl$1 does not define or inherit an
+  implementation of the resolved method 'abstract void registerS2C(...)'
+  of interface dev.architectury.impl.NetworkAggregator$Adaptor
+  at dev.architectury.impl.NetworkAggregator.registerS2CReceiver(NetworkAggregator.java:119)
+```
+
+The method *is* in the jar, so `javac`, `@Override` and the call all type check, and in singleplayer the
+integrated server runs inside the client JVM where the member survives stripping - a green client and a
+green singleplayer session prove nothing. Only a dedicated server JVM finds it.
+
+The fix is the one Architectury's own javadoc prescribes, at the top of
+`fabric/src/main/java/com/alrex/parcool/platform/FabricParCoolNetwork.java#register`:
+
+```java
+if (clientbound && Platform.getEnvironment() == Env.SERVER) {
+    NetworkManager.registerS2CPayloadType(wireId);
+    return;
+}
+```
+
+A server never receives a server-to-client packet, so it only needs the payload *type* sendable. Do
+**not** switch to `NetworkChannel` to dodge this: its S2C half is registered only
+`if (Platform.getEnvironment() == Env.CLIENT)`, so every server -> client packet then NPEs on
+`new BufCustomPacketPayload(S2C_TYPE.get(id), ...)` with a `null` type, and a green `Done` hides it.
+
+Set up the server run before you need it:
+
+```bash
+mkdir -p fabric/run
+printf 'eula=true\n' > fabric/run/eula.txt
+printf 'online-mode=false\ngamemode=creative\nlevel-name=world\n' > fabric/run/server.properties
+# Loom keys the dev-runtime remap on the project coordinates, not on the jar's contents, so an edited
+# common source is otherwise picked up from a stale cache and the run measures the OLD code.
+rm -rf .gradle/loom-cache fabric/build/loom-cache common/build/loom-cache \
+       common/build/devlibs neoforge/build/explodedCommon
+./gradlew :fabric:runServer --console=plain
+```
+
+Success is `Starting Minecraft server on` plus `Done (`, with no `AbstractMethodError`. Note that
+`:common:remapJar` has to have produced `common/build/libs/parcool-<version>-3.4.3.3.jar` before the
+wipe - Loom reads its metadata while it *configures* `:fabric`, so deleting `common/build/libs`
+outright breaks configuration with `java.io.UncheckedIOException`.
 
 Before you start, decide how you will get into a world without a mouse, and put it in the run config
 if it is not already there — a `--quickPlaySingleplayer <world>` / `--quickPlayMultiplayer <host:port>`
@@ -288,6 +339,14 @@ check all of this:
 - [ ] Do one action of each family: wall run, wall jump, slide, roll, dodge, vault, hide-in-block,
       zipline ride, stamina HUD, the settings screen.
 - [ ] Two clients on one server see each other's animations.
+- [ ] **A dedicated Fabric server reaches `Starting Minecraft server on` and `Done (`, and the log
+      contains no `AbstractMethodError` and no `Cannot load class net.minecraft.client.player.LocalPlayer
+      in environment type SERVER`.** Neither is visible to the compiler, to a client or to singleplayer;
+      a dedicated server run is the only detector. Watch for the second one too: any `Action` subclass
+      that mentions `LocalPlayer` is verified when `Actions`' static initialiser runs, which happens on a
+      server because `ParCool.init` builds the client config spec there. `Player#isLocalPlayer()` plus a
+      cast is the safe form, and some actions need to be rewritten to avoid `LocalPlayer` entirely
+      (read the input through `KeyBindings` instead of `player.input.keyPresses`).
 - [ ] `:common:checkCommonLoaderIndependence` passes.
 
 Then install the built jar into a real Prism instance and boot it there too. A jar that works in the
@@ -342,6 +401,10 @@ did not create.
 
 - [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev.
+- [ ] **The dedicated Fabric server was launched and reached `Done (`.** A client boot and a
+      singleplayer session are not substitutes: loader-stripping and dedicated-server class linking
+      defects are invisible to both. The loom caches must be wiped before that run, otherwise the run
+      measures the previous code.
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
       commented-out blocks, no absolute local paths, no machine-specific paths in the build.

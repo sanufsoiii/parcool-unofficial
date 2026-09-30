@@ -5,6 +5,7 @@ import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.client.animation.impl.ChargeJumpAnimator;
 import com.alrex.parcool.client.animation.impl.JumpChargingAnimator;
+import com.alrex.parcool.client.input.KeyBindings;
 import com.alrex.parcool.client.input.KeyRecorder;
 import com.alrex.parcool.common.action.Action;
 import com.alrex.parcool.common.action.StaminaConsumeTiming;
@@ -18,7 +19,6 @@ import com.alrex.parcool.api.event.ParCoolEventBus;
 import java.nio.ByteBuffer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.client.player.LocalPlayer;
 
 public class ChargeJump extends Action {
     public static final int JUMP_ANIMATION_TICK = 10;
@@ -82,22 +82,27 @@ public class ChargeJump extends Action {
 
     @Override
     public void onClientTick(Player player, Parkourability parkourability) {
-        if (player instanceof LocalPlayer cp) {
-            if (cp.onGround()
+        if (player.isLocalPlayer()) {
+            // Nothing below mentions LocalPlayer. This class is linked on a dedicated server
+            // (Actions' static initialiser runs at mod init through ParCoolConfig.Client, and the
+            // X::new method reference resolves X's constructor, which links and therefore verifies
+            // X), and the verifier then loads the client-only LocalPlayer and dies with
+            // "Cannot load class net.minecraft.client.player.LocalPlayer in environment type SERVER".
+            // isLocalPlayer() is false for every non-local player, so `player` *is* the local player
+            // in here, and KeyBindings reads exactly the same Minecraft.getInstance().player.input
+            // state that cp.input.keyPresses.* read.
+            if (player.onGround()
                     && coolTimeTick <= 0
                     && parkourability.getActionInfo().can(ChargeJump.class)
-                    && !cp.isVisuallyCrawling()
-                    && !cp.isSprinting()
-                    && !EntityUtil.isInWaterOrBubble(cp)
-                    && !cp.input.keyPresses.forward()
-                    && !cp.input.keyPresses.backward()
-                    && !cp.input.keyPresses.right()
-                    && !cp.input.keyPresses.left()
+                    && !player.isVisuallyCrawling()
+                    && !player.isSprinting()
+                    && !EntityUtil.isInWaterOrBubble(player)
+                    && !KeyBindings.isAnyMovingKeyDown()
                     && !parkourability.get(Crawl.class).isDoing()
                     && !ParCoolEventBus.post(new ParCoolActionEvent.TryToStartEvent(player, this)).isCanceled()
                     && !ParCoolEventBus.post(new ParCoolActionEvent.TryToStart(player, this)).isCanceled()
             ) {
-                if (cp.isShiftKeyDown() && KeyRecorder.keySneak.getPreviousTickNotKeyDown() > 5) {
+                if (player.isShiftKeyDown() && KeyRecorder.keySneak.getPreviousTickNotKeyDown() > 5) {
                     chargeTick++;
                     if (chargeTick > JUMP_MAX_CHARGE_TICK) chargeTick = JUMP_MAX_CHARGE_TICK;
                     lastChargeTick = chargeTick;
@@ -144,14 +149,12 @@ public class ChargeJump extends Action {
     }
 
     public void onLand(Player player, Parkourability parkourability) {
-        if (player.isLocalPlayer() && player instanceof LocalPlayer cp) {
+        // LocalPlayer-free for the same reason as onClientTick above; see the comment there.
+        if (player.isLocalPlayer()) {
             if (
                     parkourability.getActionInfo().can(ChargeJump.class)
                             && coolTimeTick <= 0
-                            && !cp.input.keyPresses.forward()
-                            && !cp.input.keyPresses.backward()
-                            && !cp.input.keyPresses.right()
-                            && !cp.input.keyPresses.left()
+                            && !KeyBindings.isAnyMovingKeyDown()
                             && (parkourability.get(FastRun.class).getNotDashTick(parkourability.getAdditionalProperties()) < 15)
             ) {
                 chargeTick = JUMP_MAX_CHARGE_TICK + 5;
