@@ -55,7 +55,18 @@ public class NeoForgeParCoolNetwork implements ParCoolNetwork {
         NetworkManager.registerReceiver(
                 clientbound ? NetworkManager.Side.S2C : NetworkManager.Side.C2S,
                 wireId,
-                (buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+                (buf, context) -> {
+                    // The decode must happen HERE, on the network thread, while the buffer is still
+                    // alive: registerReceiver hands the receiver the raw buffer and releases it as
+                    // soon as this lambda returns - Architectury's NetworkAggregator#registerReceiver
+                    // builds the RegistryFriendlyByteBuf, calls the receiver, then calls
+                    // buf.release(). Inside context.queue(...) the buffer is already refCnt 0, so the
+                    // first VarLong.read() it performs throws IllegalReferenceCountException and
+                    // kills the server task. Only the handler is queued, for its thread safety,
+                    // never for the decoding.
+                    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+                    context.queue(() -> handler.accept(payload, context));
+                }
         );
     }
 
