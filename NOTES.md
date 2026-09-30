@@ -667,3 +667,35 @@ copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
 * **Not verified:** no client was launched (the orchestrator holds the single GPU), and the server was
   booted with no players, so a real server -> client packet write has not been observed end to end.
   What is proven is that the server starts and registers the S2C payload *types*.
+
+## NeoForge @OnlyIn warnings from Architectury (observed on the live client, harmless there)
+
+A NeoForge dev client on 1.21.7 logs 92 warnings at mod load, all naming `dev.architectury.*`
+members and none naming ParCool:
+
+```
+[modloading-worker-0/ERROR] [ne.ne.ne.co.OnlyInWarningsHandler/]: The mod architectury uses the
+  @OnlyIn annotation; the runtime member-stripping behaviour of this annotation is no longer
+  present, which may lead to issues if that behaviour was relied upon
+[modloading-worker-0/ERROR] [ne.ne.ne.co.OnlyInWarningsHandler/]: @OnlyIn used on method
+  dev.architectury.utils.GameInstance.getClient()Lnet/minecraft/client/Minecraft;
+[modloading-worker-0/ERROR] [ne.ne.ne.co.OnlyInWarningsHandler/]: @OnlyIn used on method
+  dev.architectury.registry.menu.forge.MenuRegistryImpl.registerScreenFactory(...)
+```
+
+NeoForge replaced Forge's runtime member stripping with its own mechanism, so `@OnlyIn` is now
+decorative in Architectury. Observed only on this port: NeoForge 1.21.4 (Architectury 15.0.3),
+1.21.5 (16.1.4) and 1.21.6 (17.0.6) log zero of these, 1.21.7 (17.0.8) logs 92. Not a timing
+artifact - the three runs were at comparable load stages. The difference is in the NeoForge-side
+Architectury artifact, not in ParCool.
+
+**Impact on the client: none.** Every client path works; these are load-time notices about a
+dependency.
+
+**Risk to carry into the dedicated-NeoForge-server phase:** because `@OnlyIn` no longer strips
+anything, a server that reaches Architectury's client-only members would fail with
+`NoClassDefFoundError` on `net.minecraft.client.Minecraft` rather than with a clear
+`AbstractMethodError`. Architectury guards its own call sites, so this is not expected to fire, but
+it is the same *shape* of problem as the Fabric `Adaptor#registerS2C` case: member-stripping
+assumptions that hold on the client and do not hold on a server. Verify the NeoForge dedicated
+server separately rather than assuming the client result transfers.
