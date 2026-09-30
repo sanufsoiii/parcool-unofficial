@@ -791,3 +791,61 @@ now start" are *expected* from that evidence, not observed.
 
 Both hashes differ from the pair published before this fix (`67a43232…` / `48eda650…`) — this is
 code, so it must change. The game was not launched to validate it.
+
+## LivingRendererMixin and the Loom cache (found by launching the client)
+
+A live Fabric client on 1.21.2 logged this at boot, every single time:
+
+```
+[FabricLoader/Mixin] parcool-common.mixins.json:client.LivingRendererMixin from mod parcool:
+  Super class 'net.minecraft.client.renderer.entity.LivingEntityRenderer' of
+  client.LivingRendererMixin was not found in the hierarchy of target class
+  'net/minecraft/client/renderer/entity/LivingEntityRenderer'
+  at MixinInfo$SubType$Standard.validate(MixinInfo.java:593)
+```
+
+Two separate defects were tangled here and only one of them is fully understood.
+
+**1. The mixin extended its own target.** The class was declared
+`abstract class LivingRendererMixin<T, S, M> extends LivingEntityRenderer<T, S, M>` with a copy
+constructor, on the (incorrect) assumption that the mixin must re-declare the target's generics
+for its handler parameter to resolve. The generics were never needed: `shouldShowName` erases
+to `(LivingEntity, double)`, so the handler takes `LivingEntity` directly. The mixin now declares
+no supertype and no constructor, which is the shape all eight other ports use.
+
+**Honest caveat:** I did not isolate whether this alone caused the message. The `extends` was
+removed and the Loom cache purged in the same step, and the client came up clean. Mixin's
+`SubType$Standard.validate` walks the target's ancestor chain, and a target is never in its own
+ancestor list, so the theory holds - but treat it as unproven.
+
+**2. A stale Loom cache masked the fix and is the more dangerous of the two.** Loom keeps a
+remapped copy of `:common` under `.gradle/loom-cache/remapped_mods/.../common-<hash>.jar` and
+feeds it to the dev client. Deleting `fabric/build/loom-cache` and `common/build/loom-cache` is
+**not** enough - `.gradle/loom-cache/remapped_mods` is a separate tree and was still holding a
+copy compiled before the fix. The symptom is a source file that is provably correct on disk and
+a running client that behaves as if it were not. Verify with:
+
+```bash
+cd common/build/classes/java/main && javap -p com/alrex/parcool/mixin/client/LivingRendererMixin.class
+for j in $(find ../../../../.. -path '*remapped_mods*' -name 'common-*.jar'); do
+  unzip -p "$j" com/alrex/parcool/mixin/client/LivingRendererMixin.class > /tmp/k.class
+  javap -p /tmp/k.class | sed -n 2p
+done
+```
+
+Full purge, with no `--gradlew --stop` (which would kill neighbouring projects' daemons):
+
+```bash
+rm -rf .gradle/loom-cache fabric/build/loom-cache common/build/loom-cache \
+       common/build/devlibs neoforge/build/explodedCommon
+```
+
+Note that Mixin reports this at ERROR and the boot *continues*: the mod loads, the window opens,
+nothing looks broken, and the mixin is simply dead. In 1.21.2 the dead mixin means HideInBlock
+and WallSlide keep drawing other players' name tags. A build check cannot see this, and neither
+can a jar-structure check.
+
+Sweep of the sibling ports at the same moment found the same stale-cache trap in 1.21.5
+(`Blocks.java` newer than the cache) and 1.21.6 (five non-mixin sources newer). Both purged.
+Check your own port with `find .gradle/loom-cache/remapped_mods -name 'common-*.jar'` and
+compare against `find common/src/main/java -newer <that jar>`.
