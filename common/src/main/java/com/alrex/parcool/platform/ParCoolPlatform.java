@@ -28,7 +28,7 @@ import javax.annotation.Nullable;
  *     {@link DamageSource} from a {@link DamageType} key needs a loader specific call.</li>
  *     <li><b>Paraglider</b>, <b>EpicFight</b> and <b>BetterThirdPerson</b> ship NeoForge-only jars
  *     for 1.21.1, so their code lives in the {@code neoforge} module and is reached through this
- *     interface. Per the approved port plan (§7.4) Fabric ships no-op implementations.</li>
+ *     interface. Fabric ships no-op implementations.</li>
  * </ul>
  *
  * <p>Implementations are discovered with {@link java.util.ServiceLoader}, so {@code common} stays
