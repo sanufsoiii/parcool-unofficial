@@ -1,12 +1,22 @@
-# Building ParCool (Architectury, Minecraft 1.21.11)
+# Building ParCool (Architectury, Minecraft 1.21.10)
 
 Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
 `build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` and
 no machine-specific path anywhere in the build.
 
-Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.11, Architectury API 19.0.1,
-NeoForge 21.11.45, Fabric Loader 0.19.5, Fabric API 0.141.6+1.21.11, Architectury Loom 1.17.493,
-ModDevGradle 2.0.147, Gradle 9.4.1.
+Versions (all in `gradle.properties` / `settings.gradle`, each read from a metadata endpoint rather
+than guessed — see [NOTES.md](NOTES.md) §1):
+
+| | |
+|---|---|
+| Minecraft | 1.21.10 |
+| Architectury API | 18.0.8 |
+| NeoForge | 21.10.64 |
+| Fabric Loader | 0.19.5 |
+| Fabric API | 0.138.4+1.21.10 |
+| Architectury Loom | 1.17.493 |
+| ModDevGradle | 2.0.148 |
+| Gradle | 9.4.1 |
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -17,36 +27,53 @@ ModDevGradle 2.0.147, Gradle 9.4.1.
 ## Building
 
 ```bash
-./gradlew build   # from a clean checkout; the root build bootstraps :common itself
+./gradlew :common:build   # on a fresh checkout
+./gradlew build           # from then on
 ```
 
-The two steps are needed because Architectury Loom resolves the `:common` project dependency while it
-*configures* the loader modules, so `:common` has to have been built once. The root `build` task
-depends on the `bootstrap` task (an alias of `:common:build`), which covers every case except a truly
-fresh checkout.
+**A single `./gradlew build` on a clean checkout does not work**, and that is inherited from the
+Architectury plugin rather than something this port introduced. Architectury Loom resolves the
+`:common` project dependency while it *configures* `:fabric`, before the root `build` task graph has
+been able to depend on `:common:build`; on a clean tree the run dies with
 
-**If you add a new class to `:common` and the loader module then reports
-`cannot find symbol` for it, Loom's cached remap of `:common` is stale.** Clear it once:
+```
+A problem occurred configuring project ':fabric'.
+> Failed to setup Minecraft, java.io.UncheckedIOException: Failed to read metadata from
+  …/common/build/libs/parcool-1.21.10-3.4.3.3.jar, java.nio.file.NoSuchFileException: …
+```
+
+The root `build` task does depend on a `bootstrap` alias of `:common:build`, which covers every case
+except that first one. The two-invocation sequence above is the whole workaround.
+
+**If you add a new class to `:common` and a loader module then reports `cannot find symbol` for it,
+Loom's cached remap of `:common` is stale.** Clear it with
 
 ```bash
-rm -rf common/build/devlibs common/build/loom-cache fabric/build/loom-cache .gradle/loom-cache
+rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
 
 `.gradle/loom-cache/remapped_mods` holds the per-consumer remapped copy of `:common` that the loader
 modules actually load; if a freshly added mixin class is present in the built jar but reported as
-"not found" at runtime, this directory is the stale one.
+"not found", this directory is the stale one.
+
+**Do not run `./gradlew --stop` to flush it.** It kills every Gradle daemon on the machine, including
+the ones other projects are using. Removing the directories above is enough.
 
 ## Distributables
 
 ```bash
 ./gradlew build
-# -> fabric/build/libs/parcool-fabric.jar
+# -> fabric/build/libs/parcool-1.21.10-3.4.3.3-fabric.jar
 # -> neoforge/build/libs/parcool-neoforge.jar
 ```
 
 Each contains the `:common` code and assets plus the loader module's own classes, metadata
 (`fabric.mod.json` / `META-INF/neoforge.mods.toml`), the shared `parcool.accesswidener` and
 `parcool-common.mixins.json`, and the `ServiceLoader` file that binds `ParCoolPlatform`.
+
+The two are assembled differently on purpose — see the packaging rationale in
+[fabric/build.gradle](fabric/build.gradle) and [neoforge/build.gradle](neoforge/build.gradle), and
+§5 of [NOTES.md](NOTES.md) for what was verified about the results.
 
 ## Running
 
@@ -71,10 +98,6 @@ transformed class per file) when a specific mixin needs inspecting.
 
 ### Booting straight into a world / a server
 
-The two cross-loader checks ("does a client of one loader actually join a server of the other one?",
-"does the in-world render path survive a real frame?") are driven by the game's own quick-play flags,
-so they can be repeated without a mouse:
-
 ```bash
 # client of one loader -> dedicated server of the other one
 ./gradlew :neoforge:runServer                                   # waits for "Done (!)"
@@ -92,3 +115,23 @@ login) and a free `server-port`.
 
 `./gradlew :common:checkCommonLoaderIndependence` fails the build if `common/src/main` ever imports
 `net.fabricmc.*` or `net.neoforged.*`.
+
+## Mixin target check
+
+`tools/verify_mixins.py` checks every `@Mixin` target and every `@Inject` / `@Redirect` / `@Modify*` /
+`@Wrap*` / `@Accessor` / `@Invoker` / `@Shadow` target under `common/src/main/java` against a resolved
+mojmap jar, so a target that silently stops matching is caught without booting the game.
+
+```bash
+JAR=$(ls ~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.10-loom.mappings.*/*.jar | head -1)
+python3 tools/verify_mixins.py "$JAR" common/src/main/java
+```
+
+It needs `python3` plus `unzip` and `javap` on `PATH`.
+
+**Read `tools/README.md` before trusting its output.** A checker that cannot fail is worse than no
+checker: an earlier port of this mod verified its targets with a regex that cut at the first `)`,
+silently skipped every target that had a method descriptor, and reported "0 problems" about an
+entirely broken tree. This one runs a self-test on every invocation — a wrong-arity target, a
+wrong-name target and a genuinely correct one — and refuses to report anything unless the first two
+are flagged and the third stays silent.

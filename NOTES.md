@@ -44,7 +44,7 @@ Nothing is guessed. Each value below was read from the endpoint named in the row
 | Java toolchain | 21 | `mc12110.json` → `javaVersion.majorVersion = 21` |
 | `org.gradle.jvmargs` | `-Xmx2G` | local constraint (three Gradle daemons in parallel), not a version decision |
 
-### Architectury API — why 19.0.1 and not 18.0.8
+### Architectury API — why 18.0.8 and not 19.0.1
 
 The brief's calibration table maps `architectury-fabric 19.0.1` to `~1.21.11` and `18.0.8` to
 `~1.21.7`, and warns to check `fabric.mod.json` rather than the version number. Done, by downloading
@@ -68,11 +68,16 @@ it actually work":
   `neoforge [21.0.110-beta,)`, so both are fine there.
 
 Since one codebase ships both loaders, **18.0.8** is the only version that loads on both for a
-1.21.10 client — its `~1.21.7` range covers 1.21.10, and 1.21.7→1.21.10 is API-compatible for
-everything Architectury touches (verified: it configures, compiles and runs).
+1.21.10 client: its `~1.21.7` range covers 1.21.10, and everything ParCool uses out of Architectury
+(`DeferredRegister`, `KeyMappingRegistry`, `EntityRendererRegistry`, the event bus,
+`NetworkManager`, `ClientTooltipComponentRegistry`) has the same shape in 18.0.8 as in 19.0.1 —
+checked with `javap` on both jars for the classes that matter, including
+`KeyMappingRegistry.register(KeyMapping)` and `ColorHandlerRegistry` (which has only the two
+`registerBlockColors` overloads in 18.0.8, i.e. `registerItemColors` is already gone — see §3).
 
 This is a real deviation from the 1.21.11 tree and from the brief's calibration table, so it is
-recorded here and in `gradle.properties`.
+recorded here and in `gradle.properties`. The mod metadata follows it: `architectury: ">=18.0.0"` in
+`fabric.mod.json` and `versionRange = "[18.0.0,)"` in `neoforge.mods.toml`.
 
 ---
 
@@ -223,16 +228,140 @@ listing (`method_59808`) rather than refusing to load it, while a codec failure 
 `Pack.readPackMetadata` return `null` and the pack is dropped outright. Parsing is therefore the
 property that has to hold, and it does.
 
+### 2.3 Things the 1.21.11 tree gets right that must NOT be walked back
+
+The base tree is not wrong everywhere; these are 1.21.9-or-earlier changes that it carries and that
+this port keeps:
+
+* `Properties#setId` on both `Blocks` and `Items`. `Item$Properties#effectiveDescriptionId` and
+  `effectiveModel` both start with `Objects.requireNonNull(this.id, "Item id not set")` on 1.21.10
+  (javap -c), and Architectury's `DeferredRegister` does not set it.
+* `Item$Properties#useBlockDescriptionPrefix()`. It exists on 1.21.10, and the description id is
+  resolved from the properties alone (`BlockItem#getDescriptionId` is gone), so without the call the
+  hooks would be `item.parcool.*` rather than `block.parcool.*` and every lang file would be one key
+  off. The `item.parcool.*` entries the 1.21.11 tree added to eleven lang files were therefore
+  removed again here.
+* `EntityUtil.isInWaterOrBubble`. `Entity#isInWaterOrBubble` is gone on 1.21.10 (javap).
+* `Attributes.registerAll()` called only from the Fabric entry point, with `:neoforge`'s
+  `NeoForgeAttributes` on the mod event bus. Confirmed against the NeoForge 21.10.64 *sources* jar:
+  `net/neoforged/neoforge/registries/DeferredRegister.java` has no `Attributes` nested class and
+  `NeoForgeRegistries` has no `ATTRIBUTE` entry, i.e. the generic `DeferredRegister.create(…)` the
+  port uses is the only option there, exactly as on 21.11.
+* `BlockEntityTypeInvoker` + `ParCoolPlatform#registerBlockEntityType`. `BlockEntityType`'s private
+  `(BlockEntitySupplier, Set)` constructor is unchanged on 1.21.10 (javap).
+* `KeyboardInput#tick()` taking no arguments — the handler must be `tick()V` with a bare
+  `CallbackInfo`.
+* `ZiplineRopeEntity#addAdditionalSaveData` writing six distinct keys.
+
 ---
 
 ## 3. Bugs found
 
 ### Fixed
 
+| # | Bug | Where | Evidence / fix |
+|---|---|---|---|
+| 1 | `@WrapWithCondition(method = "causeExtraKnockback", …)` targets a method 1.21.10 does not have | `common/…/mixin/common/PlayerMixin.java` | `Player#causeExtraKnockback` only exists from 1.21.11; javap on 1.21.10 shows `attack(Entity)` and no `causeExtraKnockback`. With `defaultRequire: 1` this is a hard boot failure. Retargeted to `attack`, whose `setSprinting(Z)` call is the same one (javap -c: `invokevirtual setSprinting` at offset 636, inside `attack`, behind the same knockback-is-nonzero test). Caught by `tools/verify_mixins.py`. |
+| 2 | `pack.mcmeta` copied from the 1.21.11 tree does not parse on 1.21.10 | `common/src/main/resources/pack.mcmeta` | The 1.21.11 file carries `supported_formats`, which 1.21.10's `PackMetadataSection` codec rejects outright (`supported_formats is deprecated starting from pack format 65`). Replaced with `min_format: 82, max_format: 88`, verified by running the real codec against the file as it comes out of the built jar. |
+| 3 | The five recipe JSONs have no `category` | `common/src/main/resources/data/parcool/recipe/*.json` | Added `"category": "misc"` to all five. **Note this is not load-bearing on 1.21.10** — see §2.1; the brief's claim is not reproducible. It is added because it is what upstream ParCool and every sibling port ship. |
+| 4 | `pack.mcmeta` from the 1.21.7 tree (`pack_format: 81, supported_formats: [64, 81]`) also fails on 1.21.10 | same | `pack_format` alone is rejected for format > 64 under `CLIENT_RESOURCES`. Both reference trees' values are wrong here; §2.2 has the codec output. |
+| 5 | Paraglider pinned to a 1.21.11 build | `neoforge/build.gradle` | `Paraglider-neoforge-21.11.0-beta.6` (7794499) references `net.minecraft.resources.Identifier`, which does not exist on 1.21.10; `:neoforge:compileJava` failed with `cannot access Identifier`. CurseForge has **no** Paraglider build for 1.21.10 at all (checked `https://www.curseforge.com/api/v1/mods/289240/files`: the list goes 21.1.x → 21.5.x → 21.11.0-beta). Pinned to 21.5.2 (6739612), whose `MovementPlugin$PlayerStateRegister` / `$PlayerStateConnectionRegister` signatures are identical (javap on both jars). |
+
 ### Found, not fixed
+
+| # | Finding | Why not fixed |
+|---|---|---|
+| 1 | `ZiplineRopeEntity` and other entities carry `Attribute` modifiers keyed by `ResourceLocation`; nothing breaks, but the ids are never removed when the action stops | upstream behaviour |
+| 2 | `#minecraft:logs` in `wooden_zipline_hook.json` is a tag that has to be resolved as an item tag. 1.21.10 *does* ship `data/minecraft/tags/item/logs.json`, so this is correct — recording it because a naive reading of the recipe makes it look like a bug | not a bug |
+| 3 | 27 unused imports, byte-identical to the 1.21.11 tree's list | upstream; the brief says not to touch them. Verified with a per-file scan that the *set* is unchanged from the base tree, so this port added none. |
+| 4 | The read-only trees `parcool-Architectury-API-1.21.11` and `parcool-Architectury-API-1.21.1` both contain `ConfigSpec#persist` that writes nothing and a `BufferUtil.ensureRoom` that checks nothing. This port takes the **1.21.1** versions of both files. | the read-only trees are not to be edited. Recording it so the next port does not copy them. |
+| 5 | A single `./gradlew build` on a clean checkout fails | Architectury Loom resolves `:common` at *configuration* time of `:fabric`. Inherited from the base, documented in BUILDING.md rather than patched. |
+| 6 | Neither reference tree has the filename validation in `Limitation` that the brief mentions | checked `Limitations`' `ID` record across all seven trees: there is none to preserve. |
 
 ---
 
 ## 4. What the next port should not trust
 
-TBD
+1. **A version number.** Every decision in §2 came from `javap` against the resolved jar. The class
+   list of 1.21.10 is identical to 1.21.9's, which is the single most useful fact about it: the
+   1.21.5–1.21.7 trees are a far better reference than the 1.21.11 tree, even though 1.21.11 is the
+   nearer neighbour by number.
+2. **A regex over an annotation.** See §5.
+3. **`minecraft-merged-*-sources.jar` in the Loom cache.** It is generated *with the access widener
+   already applied*, so it lies about visibility. `javap -p` against the mojmap jar is the truth.
+4. **`pack.mcmeta` copied from a sibling port.** Every one of the five sibling values is rejected by
+   1.21.10's codec — including the two reference trees'. It has to be derived per version.
+5. **The brief's recipe claim.** `category` is optional on 1.21.10 *and* on 1.21.11 (the codec is
+   `fieldOf("category").orElse(MISC)` in both). "Every ParCool recipe silently fails without it" is not
+   true for either version; the field is still shipped, but for upstream fidelity, not as a fix.
+6. **The brief's `iron_chain` claim.** `minecraft:iron_chain` exists on 1.21.10 and
+   `minecraft:chain` does not — the 1.21.11 tree's value is right and the 1.21.2/1.21.4 trees'
+   `{"item": "minecraft:chain"}` is wrong. The object form also does not parse at all: `Ingredient.CODEC`
+   is a holder-set codec.
+
+---
+
+## 5. The mixin verifier, and why it self-tests
+
+`tools/verify_mixins.py` checks 46 injection/field targets across 233 files. It exists because the
+brief records that a previous verifier in this family parsed annotations with a regex like
+`\(([^)]*)\)`, which truncates at the first `)` — i.e. inside the first method descriptor — so it
+skipped every target that had one and reported "0 problems" about an entirely broken tree.
+
+Three things guard against a repeat:
+
+* descriptors are extracted with **balanced parentheses**, and the method name is the identifier
+  immediately before the argument list, not the last whitespace-separated token (which breaks on a
+  generic signature such as `extractRenderState(AvatarlikeEntity, Foo, float)` — the `AvatarRenderer`
+  case here);
+* `@At(target = "Lowner;name(desc)")` is checked too, with a supertype fallback, because the owner in
+  an invoke's constant pool is the receiver's static type, not the declaring class
+  (`Player.setSprinting` is really `Entity#setSprinting`);
+* **every run first executes `self_test()`**, which feeds the same code path a wrong-arity target, a
+  wrong-name target and a genuinely correct 1.21.10 target, and refuses to report anything unless the
+  first two are flagged and the third stays silent.
+
+It found exactly one real defect in this port: bug #1 above, the `causeExtraKnockback` target.
+
+---
+
+## 6. Verification status — what was checked and what was not
+
+**Checked, by running the real thing:**
+
+* `./gradlew :common:build` then `./gradlew build` from a deleted `build/` + `.gradle/` — both jars
+  produced.
+* `./gradlew :common:checkCommonLoaderIndependence` — passes.
+* `tools/verify_mixins.py` — self-test passes, 46 targets checked, no problems.
+* **Fabric jar**: bytecode is intermediary (`net/minecraft/class_2498`, …), the access widener is
+  `accessWidener v2 intermediary`, there is **no refmap**, the mixin targets are statically remapped
+  (`method=["method_7324"]`, `target="Lnet/minecraft/class_1657;method_5728(Z)V"`), the
+  `ServiceLoader` binding is present, `fabric.mod.json` is expanded to the real version.
+* **NeoForge jar**: bytecode is mojmap (`net/minecraft/resources/ResourceLocation`, …), the mixin
+  targets are mojmap (`method=["attack"]`), `accesstransformer.cfg` and `parcool.accesswidener` are
+  both shipped, and the loader-specific classes plus the four integrations are in it.
+* **`pack.mcmeta`** run through 1.21.10's real `PackMetadataSection` codec: parses under both
+  `CLIENT_RESOURCES` and `SERVER_DATA`.
+* **The four vanilla-serialiser recipes** run through 1.21.10's real `RecipeSerializer` codecs:
+  all parse. Also established: `category` is optional, and the object ingredient form does not parse.
+* **Registry contents** (`BuiltInRegistries.ITEM.containsKey`): `iron_chain` exists, `chain` does
+  not.
+* No `System.out`, no `printStackTrace`, no absolute machine path in any build file, no
+  `org.gradle.java.home`, no unused imports beyond the base tree's 27.
+
+**Not checked — the game was never launched.** No `runClient`, no `runServer`, no Prism instance.
+So all of the following are unverified on 1.21.10 and rest on API-level evidence only:
+
+* that the game starts on either loader and the mod shows no failed mod state;
+* that the attributes resolve on the first `Player#createAttributes` — the split is inferred from
+  the NeoForge 21.10.64 sources and the absence of a `DeferredRegister.Attributes`, never executed;
+* that every key binding rebinds and drives its action, and that a vanilla key ParCool also binds
+  still works (the multi-mapping `KeyMapping.MAP` says it should; unconfirmed);
+* every action of every family (wall run, wall jump, slide, roll, dodge, vault, hide-in-block, zipline
+  ride), the stamina HUD and the settings screen;
+* that the zipline rope actually draws — `RenderTypes` builds its own pipelines and registers them in
+  `Renderers#register()` precisely so they exist before `ShaderManager` precompiles; that reasoning is
+  unverified;
+* two clients on one server seeing each other's animations;
+* that the recipes are craftable in game (the codecs accept them, but `category` in the recipe book
+  and the creative tab are cosmetic and unconfirmed).
