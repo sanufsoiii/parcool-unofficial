@@ -412,3 +412,12 @@ and per the resources jar (`assets/minecraft/items/chain.json` exists, `iron_cha
   1.21.5 `KeyMapping.MAP` is `Map<InputConstants$Key, KeyMapping>` — one mapping per physical key,
   `javap` line 4 of `net.minecraft.client.KeyMapping` — so ParCool's 16 shared keys still evict
   vanilla's. The call from `KeyRecorder#onClientTick` is still there.
+
+## 10. Published artifacts
+
+```
+0.1-mc1.21.4fabric-3.4.3.3.jar     sha256 e85246799a4ecf9abdccf9970fccfc4c8dddb05d39a3a93cc7e376e3c307f714
+0.1-mc1.21.4neoforge-3.4.3.3.jar   sha256 cb7f18254649f5b843daa975bfd68a1d205b76efe4bd782817ba5895c465846f
+```
+
+copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
