@@ -55,3 +55,8 @@ fabric/build/libs/
 neoforge/build/libs/
 *.class
 *.log
+
+# Dumps of a game session, pasted into the repository root while debugging. They carry the local
+# path layout, the player name and the whole resource-reload noise, and are of no use to anyone
+# reading the port.
+*.txt

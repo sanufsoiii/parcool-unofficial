@@ -88,6 +88,7 @@ public class KeyBindings {
     private static boolean isMetaKeyDown(KeyMapping mapping, int modifier) {
         InputConstants.Key key = keyOf(mapping);
         if (key.getType() == InputConstants.Type.MOUSE) return false;
+        if (!isPollableKeysym(key)) return false;
         Window window = mc().getWindow();
         boolean modifierDown = switch (modifier) {
             case GLFW.GLFW_MOD_CONTROL -> InputConstants.isKeyDown(window, GLFW.GLFW_KEY_LEFT_CONTROL);
@@ -121,11 +122,30 @@ public class KeyBindings {
      * are still created and registered so the keys appear in the Controls screen and can be
      * rebound; they are only used for their name, category and bound key, never for their state.
      */
+    /**
+     * Whether {@code glfwGetKey} can be handed this keysym.
+     *
+     * <h2>Why this exists</h2>
+     * An unbound ParCool action - Flipping and QuickTurn default to {@link GLFW#GLFW_KEY_UNKNOWN} -
+     * carries the keysym {@code -1}. {@code glfwGetKey} rejects it: GLFW raises
+     * {@code GLFW_INVALID_ENUM} ({@code 0x00010003}, which is the {@code 65539} in the log) with the
+     * message {@code "Invalid key -1"}, and {@code Window#defaultErrorCallback} turns that into the
+     * three-line "########## GL ERROR ##########" block. Both of the unbound bindings are polled on
+     * every {@link KeyRecorder#onClientTick()}, so the game printed roughly forty of those blocks a
+     * second for as long as a world was loaded.
+     *
+     * <p>GLFW's own bounds check rejects anything below {@link GLFW#GLFW_KEY_SPACE} (32) as well, so
+     * the test is the range GLFW accepts rather than a special case for {@code -1}.
+     */
+    private static boolean isPollableKeysym(InputConstants.Key key) {
+        return key.getValue() >= GLFW.GLFW_KEY_SPACE;
+    }
+
     public static boolean isDown(KeyMapping mapping) {
         InputConstants.Key key = keyOf(mapping);
         Window window = mc().getWindow();
         return switch (key.getType()) {
-            case KEYSYM -> InputConstants.isKeyDown(window, key.getValue());
+            case KEYSYM -> isPollableKeysym(key) && InputConstants.isKeyDown(window, key.getValue());
             case MOUSE -> GLFW.glfwGetMouseButton(window.handle(), key.getValue()) == GLFW.GLFW_PRESS;
             // A raw scancode binding cannot be polled through the keycode API; fall back to the
             // mapping's own state, which is correct as long as the key is not shared.
