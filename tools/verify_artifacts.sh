@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Check the two distributables for this port: class counts, mixin config completeness, the access
+# Check the two distributables: class counts, mixin config completeness, the access
 # widener namespace, the absence of a refmap, mixin target remapping (Fabric) vs mojmap
 # (NeoForge), and the presence of every resource both jars must carry.
 set -u
