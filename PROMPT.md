@@ -151,6 +151,7 @@ still old-side, in which case copy the 1.21.1 side.
 | `Player#canInteractWithEntity` | present | removed; the port targets `LivingEntity#getVisibilityPercent` instead |
 | `jumpFromGround` | on `Player` | moved to `LivingEntity`; the port's hooks moved to a new `mixin.common.LivingEntityJumpMixin` |
 | `Item` description id | `BlockItem#getDescriptionId` delegates to the block | stored field set at construction ⇒ item models moved to `assets/parcool/items/*.json` |
+| `Item`/`Block` registry key (absent from this table — added while porting 1.21.5) | **does not exist**; `Item.Properties`/`BlockBehaviour.Properties` have no `setId`, and there is no `Objects.requireNonNull(id, …)` in `effectiveDescriptionId()`/`effectiveDrops()` | **mandatory from 1.21.2 on**: `Properties#setId(ResourceKey)` on both, and `effectiveDescriptionId()`/`effectiveDrops()` end in `Objects.requireNonNull(this.id, "Item id not set")` / `"Block id not set"`. Architectury's `DeferredRegister` does not set it, so it must be set by hand on every item *and* every block |
 | Translation keys | `key.categories.parcool` | `key.category.parcool` |
 | NeoForge mapping naming | **mojmap**, despite the `client-…-srg.jar` filename | mojmap as well (verified against a shipped NeoForge mod) — re-verify for your NeoForge version, do not assume |
 

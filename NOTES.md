@@ -312,3 +312,101 @@ them:
 - The object form `{"item": ...}` for recipe ingredients does **not** parse on any of these
   versions: `Ingredient.CODEC` is a holder-set codec whose string branch is what
   `"minecraft:chain"` goes through. The string form is the correct one throughout.
+
+## The block registry key (`setId`) (added by the orchestrator, after the port was built)
+
+`Blocks.java` built both hooks from `BlockBehaviour.Properties.of().mapColor(…).strength(…).sound(…)`
+with no registry key. That is a hard crash on 1.21.5, and the build cannot see it. The evidence is
+`javap` against the 1.21.5 mojmap jar this file already names in §1 — the plain remapped jar under
+`.gradle/loom-cache/minecraftMaven/net/minecraft/`, **not** the `-sources` jar, which is generated
+with the access widener already applied and therefore lies about visibility.
+
+```
+net.minecraft.world.level.block.state.BlockBehaviour$Properties
+  private net.minecraft.resources.ResourceKey<net.minecraft.world.level.block.Block> id;
+  ...
+  public BlockBehaviour$Properties setId(ResourceKey<Block>);        // javap line 79
+  protected Optional<ResourceKey<LootTable>> effectiveDrops();        // javap line 58
+  protected String effectiveDescriptionId();                         // javap line 81
+```
+
+`javap -c` on the same class, `effectiveDrops()`:
+
+```
+5:  getfield      #151   // Field drops:Lnet/minecraft/resources/DependantName;
+8:  ldc_w         #345   // String Block id not set
+11: invokestatic  #351   // Method java/util/Objects.requireNonNull:(…)
+14: checkcast     #353   // class net/minecraft/resources/ResourceKey
+17: invokeinterface #355 // DependantName.get(ResourceKey)
+```
+
+`effectiveDescriptionId()` is the same three lines with the same constant (`javap -c` output lines
+653-664), and `BlockBehaviour`'s constructor calls **both** while the block is being constructed:
+
+```
+net.minecraft.world.level.block.state.BlockBehaviour(Properties)
+  14: invokevirtual #102  // Properties.effectiveDrops:()Ljava/util/Optional;
+  22: invokevirtual #108  // Properties.effectiveDescriptionId:()Ljava/lang/String;
+```
+
+So the `NullPointerException("Block id not set")` is thrown while
+`new WoodenZiplineHookBlock(...)` / `new IronZiplineHookBlock(...)` run, i.e. while Architectury's
+`DeferredRegister` is filling `Registries.BLOCK` — not later, when the game happens to ask for a
+description, a model or a loot table. The item half of the same 1.21.2 change is in
+`Item$Properties#effectiveDescriptionId()` (`javap -c` line 451) and `#effectiveModel()` (line 464),
+both ending in `requireNonNull(id, "Item id not set")`, and `Items.java` already handles it.
+
+Architectury's `DeferredRegister` does not set the key. Checked by running `javap -p -c` over every
+class under `dev/architectury/registry` and `dev/architectury/impl` in `architectury-fabric-16.1.4.jar`
+and grepping for `setId`: **zero** hits. Vanilla's `Blocks.register` and NeoForge's
+`DeferredRegister.Blocks` both set it, which is exactly why the omission looks harmless while
+developing against a NeoForge classpath and is fatal under Architectury.
+
+**Fix** (`common/src/main/java/com/alrex/parcool/common/block/Blocks.java`): a small
+`key(String)` helper and `.setId(key("wooden_zipline_hook"))` / `.setId(key("iron_zipline_hook"))`
+on the two property chains, with the reason in the javadoc. The comment is not decoration: without
+it the call looks like a duplicate of the name already passed to `REGISTER.register`, the next
+reader removes it, and the mod dies at init with no compile-time signal. The 1.21.6 and 1.21.7 trees
+carry the same call for the same reason.
+
+**Warning for the next port.** `setId` is mandatory on the whole 1.21.2+ branch, not on 1.21.4 and
+1.21.5 only. The read-only 1.21.1 tree has no `setId` anywhere, and that is *correct for 1.21.1* —
+but a port that imports the 1.21.1 base and targets 1.21.2 or later inherits the crash from the
+base, even though the base itself boots. Verify `Blocks.java` and `Items.java` against the **target**
+jar, never against the tree the code was copied from. (The read-only 1.21.11 tree does have both —
+`Blocks.java:33,43` and `Items.java:25` — so the 1.21.1 tree is the real trap here, not 1.21.11.)
+
+### Checked in this pass, already correct, left alone
+
+* `Item.Properties#useBlockDescriptionPrefix()` exists once in the 1.21.5 jar and is applied on
+  **both** `BlockItem` properties via `Items.blockItemProperties(String)`, which only the two hooks
+  call. Its body swaps in the `BLOCK_DESCRIPTION_ID` `DependantName`, which yields
+  `block.parcool.*` — and `assets/parcool/lang/en_us.json` defines
+  `block.parcool.wooden_zipline_hook` / `block.parcool.iron_zipline_hook` and no
+  `item.parcool.*zipline_hook*`. Keys agree.
+* `assets/parcool/items/*.json` is the right folder from 1.21.4: the target resources jar
+  (`neoforge-21.5.98-minecraft-resources-aka-client-extra.jar`) has 1396 entries under
+  `assets/minecraft/items/`. All three files are in the built jars; the neighbouring
+  `models/item/*.json` files are inert and untouched.
+* Recipes: already the **string** ingredient form, which is the only form 1.21.5 accepts (checked
+  against the real `Ingredient.CODEC`, as in the section above), `"category": "misc"` present and
+  optional, `minecraft:chain` correct for this version (`assets/minecraft/items/chain.json` exists,
+  `iron_chain.json` does not). No change.
+* `pack.mcmeta`: `version.json` in the target resources jar says
+  `"pack_version": {"resource": 55, "data": 71}`. The file says `pack_format: 55` plus
+  `supported_formats: [55, 71]`. 1.21.5's `PackMetadataSection` reads `pack_format` through
+  `Codec.INT.fieldOf` and `supported_formats` through
+  `InclusiveRange.codec(Codec.INT)` + `Codec.lenientOptionalFieldOf` (`javap -c`, `method_52434`),
+  and `ExtraCodecs#intervalCodec` accepts both the list form `[55, 71]` and the object form
+  `{"min_inclusive":…,"max_inclusive":…}` — confirmed by decoding all three shapes against the real
+  `InclusiveRange.INT` of this jar. The list form is what ships, and it parses. There is no
+  `min_format` / `max_format` on 1.21.5; those arrive with the 1.21.11 shapes. Nothing to change.
+* `restoreVanillaBindings` is present and still needed: 1.21.5's `KeyMapping.MAP` is
+  `Map<InputConstants$Key, KeyMapping>` — one mapping per physical key (`javap`, `net.minecraft.client.KeyMapping`
+  line 4) — so ParCool's 16 shared keys still take right-click / Space / Left-Ctrl away from vanilla
+  without the repair. The `KeyRecorder#onClientTick` call is still there.
+
+### Not verified
+
+Minecraft was not launched. The `setId` crash and its fix are established from the constructor
+bytecode of the two target jars, not from a run, and the mixin set remains statically verified only.
