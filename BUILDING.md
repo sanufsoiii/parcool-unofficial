@@ -1,23 +1,28 @@
 # Building ParCool (Architectury, Minecraft 1.21.9)
 
-Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
-`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` in
-the project and no machine-specific path anywhere in the build.
+Requires JDK 21 or newer. The toolchain is declared through
+`java { toolchain { languageVersion = 21 } }` in `build.gradle`, and `org.gradle.java.home` is not
+set: there is no machine-specific path anywhere in the build.
 
 Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.9, NeoForge 21.9.16-beta,
-Fabric Loader 0.19.5, Fabric API 0.134.1+1.21.9, Architectury API 18.0.8, Architectury Loom 1.17.493,
-ModDevGradle 2.0.148, Gradle 9.4.1. `NOTES.md` records the endpoint each number came from.
+Fabric Loader 0.19.5, Fabric API 0.134.1+1.21.9, Architectury API 18.0.5, Architectury Loom 1.17.493,
+ModDevGradle 2.0.148, Gradle 9.4.1. The endpoint each number came from is written down in the comment
+blocks of `gradle.properties` and `settings.gradle`. Architectury API is **18.0.5**, not 18.0.8: 18.0.6
+and later drag in a fabric-api that hard-requires MC 1.21.10, which Fabric Loader refuses here at
+resolution time.
 
 Two of those deserve a note:
 
 * **NeoForge 21.9.16-beta** — every published NeoForge build for MC 1.21.9 carries the `-beta`
   suffix; the `21.9.x` line stops at `.16-beta` and the next entry in the metadata is `21.11.42`.
-* **Architectury API 18.0.8** — decided from `architectury-fabric`'s own `fabric.mod.json`, which is
-  the only signal that discriminates: the 18.x line declares `depends.minecraft = "~1.21.7"`
-  (`>=1.21.7 <1.22.0`) and the 19.x line declares `~1.21.11`, which **1.21.9 does not satisfy**.
-  `architectury-neoforge` declares the same wide `[1.21.4,)` / `[21.0.110-beta,)` range in every
-  16.x–19.x build and therefore says nothing. Architectury published nothing between 1.21.7 and
-  1.21.11, so 1.21.8 / 1.21.9 / 1.21.10 all land in the 18.x window.
+* **Architectury API 18.0.5** — the *line* is decided from `architectury-fabric`'s own
+  `fabric.mod.json`, which is the only signal that discriminates: the 18.x line declares
+  `depends.minecraft = "~1.21.7"` (`>=1.21.7 <1.22.0`) and the 19.x line declares `~1.21.11`, which
+  **1.21.9 does not satisfy**. `architectury-neoforge` declares the same wide `[1.21.4,)` /
+  `[21.0.110-beta,)` range in every 16.x–19.x build and therefore says nothing. Architectury
+  published nothing between 1.21.7 and 1.21.11, so 1.21.8 / 1.21.9 / 1.21.10 all land in the 18.x
+  window. The *version* inside that line is then settled by the fabric-api it pulls — see
+  `gradle.properties`.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -65,21 +70,27 @@ Each contains the `:common` code and assets plus the loader module's own classes
 
 Loom's compile classpath carries the union of every dependency's access wideners, so a mod can
 compile against a member that only Architectury or fabric-api widens — and then fail on a real client
-where the other mod's version differs. Every member this port reaches across a package boundary is
-therefore declared explicitly in `common/src/main/resources/parcool.accesswidener`, and the NeoForge
-mirror of that list is trimmed to what is still private in the NeoForge
-`21.9.16-beta` runtime artifact (`neoforge/build/moddev/artifacts/neoforge-21.9.16-beta.jar`):
+where the other mod's version differs. Every member this mod reaches across a package boundary is
+therefore declared explicitly in `common/src/main/resources/parcool.accesswidener`, and
+`neoforge/src/main/resources/META-INF/accesstransformer.cfg` mirrors it member for member:
 
-| Member | Fabric (AW) | NeoForge (AT) |
-|---|---|---|
-| `Entity#onGround` | field | not needed — public on NeoForge |
-| `LivingEntity#swimAmount` / `#swimAmountO` | field | not needed |
-| `Player#canPlayerFitWithinBlocksAndEntitiesWhen` | method | not needed |
-| `ArgumentTypeInfos#register` | shadow only | **yes** — still `private static` on 1.21.9 |
-| `RenderType#create(String, int, RenderPipeline, CompositeState)` | method | not needed |
-| `RenderStateShard#NO_TEXTURE` / `#LIGHTMAP` | field | not needed |
-| `RenderPipelines#PIPELINES_BY_LOCATION` | field | **yes** — still `private static` |
-| `RenderPipelines#MATRICES_FOG_SNIPPET` | field | not needed |
+| Member | widened on |
+|---|---|
+| `Entity#onGround` | both |
+| `LivingEntity#swimAmount` / `#swimAmountO` | both |
+| `Player#canPlayerFitWithinBlocksAndEntitiesWhen` | both |
+| `ArgumentTypeInfos#register` | both |
+| `RenderType#create(String, int, RenderPipeline, CompositeState)` | both |
+| `RenderStateShard#NO_TEXTURE` / `#LIGHTMAP` | both |
+| `RenderPipelines#PIPELINES_BY_LOCATION` | both |
+| `RenderPipelines#MATRICES_FOG_SNIPPET` | both |
+
+Mirroring rather than trimming is deliberate. Reading the AT jar with `javap` answers the wrong
+question: those bytes are the state *before* NeoForge applies its own access transformers, the classes
+are transformed in memory at launch, and after that the members are private. A member that looks
+public in the artifact fails the moment a player ticks, while an AT entry for an already-public
+member is harmless — so the cost is asymmetric and the access widener is the authoritative list. The
+header of the AT file has the full reasoning and the `IllegalAccessError` it prevents.
 
 ## Running
 

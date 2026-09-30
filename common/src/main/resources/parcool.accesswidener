@@ -16,10 +16,10 @@ accessible method net/minecraft/world/entity/player/Player canPlayerFitWithinBlo
 # pipeline out of RenderType#create + RenderStateShard's two private constants + the two private
 # RenderPipelines members it is assembled from. All of them are inaccessible from another package.
 #
-# These four entries are NOT redundant with fabric-api: :common compiles only because
+# These entries are NOT redundant with fabric-api: :common compiles only because
 # fabric-transitive-access-wideners-v1 happens to widen RenderType#create, which makes the dependency
 # on that one module invisible until it is removed. Declaring them here is what makes the mod
-# self-sufficient; see NOTES.md, "fabric-api was silently widening RenderType#create".
+# self-sufficient.
 accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;ILcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
 accessible field net/minecraft/client/renderer/RenderStateShard NO_TEXTURE Lnet/minecraft/client/renderer/RenderStateShard$EmptyTextureStateShard;
 accessible field net/minecraft/client/renderer/RenderStateShard LIGHTMAP Lnet/minecraft/client/renderer/RenderStateShard$LightmapStateShard;

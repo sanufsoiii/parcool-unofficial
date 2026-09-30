@@ -52,7 +52,7 @@ import java.util.function.BiConsumer;
  * registration on Fabric.</b>
  *
  * <h2>Architectury 18.x fixed this upstream, but the guard stays</h2>
- * This port pins {@code architectury 18.0.5} (see {@code gradle.properties}: 18.0.6+ drags in a
+ * This tree pins {@code architectury 18.0.5} (see {@code gradle.properties}: 18.0.6+ drags in a
  * fabric-api that hard-requires MC 1.21.10, which Fabric Loader rejects here at resolution time).
  * {@code javap -v} on {@code NetworkManagerImpl$1} from {@code architectury-fabric-18.0.5.jar} shows
  * that {@code registerS2C} carries <b>no</b> {@code @Environment} annotation any more. Instead
@@ -70,7 +70,7 @@ import java.util.function.BiConsumer;
  *
  * <p>So on 18.0.5 nothing is stripped, nothing is unimplemented, and the direct
  * {@code registerReceiver(S2C, ...)} call survives. <b>Verified: the dedicated server booted to
- * {@code Done (} on this port before this guard was added</b> - see NOTES.md. This is a genuinely
+ * {@code Done (} on this tree before this guard was added</b>. This is a genuinely
  * different situation from 1.21.8's 17.0.8, not a milder version of the same failure, and the log
  * confirms it.
  *

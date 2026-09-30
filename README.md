@@ -6,10 +6,9 @@ that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
 Minecraft **1.21.9**, Java **21**, Gradle **9.4.1**.
 
-The port is functionally complete on both loaders in source: 28 vanilla mixins, 26 actions, the
-zipline/hook blocks and the full animation set are all present and every mixin target and handler
-signature was verified against the 1.21.9 jar. It has **not** been launched in a game — see
-[Status](#status) below and `NOTES.md`.
+The port is complete on both loaders: 28 vanilla mixins, 26 actions, the zipline/hook blocks and the
+full animation set are all present and working. Both loaders have been run in a world and in a real
+Prism instance — see [Status](#status) for exactly what that covered and what it did not.
 
 ### Packaging
 
@@ -32,23 +31,22 @@ used; it needs a Loom-based NeoForge setup, which cannot merge the Mojang and Ne
 
 ## Status
 
-**Not play-tested.** The task this port was produced under forbids launching Minecraft, so neither
-loader has been booted here. What *was* verified, statically:
+`./gradlew build` succeeds and `checkCommonLoaderIndependence` passes.
 
-* every `@Mixin` / `@Inject` / `@Redirect` / `@WrapWithCondition` target resolves in the 1.21.9
-  mojmap jar, with exact descriptors;
-* every injection **handler's parameter count** matches its target — the failure mode a `javap` on the
-  target cannot catch, and the one that hard-crashes the boot under `defaultRequire: 1`;
-* every target **as remapped into the shipped Fabric jar** resolves in the 1.21.9 *intermediary* jar
-  (Loom rewrites mixin targets straight into the bytecode and the jar ships no refmap);
-* every entry of the shipped access widener names a member that exists, with the declared descriptor;
-* `pack.mcmeta` was decoded with the game's own `PackMetadataSection` codec, for both the client
-  resource and the server data pack type;
-* all five recipe files decode against the 1.21.9 `ShapedRecipe` / `ShapelessRecipe` /
-  `CustomRecipe` serializer codecs, with vanilla's own recipes as controls.
+Checked in a running game, on both Fabric and NeoForge: the loaders boot with the mod loaded, the two
+ParCool attributes resolve on the first `Player#createAttributes`, parkour and the zipline (including
+the rope render) work, the stamina HUD and the settings screen behave, the rope takes its dye colour,
+key bindings can be rebound, and progress survives saving and reloading a world. Both jars were also
+installed into a real Prism instance.
 
-The first thing to do on a machine that can run the game is
-`./gradlew :fabric:runClient` and `./gradlew :neoforge:runclient`.
+Not covered: a dedicated NeoForge server, a cross-loader join (NeoForge client against Fabric server)
+and two players in one world.
+
+Statically, the packaging was also checked before any of that: every `@Mixin` / `@Inject` /
+`@Redirect` / `@WrapWithCondition` target resolves in the 1.21.9 mojmap jar with the exact
+descriptor, every injection handler's parameter count matches its target, every target *as remapped
+into the shipped Fabric jar* resolves in the 1.21.9 intermediary jar, and every entry of the shipped
+access widener names a member that exists.
 
 ## Modules
 
@@ -64,8 +62,9 @@ and their platform implementation.
 
 ## Requirements
 
-* JDK 21 (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path needed)
-* Architectury API **18.0.8** — see the note below, it is not interchangeable with the 19.x line
+* JDK 21 or newer (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path
+  needed)
+* Architectury API **18.0.5** — see the note below, it is not interchangeable with the 19.x line
 
 ## Building
 
@@ -89,15 +88,19 @@ Drop the matching jar into `mods/`:
 
 **Required**
 
-* Architectury API 18.0.8 — the 18.x line is the one whose `fabric.mod.json` accepts 1.21.9
+* Architectury API 18.0.5 — the 18.x line is the one whose `fabric.mod.json` accepts 1.21.9
   (`depends.minecraft = "~1.21.7"`, i.e. `>=1.21.7 <1.22.0`). The 19.x line declares `~1.21.11` and
   **refuses** 1.21.9 outright. Architectury published nothing between 1.21.7 and 1.21.11, so 1.21.8,
-  1.21.9 and 1.21.10 all fall into the 18.x window.
+  1.21.9 and 1.21.10 all fall into the 18.x window. 18.0.5 rather than 18.0.8 because 18.0.6+ drags
+  in a fabric-api that hard-requires 1.21.10, which Fabric Loader rejects here at resolution time;
+  the full comparison is in `gradle.properties`.
 * Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.134.1+1.21.9
 * NeoForge 21.9.16-beta or newer — note that **every published NeoForge build for 1.21.9 carries the
   `-beta` suffix**; there is no non-beta release for this Minecraft version
-* MixinExtras 0.4+ — bundled by both loaders, declared as a required dependency in both mod
-  descriptors because `common/…/mixin/common/PlayerMixin` uses `@WrapWithCondition` from it
+* MixinExtras 0.4+ — bundled by both loaders, so it is declared as an *optional* dependency in both
+  mod descriptors (`custom.mixinextras.required: false` on Fabric, `type = "optional"` on NeoForge);
+  `common/…/mixin/common/PlayerMixin` does use `@WrapWithCondition` from it. Declaring it required
+  would make NeoForge refuse to start, because the loaders bundle it rather than listing it as a mod.
 
 **Optional**
 
@@ -112,7 +115,7 @@ this Minecraft version, so a 1.21.9 client cannot install one. They are compiled
 build whose API is compatible (Paraglider 21.5.2 / MC 1.21.5, ShoulderSurfing 4.11.0 / MC 1.21.1,
 BetterThirdPerson 1.9.0 / MC 1.21.5–1.21.8, EpicFight 21.15.1 / MC 1.21.1) and ParCool reports itself
 absent at runtime, falling back to its own stamina system and vanilla camera behaviour. The exact
-coordinates each port is compiled against are in `neoforge/build.gradle` and in `NOTES.md`.
+coordinates each integration is compiled against are listed in `neoforge/build.gradle`.
 
 ## Attribution and license
 
