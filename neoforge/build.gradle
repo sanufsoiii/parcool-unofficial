@@ -39,7 +39,7 @@ neoForge {
 			// which is how the client half of the mixin set is verified.
 			jvmArguments.addAll '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
 			// `./gradlew :neoforge:runClient -PparcoolQuickPlay=host:port` boots straight into a server,
-			// which is how the cross-loader join (M2/M3/M4) is reproduced without a mouse. See
+			// which is how a cross-loader join is reproduced without a mouse. See
 			// BUILDING.md; the same property drives :fabric:runClient.
 			if (project.hasProperty('parcoolQuickPlay')) {
 				programArguments.addAll '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
