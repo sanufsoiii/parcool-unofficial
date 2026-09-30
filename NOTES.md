@@ -454,3 +454,14 @@ below a `static {}` that uses it. If a local copy is genuinely unavoidable it mu
 above every initialiser that reads it. And check the field's real visibility with `javap -p`
 rather than inferring it from neighbouring versions - here the neighbouring ports could see it,
 and 1.21.6 could not, but not for the reason claimed.
+
+## Live-client result (human player, not an orchestrator)
+
+Fabric client, human in a world: **all actions, zipline, HUD, settings and inventory textures work.
+Approved.** Fabric dedicated server reaches `Done (` with `AbstractMethodError` 0.
+
+Run under three clients at once (1.21.5, 1.21.6, 1.21.8). At boot on this build:
+`Mixin apply failed` 0, `IllegalReferenceCount` 0, `GL ERROR` 0, `Invalid key` 0.
+
+Still not exercised on this port: NeoForge (never launched on any port), and the cross-loader
+join (a NeoForge client against this Fabric server).
