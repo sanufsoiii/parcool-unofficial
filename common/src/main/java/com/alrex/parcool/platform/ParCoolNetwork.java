@@ -18,16 +18,14 @@ import java.util.function.BiConsumer;
  *     {@code NetworkChannel#register} registered a C2S <i>and</i> an S2C receiver under the same id
  *     ("Cannot register payload … as it is already registered"). A bidirectional message therefore
  *     needs one id per direction (see {@code NetworkRegistries}).</li>
- *     <li><b>Fabric</b>: in Architectury 13.0.11 the raw path threw
- *     {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C}, so
- *     {@code NetworkChannel} was the only working path there and the two loaders ended up with
- *     different wire ids ({@code parcool:payload.*} on NeoForge, {@code parcool:main/<hash>} on
- *     Fabric). architectury-fabric <b>14.0.4</b> does implement {@code registerS2C} — verified with
- *     {@code javap} on the published jar, where {@code NetworkManagerImpl$1} declares both
- *     {@code registerC2S} and {@code registerS2C}, and {@code NetworkAggregator#registerReceiver}
- *     still fills {@code C2S_TYPE}/{@code S2C_TYPE} from the id overload. So on this line the two
- *     loaders share one path and one set of ids ({@code parcool:payload.*} plus a {@code .c2s}
- *     variant).</li>
+ *     <li><b>Fabric</b>: {@code NetworkChannel} cannot be used on a dedicated server at all — it
+ *     registers the S2C receiver only when {@code Platform.getEnvironment() == Env.CLIENT}, so
+ *     {@code NetworkAggregator.S2C_TYPE}/{@code S2C_CODECS} stay empty there and every
+ *     server-to-client send dies in {@code collectPackets}. The raw id path stays, and
+ *     {@code FabricParCoolNetwork} splits the two sides the way Architectury's own javadoc on
+ *     {@code NetworkManager#registerS2CPayloadType} prescribes: a receiver on the client,
+ *     {@code registerS2CPayloadType} on the dedicated server. Both loaders therefore keep one code
+ *     path and one set of ids ({@code parcool:payload.*} plus a {@code .c2s} variant).</li>
  * </ul>
  *
  * <p>Mixing the two overloads is what M4 warns about: the {@code ResourceLocation} one fills

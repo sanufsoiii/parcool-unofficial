@@ -259,18 +259,48 @@ the one you are looking at.
 
 ## 9. Phase 6 — actually run both loaders
 
-> **For the 1.21.2 port this whole phase's *run* part was cancelled by the task brief, and the
-> acceptance was `./gradlew build` + artifact inspection instead.** The checklist below was therefore
-> *not* executed; NOTES.md §8 lists it as untested. If you are reading this on another version, the
-> checklist is still the right thing to do.
+> **Correction to the 1.21.2 run of this phase (the port's own notes, kept here so the next port
+> inherits it): the acceptance was `./gradlew build` + artifact inspection, and that was not enough.**
+> `./gradlew build` was green, `:fabric:runClient` booted into a world with no errors, and
+> `:fabric:runServer` still died at mod init with
+> `AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C`. A **dedicated server is
+> the only oracle for this defect class** — see §9.1 — so add `:fabric:runServer` to the checklist
+> and treat a green `Done (` in its log as part of "done".
 
 A port that only compiles is not a port.
 
 ```bash
 ./gradlew build
+./gradlew :fabric:runServer
 ./gradlew :fabric:runClient
 ./gradlew :neoforge:runclient
 ```
+
+### 9.1 On Architectury 14.x, `NetworkManager.registerReceiver(Side.S2C, …)` cannot run on a server
+
+This is the single most expensive trap in this port family, and the neighbouring 1.21.3 tree makes
+it worse rather than better, so read it before touching `platform/ParCoolNetwork.java`:
+
+- `architectury-fabric`'s `NetworkAggregator.Adaptor#registerS2C` is annotated
+  `@Environment(EnvType.CLIENT)`, and Fabric Loader's `EnvironmentStripper` **deletes**
+  `@Environment(CLIENT)` members on a dedicated server. The class then no longer implements the
+  interface method, and the first `registerS2CReceiver` call throws `AbstractMethodError`. It works
+  on a client, so **the client cannot see this bug at all**.
+- The correct split is the one Architectury's own javadoc on
+  `NetworkManager#registerS2CPayloadType` prescribes: `registerReceiver` on the client,
+  `registerS2CPayloadType(id)` on the dedicated server. `Adaptor#registerS2CType` is *not*
+  `@Environment`-annotated, so it survives. Wire format is unchanged — both shapes register
+  `BufCustomPacketPayload.streamCodec(type)` for the same id.
+- **Do not "fix" it by switching to `NetworkChannel` the way the 1.21.3 tree does.**
+  `NetworkChannel#register` only registers the S2C receiver when
+  `Platform.getEnvironment() == Env.CLIENT`, so on a dedicated server `NetworkAggregator.S2C_TYPE` /
+  `S2C_CODECS` stay empty and **every server-to-client send dies with a `NullPointerException` in
+  `collectPackets`**. The server reaches `Done` and the mod is silently dead. Verify
+  `javap -c dev/architectury/networking/NetworkChannel` before copying that shape.
+- `architectury_api_version` is not a way out: 15.x already declares `minecraft: ~1.21.4-`, so going
+  above 14.0.4 means retargeting Minecraft.
+
+
 
 Before you start, decide how you will get into a world without a mouse, and put it in the run config
 if it is not already there — a `--quickPlaySingleplayer <world>` / `--quickPlayMultiplayer <host:port>`
@@ -281,6 +311,10 @@ check all of this:
 - [ ] Enter a world. The ParCool attributes resolve on the first `Player#createAttributes` — that is
       the step that dies with `Registry is already frozen` if the NeoForge attribute split is wrong.
 - [ ] `grep "GL ERROR" <log>` is empty. Also `grep "Invalid key"` — the GLFW keysym guard.
+- [ ] `:fabric:runServer` reaches `Done (` and its log has no `AbstractMethodError` and no
+      `Error starting minecraft server`. This needs `fabric/run/eula.txt` with `eula=true` and a
+      `fabric/run/server.properties`; the server pauses on an empty world but stays up, which is
+      enough for the check.
 - [ ] Every key binding listed in `assets/parcool/lang/en_us.json` under `key.parcool.*` is
       rebindable in Options → Controls, and pressing it actually drives its action.
 - [ ] A vanilla key that ParCool also binds still works (right-click places a block, Space jumps,
@@ -341,6 +375,8 @@ did not create.
 ## 12. Definition of done
 
 - [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
+- [ ] **`:fabric:runServer` reaches `Done (`.** A green client proves nothing about the dedicated
+      server; see §9.1.
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev.
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
