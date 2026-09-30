@@ -235,6 +235,26 @@ parallel and the Gradle daemons are shared.
 
 A port that only compiles is not a port.
 
+> ### The dedicated server is not optional, and it is the only thing that catches one defect class
+>
+> Fabric Loader's `EnvironmentStripper` deletes members annotated `@Environment(EnvType.CLIENT)` when
+> the game runs on a **dedicated server**. Architectury's `NetworkAggregator.Adaptor#registerS2C` is
+> annotated that way on the 14.x–17.x lines, so `NetworkManager.registerReceiver(Side.S2C, …)` compiles
+> fine, works on a client, works in single player (the integrated server shares the client JVM and its
+> class loader), and then kills a dedicated server at mod init with `AbstractMethodError`. That is the
+> defect this port shipped with, and it survived months of testing because every signal available at
+> the time — clean client boot, working single player, green build — is compatible with a mod that
+> cannot start a server at all.
+>
+> **Run `./gradlew :fabric:runServer` and require both `Starting Minecraft server on` and `Done (`.**
+> A client run is not a substitute, single player is not a substitute, and a green build is not a
+> substitute. `javap -v` on `dev/architectury/networking/fabric/NetworkManagerImpl$1.class` and look
+> for the `Environment` annotation on `registerS2C`: present through the 17.x line, gone from 18.0.5
+> onward. Full analysis and the fixed log are in NOTES.md.
+>
+> If the brief ever does allow launches, the dedicated server is the first thing to run — before the
+> client, because it is headless and cheap.
+
 > **CANCELLED for this tree.** The brief for this port forbids launching Minecraft in any form (dev
 > run, dedicated server, headless client). Acceptance is `./gradlew build` plus the contents of the two
 > artifacts, and the whole runtime checklist below is *open*. BUILDING.md and NOTES.md say so in the
@@ -323,6 +343,11 @@ did not create.
       Fabric jar, mojmap mixin targets in the NeoForge jar).
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev. — **open:
       launching the game is forbidden for this tree.**
+- [ ] `./gradlew :fabric:runServer` prints `Starting Minecraft server on` **and** `Done (`, and
+      `grep -c AbstractMethodError` on the log is `0`. This is headless and needs no GPU, so it is
+      *not* covered by a "no game launches here" restriction. It is the only check that catches
+      `@Environment(EnvType.CLIENT)` stripping, which the compiler, the client and single player all
+      miss. — **done on this tree; see NOTES.md.**
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
       commented-out blocks, no absolute local paths, no machine-specific paths in the build.
