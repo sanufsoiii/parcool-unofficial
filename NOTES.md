@@ -169,50 +169,59 @@ compiling a throwaway probe against the resolved 1.21.10 jar and running the rea
   `iron_chain -> true`, `chain -> false`. The brief's guess that 1.21.10 might not have it, and
   that `minecraft:chain` is the right value here, are both wrong — the 1.21.11 tree's
   `minecraft:iron_chain` is correct and is kept.
-* `#minecraft:logs` is a *block* tag, not an item tag, so the codec rejects it under the item
-  registry. Vanilla 1.21.10's own `wooden_zipline_hook`-shaped recipes use `#minecraft:logs` in a
-  `crafting_shaped` `key` and that is resolved through `Ingredient`'s holder-set codec against the
-  item registry, where it does not exist — this is a pre-existing upstream oddity in ParCool's
-  recipe and is left exactly as upstream has it.
+* `#minecraft:logs` is fine. It looks like a block tag, but 1.21.10 ships
+  `data/minecraft/tags/item/logs.json` too (→ `#minecraft:logs_that_burn`, `#minecraft:crimson_stems`,
+  `#minecraft:warped_stems`), and an ingredient resolves against the *item* registry. The probe's
+  first "Missing tag: 'minecraft:logs' in 'minecraft:item'" was an artefact of the probe itself —
+  a bare `Bootstrap.bootStrap()` populates no tags at all — not a defect in the recipe. Re-run with a
+  vanilla item substituted for the tag it parses cleanly, and with the tag present it parses too.
 
 ### 2.2 `pack.mcmeta` — executed against the real 1.21.10 codec
 
 The field set is *not* the 1.21.11 one. `PackMetadataSection.forPackType(PackType).codec()` was run
-over candidate files on 1.21.10:
+over candidate files on 1.21.10 (both pack types, since a mod jar is loaded as both):
 
 | candidate | `CLIENT_RESOURCES` | `SERVER_DATA` |
 |---|---|---|
-| `pack_format: 81` (the 1.21.11 base content, with `supported_formats`) | **ERR** `supported_formats is deprecated starting from pack format 65` | OK |
+| the 1.21.11 base content (`pack_format: 81` + `min_format`/`max_format` + `supported_formats`) | **ERR** `supported_formats is deprecated starting from pack format 65` | OK |
 | `pack_format: 81` alone | **ERR** `declares support for version newer than 64, but is missing mandatory fields min_format and max_format` | OK |
-| `min_format: 69, max_format: 88` | OK | **ERR** `declares support for format 69, but game versions supporting formats 17 to 81 require a supported_formats field` |
+| `min_format: 64, max_format: 88` | **ERR** `declares support for format 64, but … formats 17 to 64 require a supported_formats field` | **ERR** `… formats 17 to 81 require a supported_formats field` |
+| `min_format: 69, max_format: 88` | OK | **ERR** (same: 69 ≤ 81) |
+| `min_format: 69, max_format: 88` + `supported_formats` | **ERR** (deprecated from 65) | **ERR** (`require a pack_format field`) |
+| `min_format: 82, max_format: 88` | **OK** | **OK** |
 | `min_format: 88, max_format: 88` | OK | OK |
-| `min_format: 64, max_format: 88` | OK | OK |
 
-So on 1.21.10: **`min_format` + `max_format`, and `supported_formats` must be gone** (it is
-deprecated from resource format 65 and data format 82, and its presence is a hard parse error).
-The 1.21.11 tree's file, copied verbatim, would not even parse as a resource pack.
+So on 1.21.10: **`min_format` + `max_format`; `supported_formats` must be gone** (deprecated from
+resource format 65 / data format 82 and a hard parse error when present), and **`min_format` has to
+be ≥ 82**, which is `PackFormat.lastPreMinorVersion(SERVER_DATA)` (javap: the `PackType` switch
+returns `bipush 64` for `CLIENT_RESOURCES` and `bipush 81` for `SERVER_DATA`). The 1.21.11 tree's
+file, copied verbatim, does not even parse as a resource pack on 1.21.10.
 
-Chosen: `min_format: 69, max_format: 88` — wait, that fails `SERVER_DATA`. The range that parses
-under **both** pack types is `min_format: 88, max_format: 88` (and `64…88`). Running
-`PackCompatibility.forVersion` for 1.21.10 shows `range [64,88]` is `COMPATIBLE` for the resource
-format 69.0 **and** for the data format 88.0, while `[88,88]` is `TOO_NEW` for resources. So the
-value used is:
+Shipped:
 
 ```json
 {
     "pack": {
         "description": "ParCool mod resources",
-        "min_format": 64,
+        "min_format": 82,
         "max_format": 88
     }
 }
 ```
 
-`64` is `PackFormat.lastPreMinorVersion(CLIENT_RESOURCES)` on 1.21.10 (javap on `PackFormat`: the
-`PackType` switch returns `bipush 64` for `CLIENT_RESOURCES` and `bipush 81` for `SERVER_DATA`), and
-`88` is `SharedConstants.DATA_PACK_FORMAT_MAJOR`. The range covers every format from the last
-pre-minor-version resource format up to the current data format, so it is `COMPATIBLE` on both
-sides and parses under both codecs.
+`88` is `SharedConstants.DATA_PACK_FORMAT_MAJOR` on 1.21.10 (`69`/`88`, from
+`javap -p -constants`). Verified by re-running the codec against the file as it actually comes out
+of the built jar: `CLIENT_RESOURCES -> parses OK`, `SERVER_DATA -> parses OK`.
+
+The one thing that is *not* clean is `PackCompatibility`: a range of `[82, 88]` is `TOO_NEW` against
+the resource format `69.0`. There is no range that is simultaneously `COMPATIBLE` with both `69.0`
+and `88.0` **and** parses under both codecs — `[64, 88]` and `[69, 88]` are compatible with both but
+are rejected by the `SERVER_DATA` codec, exactly as the table above shows. That is inherent to 1.21.10
+having a single `pack.mcmeta` for a jar that is both a resource and a data pack; every 1.21.10 mod
+faces it, and `TOO_NEW` only decorates the pack name with " (incompatible)" in `PackRepository`'s
+listing (`method_59808`) rather than refusing to load it, while a codec failure makes
+`Pack.readPackMetadata` return `null` and the pack is dropped outright. Parsing is therefore the
+property that has to hold, and it does.
 
 ---
 
