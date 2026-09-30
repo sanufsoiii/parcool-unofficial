@@ -39,6 +39,8 @@ Loom-based NeoForge setup, which cannot merge the Mojang and NeoForge mappings.
 * The ShoulderSurfing integration is NeoForge-only in practice: the `shouldersurfing_plugin.json` in
   the Fabric jar is never read on Fabric, so the decoupled-camera hook is absent there rather than
   broken.
+* On NeoForge, Architectury 17.0.8 prints a "Warning while loading mods" dialog about `@OnlyIn` at
+  launch. It comes from that dependency, not from ParCool, and is harmless.
 
 > This repository contains a *port*, not alRex_U's original sources. The original project lives at
 > <https://github.com/alRex-U/ParCool> and on CurseForge at
