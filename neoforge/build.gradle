@@ -39,7 +39,7 @@ neoForge {
 			// which is how the client half of the mixin set is verified.
 			jvmArguments.addAll '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
 			// `./gradlew :neoforge:runClient -PparcoolQuickPlay=host:port` boots straight into a server,
-			// which is how the cross-loader join (M2/M3/M4) is reproduced without a mouse. See
+			// which is how a cross-loader join is reproduced without a mouse. See
 			// BUILDING.md; the same property drives :fabric:runClient.
 			if (project.hasProperty('parcoolQuickPlay')) {
 				programArguments.addAll '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
@@ -110,7 +110,7 @@ dependencies {
 	compileOnly "io.github.llamalad7:mixinextras-common:0.4.1"
 
 	// Optional integrations. None of them is published for Minecraft 1.21.2 by the time this port was
-	// written, so the newest available 1.21.1-line builds are compiled against; see NOTES.md. All four
+	// written, so the newest available 1.21.1-line builds are compiled against. All four
 	// report themselves absent at runtime when the mod is not installed, so a client that has the
 	// 1.21.2 build of one of them works unchanged - the class shape ParCool touches is the same.
 	//   Paraglider        6739615  Paraglider-neoforge-21.1.3       (declares MC [1.21.1])
@@ -135,7 +135,7 @@ tasks.named('neoForgeIdeSync') {
 }
 
 /**
- * The distributable NeoForge jar: the SRG-transformed :common artifact plus this module's own
+ * The distributable NeoForge jar: the mojmap-named :common artifact plus this module's own
  * classes, the loader metadata and the ServiceLoader registration.
  *
  * architectury-plugin's `neoForge()` transform normally does this, but it requires a Loom extension
@@ -146,7 +146,7 @@ tasks.named('neoForgeIdeSync') {
 // The access widener and the mixin config live in :common so both loaders ship the same copy. The
 // dev runtime loads this module from its own sourceSet output, so the files have to be present here
 // as well (the distributed jar picks them up from the :common transform artifact).
-// Explodes the SRG-transformed :common artifact so its classes are part of this module's own output.
+// Explodes the mojmap-named :common artifact so its classes are part of this module's own output.
 def explodedCommon = layout.buildDirectory.dir('explodedCommon')
 
 def explodeCommon = tasks.register('explodeCommon', Copy) {

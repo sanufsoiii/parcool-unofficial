@@ -6,8 +6,10 @@ no machine-specific path anywhere in the build.
 
 Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.2, Architectury API 14.0.4,
 NeoForge 21.2.1-beta, Fabric Loader 0.16.10, Fabric API 0.106.1+1.21.2, Architectury Loom 1.7.435,
-architectury-plugin 3.5.170, ModDevGradle 1.0.24, Gradle 8.10.2.
-Where each number was resolved from is written down in [NOTES.md](NOTES.md) §1 — do not re-guess them.
+architectury-plugin 3.5.170, ModDevGradle 1.0.24, Gradle 8.10.2. Each of them is read out of the
+publisher's own `maven-metadata.xml`, and the reasoning behind the two non-obvious ones (Architectury
+API 14.0.4 and Fabric API 0.106.1) is in the comment block above `architectury_api_version` and
+`fabric_api_version` in `gradle.properties`.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -50,8 +52,9 @@ rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-c
 modules actually load; if a freshly added mixin class is present in the built jar but reported as
 "not found" at runtime, this directory is the stale one.
 
-> **Never run `./gradlew --stop` here.** Several ports are built in parallel from one Gradle home;
-> `--stop` kills every daemon, including the other jobs'. Delete the cache directories instead.
+> **Do not reach for `./gradlew --stop` to flush this.** `--stop` kills every Gradle daemon on the
+> machine, so it would also stop daemons serving unrelated Gradle projects. Deleting the cache
+> directories above is enough, and it is per-project.
 
 ## Distributables
 
@@ -85,7 +88,7 @@ Two things about the packaging are load-bearing and are explained at length in t
 ```
 
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
-ParCool mixin; that is how the mixin set is verified without a manual client session. A dedicated
+ParCool mixin. A dedicated
 server refuses to start until it is acknowledged, so before the first `:fabric:runServer` /
 `:neoforge:runServer` create `<module>/run/eula.txt` containing:
 
@@ -129,6 +132,6 @@ players.
 
 A `@Inject` whose descriptor does not match its target is **not** a compile error — it is a mixin that
 never applies, and with `"defaultRequire": 1` that is a hard boot failure. Loom's annotation processor
-only warns when it cannot remap a *name*, never a descriptor. Check them mechanically against the
-mapped jar; the recipe and the result for this tree (39 targets, 0 problems) are in
-[NOTES.md](NOTES.md) §7.
+only warns when it cannot remap a *name*, never a descriptor, so the targets are worth re-checking
+mechanically against the mapped jar with `javap` after a version bump. `-Dmixin.debug=true` on a dev
+run reports the same thing from the other side: every applied ParCool mixin is listed by name.
