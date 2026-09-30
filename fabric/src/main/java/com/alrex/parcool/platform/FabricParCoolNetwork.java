@@ -127,12 +127,12 @@ public class FabricParCoolNetwork implements ParCoolNetwork {
             boolean clientbound,
             BiConsumer<T, NetworkManager.PacketContext> handler) {
         if (clientbound && Platform.getEnvironment() == Env.SERVER) {
-            // На выделенном сервере Adaptor#registerS2C вырезан Fabric Loader'ом (у метода стоит
-            // @Environment(EnvType.CLIENT)), поэтому вызывать registerReceiver(S2C, ...) нельзя —
-            // будет AbstractMethodError. Ресивер на сервере и не нужен: он принимает пакеты, а сервер
-            // только отправляет. Достаточно зарегистрировать тип пакета, чтобы NetworkManager.toPacket
-            // знал, чем его закодировать. Внутри клиента метод не вырезается, путь остаётся прежним.
-            // Разбор причины — в javadoc класса.
+            // On a dedicated server Fabric Loader strips Adaptor#registerS2C (the method carries
+            // @Environment(EnvType.CLIENT)), so registerReceiver(S2C, ...) must not be called there -
+            // it throws AbstractMethodError. A server does not need the receiver either: it only ever
+            // sends. Registering the payload type is enough for NetworkManager.toPacket to know how to
+            // encode it. Inside the client the method is not stripped, so that path is unchanged.
+            // The full derivation is in the class javadoc.
             NetworkManager.registerS2CPayloadType(wireId);
             return;
         }
@@ -146,11 +146,11 @@ public class FabricParCoolNetwork implements ParCoolNetwork {
                 clientbound ? NetworkManager.Side.S2C : NetworkManager.Side.C2S,
                 wireId,
                 (buf, context) -> {
-                    // Декод обязан происходить здесь, на сетевом потоке, пока буфер жив: registerReceiver
-                    // отдаёт сырой буфер и освобождает его, как только лямбда вернулась. Внутри
-                    // context.queue(...) буфер уже refCnt 0, и любой VarLong.read() роняет поток
-                    // IllegalReferenceCountException. В очередь уходит только обработчик — ради
-                    // потокобезопасности, а не ради декодирования.
+                    // The decode has to happen here, on the network thread, while the buffer is still
+                    // alive: registerReceiver hands the lambda a raw buffer and releases it as soon as
+                    // the lambda returns. Inside context.queue(...) the buffer is already refCnt 0, and
+                    // any VarLong.read() then kills the thread with IllegalReferenceCountException. Only
+                    // the handler belongs in the queue, for thread safety, not the decoding.
                     T payload = erased.decode((RegistryFriendlyByteBuf) buf);
                     context.queue(() -> handler.accept(payload, context));
                 }
