@@ -315,3 +315,141 @@ them:
 - The object form `{"item": ...}` for recipe ingredients does **not** parse on any of these
   versions: `Ingredient.CODEC` is a holder-set codec whose string branch is what
   `"minecraft:chain"` goes through. The string form is the correct one throughout.
+
+## The network decode ran on a released buffer (found by launching the game, 1.21.7)
+
+**1.21.7 is the first port in this series whose client actually launched and joined a world.** The
+three waves before it all passed acceptance on "the build is green", and the bug below was sitting
+in the tree the whole time. Nothing about it is visible to a compiler, to `javac` warnings, to
+`checkCommonLoaderIndependence`, to the mixin-target checker, or to any test that does not put a
+real client on a real server. It only fires on the first ParCool packet that actually crosses the
+wire, i.e. only after a world is loaded and packets flow.
+
+### The stack that found it
+
+```
+[Server thread/ERROR] (Minecraft) Error executing task on Server
+io.netty.util.IllegalReferenceCountException: refCnt: 0
+  at io.netty.buffer.AbstractByteBuf.readByte(AbstractByteBuf.java:730)
+  at net.minecraft.network.VarLong.read(VarLong.java:28)
+  at net.minecraft.network.codec.ByteBufCodecs$8.decode(ByteBufCodecs.java:155)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.lambda$register$0(FabricParCoolNetwork.java:48)
+[Render thread/WARN] (ParCool) the server limitation snapshot has been missing for 10s,
+  so no action can start. Asking the server again (ParCoolIsActive=true).
+```
+
+It repeats every few seconds. The user described 1.21.7 as "almost nothing worked", and that is
+literally what happened: the server task dies on every incoming ParCool packet, the limitation
+snapshot never arrives, and no action can start.
+
+### Why it happened
+
+One line, identical in `FabricParCoolNetwork` and `NeoForgeParCoolNetwork`:
+
+```java
+(buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+```
+
+`NetworkManager.registerReceiver` hands the receiver a **raw** `RegistryFriendlyByteBuf` and releases
+it as soon as that lambda returns. `context.queue(...)` moves the work to the main thread, i.e. to
+*after* the release. The decode therefore reads memory that netty has already freed, and the first
+`VarLong.read()` in any ParCool payload codec throws `IllegalReferenceCountException: refCnt: 0`.
+
+The queue is needed for **thread safety of the handler** — the handler touches the player, the level
+and the mod's own state, none of which may be touched from a netty thread. The queue is **not**
+needed for decoding. Decoding is pure byte-reading, it is safe on the netty thread, and it is only
+safe on the netty thread.
+
+The correct order is decode first, then queue only the handler:
+
+```java
+(buf, context) -> {
+    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+    context.queue(() -> handler.accept(payload, context));
+}
+```
+
+`NetworkChannel`, which the 1.21.3 Fabric path uses, has always had this shape — the channel decodes
+in its own decoder lambda and passes an already-built payload to the receiver, so
+`context.get().queue(() -> handler.accept(payload, …))` only ever queues the handler. Porting 1.21.3
+onto the raw id-based `NetworkManager` API in 1.21.5/1.21.6/1.21.7 collapsed those two lambdas into
+one and moved the decode into the queue with them. That collapse is the entire regression.
+
+The comment in the source is mandatory and must not be deleted or shortened: without it the next
+reader sees a decode that "could just as well" happen inside the `queue`, concludes the rewrite is
+equivalent, and puts the bug straight back.
+
+### This class of defect is invisible to everything except a live client
+
+Recorded separately on purpose, because it is the general lesson and not just this port's story:
+
+* `javac` sees `StreamCodec.decode(ByteBuf)` return `T` and `PacketContext.queue(Runnable)` return
+  `void`. Both signatures are correct. The bug lives entirely in *when* the call happens relative to
+  a release that happens outside the type system, in a lambda Architectury invokes.
+* `IllegalReferenceCountException` is a runtime netty invariant, not a type error. There is no
+  annotation, no null check and no assertion that would flag it.
+* Nothing in the build exercises it. `:common:checkCommonLoaderIndependence` is a source-level
+  loader-leak check; the mixin checker is a static target check; there is no client, no packet
+  capture, no integration test. Green build, green acceptance, dead mod.
+* **The packets have to actually flow.** Without a client entering a world there is no inbound
+  ParCool packet, so the lambda never runs and the bug cannot manifest. A dedicated server started
+  with no client connected proves nothing here either — the NeoForge `C2S_TYPE` NPE in §4 of this
+  file was invisible for exactly the same reason.
+* The only detector is a real client on a real server, and then reading the log. `refCnt: 0` in a
+  stack trace is the signature.
+
+## The Architectury toolchain change (1.21.7, `18.0.8` → `17.0.8`)
+
+Found while chasing the above: the client was not even reaching the packet handler, because Fabric
+Loader aborted the boot. `architectury_api_version` is now `17.0.8`, and the mod's own declared
+lower bounds moved with it (`fabric.mod.json` `"architectury": ">=17.0.8"`,
+`neoforge.mods.toml` `versionRange = "[17.0.8,)"`).
+
+Independently re-verified for this pass, from the maven metadata rather than from the handoff:
+
+| architectury-fabric | fabric-api it drags | fabric-loader it drags | vs. this port's pins | result |
+|---|---|---|---|---|
+| 18.0.8 | 0.136.0+1.21.10 | 0.17.2 | port pins 0.128.2+1.21.7 / 0.16.14 | port **loses**, broken |
+| 17.0.8 | 0.128.1+1.21.7 | 0.16.14 | port pins 0.128.2+1.21.7 / 0.16.14 | port **wins**, ok |
+
+`architectury-fabric` declares `fabric-api` as a hard runtime dependency, so Gradle's "highest wins"
+silently replaces the port's own pin. `fabric-api` builds are MC-pinned —
+`0.128.2+1.21.7` declares `minecraft >=1.21.7- <1.21.8-` (read out of its own `fabric.mod.json`),
+while `0.136.0+1.21.10` demands `>=1.21.10- <1.21.11-` and Fabric Loader refuses the boot:
+
+```
+[FabricLoader/Resolution] Immediate reason: [HARD_DEP architectury 18.0.8
+  {depends fabric-api @ [>=0.127.0]},
+  HARD_DEP_INCOMPATIBLE_PRESELECTED fabric-api 0.136.0+1.21.10
+  {depends minecraft @ [>=1.21.10- <1.21.11-)}, ROOT_FORCELOAD_SINGLE architectury 18.0.8]
+[FabricLoader/ERROR] Incompatible mods found!
+```
+
+`architectury-neoforge:17.0.8` exists and is compatible: it declares `minecraft [1.21.4,)` and
+`neoforge [21.0.110-beta,)`, which accepts this port's `21.7.25-beta`. API compatibility was
+checked rather than assumed — every `dev.architectury.*` class ParCool references
+(`NetworkManager`, `EventFactory`, `ClientGuiEvent`, `ClientPlayerEvent`, `ClientTickEvent`,
+`CommandRegistrationEvent`, `EntityEvent`, `LifecycleEvent`, `PlayerEvent`, `TickEvent`, `Platform`,
+`KeyMappingRegistry`, `EntityRendererRegistry`, `DeferredRegister`, `RegistrySupplier`, `Env`,
+`Event`, `EventResult`) is present in both 17.0.8 and 18.0.8, and `NetworkManager$PacketContext` is
+byte-identical between the two (`getPlayer`, `queue`, `getEnvironment`, `registryAccess`, `getEnv`).
+The downgrade is a strict superset for this port.
+
+For contrast, 1.21.5 and 1.21.6 were checked for the same trap and are **not** affected:
+`architectury-fabric 16.1.4` drags `fabric-api 0.119.5+1.21.5` and `architectury-fabric 17.0.6` drags
+`fabric-api 0.127.0+1.21.6`, both *below* the `0.128.2` those ports pin, so the port's own version
+wins and the classpath stays on the right Minecraft. Only 1.21.7 needed the downgrade.
+
+## Re-published artifacts (after the decode fix and the Architectury downgrade)
+
+```
+0.1-mc1.21.7fabric-3.4.3.3.jar     sha256 01209d11bb0967a26202b0348e53707c0f081de7cafb278df104939d81030ca5
+0.1-mc1.21.7neoforge-3.4.3.3.jar   sha256 5019aa85551f3bb8d909cb06e4fdc6efb89f58ce270609f33799f85cbfbc7667
+```
+
+copied to `/home/sanufsoii/ports/готовые порты/parcool/`. Both differ from the previously published
+pair (`8ee8516d22dc87088078904aabf2226452b30b29bcd0324dd4d12985e60d8350` /
+`5b328a5b765196449f24569617375683b774fa4c7f4b190cc933afc981f2676e`) — as they must, since the network
+code is in the jar. **The game was not launched after either change.** This artifact is "compiles and
+contains the fixed bytecode", which is not "works": the 1.21.7 client has to be launched again and
+have actually joined a world before the `refCnt: 0` stack trace can be called gone.
