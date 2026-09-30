@@ -781,3 +781,13 @@ are all necessary and none of them is sufficient.
 dedicated server. The evidence above is: Architectury's own source for the buffer contract,
 `javap` on the built class, and a green build. "The exception no longer appears" and "actions can
 now start" are *expected* from that evidence, not observed.
+
+### Artifacts for this fix
+
+```
+0.1-mc1.21.2fabric-3.4.3.3.jar     sha256 95fe10c25f35df3b177cb5e53c8b4ab9fd2cd57709cb0edf9d398de0cf4c2423
+0.1-mc1.21.2neoforge-3.4.3.3.jar   sha256 c7f63d5b24c01c360d83ac45fa4848fddecfe125923ac10c03e9fb02e27f11eb
+```
+
+Both hashes differ from the pair published before this fix (`67a43232…` / `48eda650…`) — this is
+code, so it must change. The game was not launched to validate it.
