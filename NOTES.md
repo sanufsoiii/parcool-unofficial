@@ -27,7 +27,7 @@ Every number below was read out of a metadata endpoint on 2026-09-30.
 | `neo_version` | `21.9.16-beta` | last `21.9.*` entry in `maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml`. **There is no non-beta NeoForge build for 1.21.9** — every `21.9.x` release carries the `-beta` suffix, and the next entry in the list is `21.11.42` |
 | `loader_version` | `0.19.5` | `meta.fabricmc.net/v2/versions/loader/1.21.9` → `loader[0].loader.version` |
 | `fabric_api_version` | `0.134.1+1.21.9` | highest `<version>*+1.21.9</version>` in `maven.fabricmc.net/.../fabric-api/maven-metadata.xml` (the line jumps from 0.134.1 straight to `0.136.0+1.21.10`) |
-| `architectury_api_version` | **`18.0.8`** | see below |
+| `architectury_api_version` | **`18.0.5`** (was `18.0.8` in phase 1) | see below, and *Phase 8* for why 18.0.8 cannot boot 1.21.9 at all |
 | `dev.architectury.loom` | `1.17.493` | highest published version in `maven.architectury.dev/dev/architectury/architectury-loom/maven-metadata.xml` |
 | `architectury-plugin` | `3.5.170` | highest in `architectury-plugin.gradle.plugin/maven-metadata.xml` |
 | `net.neoforged.moddev` | `2.0.148` | highest in `net.neoforged.moddev.gradle.plugin/maven-metadata.xml` (2.0.147 → 2.0.148 → end) |
@@ -263,9 +263,17 @@ most likely places for a remaining defect:
   remapped target inside the **shipped** Fabric jar resolves in the 1.21.9 *intermediary* jar, since
   Loom's static remap rewrites targets into the bytecode and the jar ships no refmap to fix a
   mistake at runtime. Both verifiers are self-tested against a deliberately broken target.
-* **Architectury API 18.0.8's own mixins applying on 1.21.9** (the open risk from phase 1).
+* **Architectury API's own mixins applying on 1.21.9** (the open risk from phase 1). **Resolved
+  later, from a real run** — see *Phase 8* below: the `JAVA_16` / class-version-65 warnings are
+  cosmetic, and the log shows the mixins being applied by name. The part that is *still* open is the
+  behaviour behind them, and the version moved from 18.0.8 to 18.0.5, which is itself a source of
+  unverified behaviour.
 * **Runtime behaviour of anything behind a `defaultRequire: 1` mixin**, and the visual result of the
   camera-roll path.
+* **That a ParCool packet round-trips.** A client did reach a world in this port's own run log and
+  the network was still found, by reading Architectury's source, to decode a released buffer — the
+  fix is in and proved in the bytecode, but no session has yet delivered a ParCool payload to
+  confirm it. See *The decode ran on a released buffer* below.
 * **The four optional integrations**, which cannot be exercised at all on 1.21.9 (no build exists).
 
 ---
@@ -283,6 +291,24 @@ Clean-checkout reproduction (`rm -rf build */build .gradle && ./gradlew :common:
   sha256 16983f865c3b52ea6705c7545c56f26093affb92467ab6235e082bfbbc0ac87b
 ```
 
+**Both of those were superseded by the `refCnt: 0` network fix further down, and the pair now
+published is:**
+
+```
+/home/sanufsoii/ports/готовые порты/parcool/0.1-mc1.21.9fabric-3.4.3.3.jar
+  1 208 041 bytes, 516 entries, 350 classes
+  sha256 9a4d9948321e0cf33195c49f93b383fef45eae011563a2ec3cafbfc624481f77
+/home/sanufsoii/ports/готовые порты/parcool/0.1-mc1.21.9neoforge-3.4.3.3.jar
+  1 225 035 bytes, 533 entries, 360 classes
+  sha256 398fc4bd829842073050dcb825c1d9f91c120fd3c18e1c2193c421fca4803fc1
+```
+
+The artifacts are therefore **not** byte-for-byte identical to the pre-fix pair, but the shape is:
+entry counts and class counts are identical to the pre-fix pair (516/350 and 533/360 — note the
+pre-fix note above said 361 classes for the neoforge jar, which is a miscount, the jar has always
+had 360), and the byte deltas are +37 and −18. The only changed content is the body of the receiver
+lambda in `FabricParCoolNetwork#register` and `NeoForgeParCoolNetwork#register`.
+
 Post-build checks run against the shipped jars (not the build tree):
 
 * Fabric jar: every mixin target *as remapped into the bytecode* resolves in the 1.21.9 intermediary
@@ -293,6 +319,243 @@ Post-build checks run against the shipped jars (not the build tree):
   `parcool.accesswidener`, `parcool-common.mixins.json`, `LICENSE` and the `ServiceLoader` file.
 * Both: all assets and `data/parcool/**` present; `pack.mcmeta` decoded as COMPATIBLE for both the
   client-resource and the server-data pack type.
+
+## The decode ran on a released buffer — `refCnt: 0`
+
+Found by launching a client, not by reading the code, and the faulty line had been carried into
+every port from 1.21.7 on. Fixed here in both `FabricParCoolNetwork` and
+`NeoForgeParCoolNetwork`, which were byte-identical on this line.
+
+### What the live client said
+
+```
+[Server thread/ERROR] (Minecraft) Error executing task on Server
+io.netty.util.IllegalReferenceCountException: refCnt: 0
+  at io.netty.buffer.AbstractByteBuf.readByte(AbstractByteBuf.java:730)
+  at net.minecraft.network.VarLong.read(VarLong.java:28)
+  at net.minecraft.network.codec.ByteBufCodecs$8.decode(ByteBufCodecs.java:155)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.lambda$register$0(FabricParCoolNetwork.java:48)
+[Render thread/WARN] (ParCool) the server limitation snapshot has been missing for 10s,
+  so no action can start. Asking the server again (ParCoolIsActive=true).
+```
+
+`lambda$register$0` is the receiver lambda registered in `register(...)`; the frames below it are
+the payload codec's own `VarLong` read. The second line is the consequence, not a separate bug: the
+limitation snapshot never lands, so the action watchdog fires and no action can start.
+
+### Why the decode read freed memory
+
+`NetworkManager.registerReceiver(Side, ResourceLocation, NetworkReceiver)` is Architectury's
+deprecated id overload. Its body is `NetworkAggregator#registerReceiver`
+(`dev/architectury/impl/NetworkAggregator.java` in the `architectury-18.0.5-sources.jar`; the same
+code is in 18.0.8 and 19.0.1):
+
+```java
+class_8710.class_9154<BufCustomPacketPayload> type = new class_8710.class_9154<>(id);
+...
+registerC2SReceiver(type, BufCustomPacketPayload.streamCodec(type), packetTransformers, (value, context) -> {
+    class_9129 buf = new class_9129(Unpooled.wrappedBuffer(value.payload()), context.registryAccess());
+    receiver.receive(buf, context);
+    buf.release();          // <-- the receiver gets a BORROWED buffer with an explicit deadline
+});
+```
+
+The contract is therefore: the receiver is handed a **borrowed** `RegistryFriendlyByteBuf` that is
+released the moment `receive` returns. `class_9129` is an `AbstractByteBuf` in its own right, so its
+`release()` drives its own `refCnt` to 0, and any later read trips `ensureAccessible()` →
+`IllegalReferenceCountException: refCnt: 0`. (It does not release the buffer it wraps, which is
+exactly why the failure is a `refCnt: 0` read rather than a corrupted-payload read.)
+
+This port's receiver threw that contract away:
+
+```java
+(buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+```
+
+`context.queue` is `MinecraftServer#execute` / `Minecraft#execute` — it hands the runnable to the
+main thread's task queue. The decode therefore did not run until the main thread drained the queue,
+which is by definition *after* `receive` returned and *after* `buf.release()`.
+
+`context.queue` is **not** the bug and must stay: it is what makes `handler.accept` thread-safe. The
+decode is the only thing that has to move out of it.
+
+### The fix, and the proof in the shipped bytecode
+
+Decode first, on the network thread, while the buffer is alive; queue only the handler:
+
+```java
+T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+context.queue(() -> handler.accept(payload, context));
+```
+
+Before (the previously published NeoForge jar) the queued runnable captured the buffer and the codec,
+and `decode` did not exist in the receiver at all:
+
+```
+private static void lambda$register$1(BiConsumer, StreamCodec, RegistryFriendlyByteBuf, PacketContext);
+   0: aload_3
+   5: invokedynamic #44  // InvokeDynamic #1:run:(BiConsumer;StreamCodec;RegistryFriendlyByteBuf;PacketContext;)Runnable
+  10: invokeinterface dev/architectury/networking/NetworkManager$PacketContext.queue:(Ljava/lang/Runnable;)V
+```
+
+After (rebuilt):
+
+```
+private static void lambda$register$1(StreamCodec, BiConsumer, RegistryFriendlyByteBuf, PacketContext);
+   2: invokeinterface net/minecraft/network/codec/StreamCodec.decode:(Ljava/lang/Object;)Ljava/lang/Object;
+  10: astore        4
+  17: invokedynamic #52  // InvokeDynamic #1:run:(BiConsumer;CustomPacketPayload;PacketContext;)Runnable
+  22: invokeinterface dev/architectury/networking/NetworkManager$PacketContext.queue:(Ljava/lang/Runnable;)V
+```
+
+`decode` at offset 2, `queue` at offset 22, and the queued `Runnable` now captures
+`(BiConsumer, CustomPacketPayload, PacketContext)` — no buffer crosses the thread boundary.
+
+This is the shape 1.21.3's `NetworkChannel` path already had: `CHANNEL.register(payload, encoder,
+decoder, handler)` takes the decoder as its own lambda, so Architectury invokes it while the buffer
+is live and only the handler is queued. 1.21.3 is read-only and was not touched; it is the
+correct-pattern reference for this file.
+
+### This class of defect is invisible to the compiler
+
+`./gradlew build` was green with the bug in place and stayed green. Nothing about the types is wrong:
+`erased.decode` returns exactly `T`, `context.queue` takes exactly a `Runnable`, and the lambda that
+does the wrong thing has precisely the right signature. There is no annotation, no lint and no test
+in this tree that can see it, because what is broken is an **ownership/lifetime rule** that lives
+entirely inside Architectury's `buf.release()` and is invisible from the call site.
+
+**The only thing that catches it is a live client that has entered a world.** Without a world there
+are no incoming ParCool payloads, the receiver lambda is never invoked, the released buffer is never
+read, and nothing is ever logged. The defect fires on the *first* packet, so it is latent until
+exactly the moment the mod starts doing its job.
+
+A world is necessary but not sufficient: the payload has to actually arrive. A session with no
+ParCool limitations configured produces no snapshot to receive and can therefore stay quiet with the
+bug fully present. So "it launched cleanly" and even "it got into a world" are both consistent with
+the bug being there. Only a session in which a ParCool packet is actually delivered — stamina, action
+sync, client settings, limitation snapshot — exercises the decoder.
+
+Corollary for every port: a port whose verification never launched the game has **no evidence either
+way** about this, and "it built" must never be written up as "it works".
+
+## Phase 8 — the fabric-api swap, and why the first launch after it proved nothing
+
+### Architectury 18.0.8 could not boot 1.21.9 at all
+
+Two independent constraints have to hold, and phase 1 only recorded the first:
+
+1. `architectury-fabric`'s own `fabric.mod.json` says `"minecraft": "~1.21.7"`. Read naively that
+   looks like a refusal, but the 18.x line actually ships `~1.21.7-`, and the trailing dash makes it
+   `[1.21.7, 1.22.0)` — which admits 1.21.9. 19.0.1 is the real refusal: `~1.21.11`.
+2. Architectury declares `fabric-api` as a **hard, non-optional runtime dependency**, and Gradle
+   resolves version conflicts with "highest wins". fabric-api is MC-pinned, so the fabric-api that
+   Architectury drags in has to *lose* against this port's `fabric_api_version=0.134.1+1.21.9` — or
+   Fabric Loader aborts the boot before the window exists.
+
+Read out of the published `.module`/`.pom` metadata on maven.architectury.dev:
+
+| architectury | fabric-api it drags in | that fabric-api wants | vs the port's `0.134.1+1.21.9` | result |
+|---|---|---|---|---|
+| 18.0.8 | 0.136.0+1.21.10 | MC `[1.21.10, 1.21.11)` | higher → architectury wins | **boot aborts** |
+| 18.0.5, 18.0.4 | 0.133.14+1.21.9 | MC `[1.21.9, 1.21.10)` | lower → the port wins | ok |
+| 18.0.3, 18.0.2 | 0.133.14+1.21.9 | MC `[1.21.9, 1.21.10)` | lower → the port wins | ok |
+| 17.0.8 | 0.128.1+1.21.7 | MC `[1.21.7, 1.21.8)` | lower → the port wins | ok |
+
+The `0.136.0+1.21.10` failure is captured twice in this port's own run logs, so it is not a theory —
+`fabric/run/logs/2026-09-30-1.log.gz` (09:06) and `2026-09-30-2.log.gz` (09:11) are both aborted boots:
+
+```
+[FabricLoader/Resolution] Immediate reason: [HARD_DEP architectury 18.0.8 {depends fabric-api @ [>=0.127.0]},
+  HARD_DEP_INCOMPATIBLE_PRESELECTED fabric-api 0.136.0+1.21.10 {depends minecraft @ [>=1.21.10- <1.21.11-)},
+  ROOT_FORCELOAD_SINGLE architectury 18.0.8]
+[FabricLoader/ERROR] Incompatible mods found!
+```
+
+`architectury_api_version` is therefore `18.0.5`, not `18.0.8`. The 18.x line on
+maven.architectury.dev is 18.0.2, 18.0.3, 18.0.4, 18.0.5 and 18.0.8 — 18.0.6 and 18.0.7 were never
+published — so 18.0.5 is the newest build satisfying both constraints. The chain is confirmed by the
+log itself: the run that got past resolution reports `- fabric-api 0.134.1+1.21.9` in its mod list,
+i.e. the port's declaration won, exactly as "highest wins" predicts.
+
+API compatibility was checked rather than assumed. `javap` over the `dev.architectury` classes
+ParCool references gives byte-identical signatures in architectury{,-fabric,neoforge} 18.0.5 and
+18.0.8, with one difference in the port's favour: 18.0.5 still declares
+`ClientGuiEvent.DEBUG_TEXT_LEFT/DEBUG_TEXT_RIGHT`, which 18.0.8 removed. ParCool uses neither
+(`grep -r DebugText common/src fabric/src neoforge/src` is empty), so the downgrade is a strict
+superset for this port. architectury-neoforge 18.0.5 declares the same
+`minecraft [1.21.4,)` / `neoforge [21.0.110-beta,)` as 18.0.8, so it accepts 21.9.16-beta.
+
+### The Architectury mixin warnings are harmless, and here is why
+
+```
+[FabricLoader/Mixin] Compatibility level JAVA_16 specified by architectury-common.mixins.json is
+  higher than the maximum level supported by this version of mixin (JAVA_13)
+[FabricLoader/Mixin] architectury-common.mixins.json:inject.MixinBlock from mod architectury:
+  Class version 65 required is higher than the class version supported by the current version of
+  Mixin (JAVA_16 supports class version 60)
+```
+
+This is noise, and the log proves it rather than arguing it:
+
+* Both messages are about the **`compatibilityLevel` field of the mixin config**, i.e. the bytecode
+  level Mixin is *allowed to emit into Minecraft's classes*. SpongePowered Mixin 0.8.7 caps that at
+  `JAVA_13` and Architectury asks for `JAVA_16`. Mixin downgrades its own output level and warns.
+  It does not disable the injector.
+* Class version 65 is Java 21, which is what 1.21.9 itself runs on. The "class version supported by
+  the current version of Mixin (JAVA_16 supports class version 60)" half of the message is Mixin
+  comparing against the *downgraded* `JAVA_16` level it just adopted, so it is downstream of the same
+  cosmetic clamp. Note that the identical warning is emitted for `fabric-block-view-api-v2`, i.e. for
+  a mod that is not Architectury at all — a warning that fires for unrelated mods cannot be an
+  Architectury-specific breakage.
+* The decisive evidence is that the mixins **were applied**: the log contains
+  `Mixing inject.MixinBlock from architectury-common.mixins.json into net.minecraft.world.level.block.Block`
+  (the very mixin named in the second warning), plus `MixinEntity`, `MixinPlayer`, `MixinServerPlayer`,
+  `MixinLivingEntity`, `MixinServerLevel`, `BiomeAccessor`, `MixinFarmBlock`, `MixinItemEntity` and
+  dozens more, and on the client side `client.MixinClientPacketListener from architectury.mixins.json
+  into net.minecraft.client.multiplayer.ClientPacketListener`. A mixin that Mixin refused to apply
+  would never produce a `Mixing …` line.
+
+So Architectury's own mixins are live on 1.21.9 in this port. The earlier "open risk" listed in
+*Not verified* is now closed for the mixin-application half: they apply, and no injector failed
+(`defaultRequire: 1` would have logged a critical injection failure, and there is none). What
+remains unverified is still the *behaviour* behind them.
+
+### The first launch after the downgrade is not a pass, and the log says so
+
+`fabric/run/logs/latest.log` covers 09:24:40–09:30:14 and contains no error of any kind relating to
+ParCool. It is tempting to call that a clean bill of health. It is not one, and the log itself is why.
+What is actually in it:
+
+* all eleven receivers registered — `Registering C2S receiver with id parcool:payload.custom_stamina.c2s`,
+  `parcool:payload.client_info.c2s`, `parcool:payload.stamina.c2s`, `parcool:payload.action_state.c2s`,
+  and the seven S2C ids, lines 516–526;
+* `fabric-api 0.134.1+1.21.9` loaded, so the downgrade did its job;
+* the run **did** get into a world — the integrated server started at 09:28:32, `Player172` logged in
+  with entity id 25 at 09:28:36 and joined, `Loaded 12 advancements` at 09:30:10, several gamemode
+  commands, a screenshot. It stayed in the world for ~95 s;
+* ParCool logged `Limitation of 31a9aee6-8c2b-389d-b14e-b75d71479611 was loaded`;
+* and yet **not one** `IllegalReferenceCountException`, and **not one** "the server limitation snapshot
+  has been missing" warning. The watchdog never fired, which means ParCool never became active,
+  which means the limitation snapshot S2C never arrived.
+
+So the session neither refutes nor confirms the network bug: it shows the release-after-return path
+was simply never exercised, because no ParCool payload finished arriving in either direction. The
+world had no limitations configured, so the server never had a reason to send a snapshot. Note also
+that **ParCool logs nothing at all on its send or receive path** — "there are no ParCool network
+lines in the log" is not evidence that packets did not move, it is evidence that the mod has no
+logging there, and its absence cannot be read in either direction.
+
+What could not be settled from the log, and was not chased further because this port must not launch
+the game: whether the client's C2S `client_info` — sent unconditionally from
+`PlayerJoinHandler#onClientPlayerJoin`, and Architectury's `MixinClientPacketListener` that fires
+that event *was* applied (see above) — was ever accepted by the integrated server. If it was, the
+released-buffer path would have thrown; since nothing threw, the most consistent reading is that no
+ParCool payload completed the journey, not that the code is sound. That is a hypothesis, and it is
+labelled as one.
+
+The lesson, written down so the next port does not repeat the mistake: **a clean `latest.log` is not
+a pass.** A boot proves the mod loads. Only a session in which a ParCool packet is actually delivered
+proves the network works.
 
 ## Ingredient form and the `chain` / `iron_chain` rename (verified by the orchestrator)
 
