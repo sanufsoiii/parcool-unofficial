@@ -1,0 +1,21 @@
+pluginManagement {
+	repositories {
+		maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+		maven { name = 'Architectury'; url = 'https://maven.architectury.dev/' }
+		maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases/' }
+		mavenCentral()
+		gradlePluginPortal()
+	}
+}
+
+plugins {
+	id 'dev.architectury.loom' version '1.7.435' apply false
+	id 'architectury-plugin' version '3.5.170' apply false
+	id 'net.neoforged.moddev' version '1.0.9' apply false
+}
+
+rootProject.name = 'parcool-architectury'
+
+include 'common'
+include 'fabric'
+include 'neoforge'
