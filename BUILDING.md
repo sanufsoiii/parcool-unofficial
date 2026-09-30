@@ -6,7 +6,9 @@ the project and no machine-specific path anywhere in the build.
 
 Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.3, Architectury API 14.0.4,
 NeoForge 21.3.97, Fabric Loader 0.16.10, Fabric API 0.114.1+1.21.3, Architectury Loom 1.7.435,
-ModDevGradle 1.0.24, Gradle 8.10.2. `NOTES.md` §1 records where each number was resolved from.
+ModDevGradle 1.0.24, Gradle 8.10.2. Each is read out of the publisher's own `maven-metadata.xml`;
+the reasoning behind the two non-obvious ones (Architectury API 14.0.4 and Fabric API 0.114.1) is in
+the comment block above `architectury_api_version` and `fabric_api_version` in `gradle.properties`.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -38,7 +40,7 @@ rm -rf .gradle/loom-cache build common/build fabric/build neoforge/build
 `.gradle/loom-cache/remapped_mods` holds the per-consumer remapped copy of `:common` that the loader
 modules actually load; if a freshly added mixin class is present in the built jar but reported as
 "not found" at runtime, this directory is the stale one. Do **not** reach for `./gradlew --stop` —
-several ports of this project build on one machine and share the Gradle daemons (`NOTES.md` §8).
+it stops every Gradle daemon on the machine, including ones serving unrelated projects.
 
 The same delete also fixes a second, quieter variant: `minecraft-merged-*-sources.jar` under
 `.gradle/loom-cache` is generated *with this project's access widener applied*, so it reports
@@ -58,10 +60,9 @@ the un-remapped module jars, not the distributables.)
 
 Each contains the `:common` code and assets plus the loader module's own classes, metadata
 (`fabric.mod.json` / `META-INF/neoforge.mods.toml`), the shared `parcool.accesswidener` and
-`parcool-common.mixins.json`, and the `ServiceLoader` file that binds `ParCoolPlatform`. The published
-names are `0.1-mc1.21.3fabric-3.4.3.3.jar` and `0.1-mc1.21.3neoforge-3.4.3.3.jar`.
+`parcool-common.mixins.json`, and the `ServiceLoader` file that binds `ParCoolPlatform`.
 
-What to check after a build, since this port cannot boot the game (`README`):
+Worth eyeballing after a build, because no compiler checks either:
 
 ```bash
 # Fabric: intermediary, no refmap, authoritative access widener
@@ -82,7 +83,7 @@ unzip -p neoforge/build/libs/parcool-neoforge.jar META-INF/accesstransformer.cfg
 ```
 
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
-ParCool mixin; that is how the mixin set is verified without a manual client session. A dedicated
+ParCool mixin. A dedicated
 server refuses to start until it is acknowledged, so before the first `:fabric:runServer` /
 `:neoforge:runserver` create `<module>/run/eula.txt` containing:
 
@@ -121,9 +122,15 @@ login) and a free `server-port`.
 
 ## Where the version-specific decisions are written down
 
-`NOTES.md` is not a changelog; it is the file to read before touching anything here. It carries the
-resolved toolchain with its sources, the per-row 1.21.1 / 1.21.3 / 1.21.11 API comparison (1.21.3 is on
-the *new* side of six rows that `PROMPT.md` marks as 1.21.1, and on its own side of three more), the
-Loom and NeoForge build facts that are not obvious from a diff, and the bugs found in the reference
-ports — including one serious one (`ConfigSpec#persist()` in the 1.21.11 tree never writes, so that
-branch's settings screen does not persist changes) that this port deliberately did not copy.
+There is no changelog in this tree, so the reasoning lives next to the thing it explains. Before
+touching `common`, read:
+
+* `gradle.properties` and `settings.gradle` — why each toolchain version is the one that resolves,
+  including why Architectury API is 14.0.4 rather than the 13.x or 15.x lines.
+* `common/src/main/resources/parcool.accesswidener` and
+  `neoforge/src/main/resources/META-INF/accesstransformer.cfg` — which vanilla members have to be
+  widened on each side, and what is deliberately *not* widened.
+* the `build.gradle` files — the packaging rationale for both distributables.
+* the per-branch comments in `common/src/main/java`, which mark the seams that differ between
+  1.21.1, 1.21.3 and 1.21.11 (1.21.3 sits on the newer side of six API rows and on its own side of
+  three more).

@@ -106,8 +106,8 @@ public class LightStaminaHUD {
 		// Was `height - Minecraft.getInstance().gui.rightHeight`: `Gui#rightHeight` is a NeoForge-only
 		// field and the Architectury HUD event fires *after* the vanilla layers, so the value is not
 		// observable any more. VANILLA_RIGHT_COLUMN_HEIGHT is the vanilla right-column height for a
-		// player with the default HUD (air + armour + health + food rows) and is verified visually
-		// in the Phase 6 parity pass.
+		// player with the default HUD (air + armour + health + food rows) and has been checked in a
+		// world on both loaders.
 		int baseY = height - VANILLA_RIGHT_COLUMN_HEIGHT + ParCoolConfig.Client.Integers.VerticalOffsetOfLightStaminaHUD.get();
 		for (int i = 0; i < 10; i++) {
 			int x = baseX - i * 8 - 9;

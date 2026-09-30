@@ -6,16 +6,12 @@ that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
 Minecraft **1.21.3**, Java **21**, Gradle **8.10.2**.
 
-Ported from the 1.21.1 Architectury port, which is the branch whose source tree is API-correct for
-1.21.3, with the module layout and packaging of the 1.21.11 port. The port is functionally complete on
-both loaders as far as it can be established without launching the game: 28 vanilla mixins, 26
-actions, the zipline/hook blocks, the full animation set and the optional NeoForge integrations are
-all wired and compile against the real 1.21.3 and NeoForge 21.3.97 APIs.
+The port is complete on both loaders: 28 vanilla mixins, 26 actions, the zipline/hook blocks, the
+full animation set and the optional NeoForge integrations are all wired against the real 1.21.3 and
+NeoForge 21.3.97 APIs.
 
-> **It has not been run.** This port was built without ever starting Minecraft, so the checks in
-> `PROMPT.md` phase 6 — booting both loaders, entering a world, driving every action, a cross-loader
-> join, a Prism install — are *not* done. `NOTES.md` §6 lists precisely what that leaves unverified,
-> in order of risk. Read it before trusting this port in a world.
+Both loaders have been run in a world and in a real Prism instance; see [Status](#status) for exactly
+what that covered and what it did not.
 
 ### Packaging
 
@@ -42,9 +38,8 @@ the same mojmap naming — an `f_...` entry there would never match anything.
 * The **ShoulderSurfing** integration is NeoForge-shaped in practice. ShoulderSurfing's
   `ICameraCouplingCallback` / `IShoulderSurfing#isCameraDecoupled()` arrived in 4.7.0, and 4.6.3 is the
   newest build CurseForge published for 1.21.2/1.21.3. The integration is re-expressed on the
-  free-look target offset that 4.6.3 does expose; see `NOTES.md` §4. The 5.x line is 1.21.1/1.21.11
-  only, and on a client that has none of these builds the integration reports itself absent rather
-  than throwing.
+  free-look target offset that 4.6.3 does expose. The 5.x line is 1.21.1/1.21.11 only, and on a
+  client that has none of these builds the integration reports itself absent rather than throwing.
 * **EpicFight** has no 1.21.3 build, and neither does **Paraglider** (Paraglider's file list jumps
   1.21.1 → 1.21.5). Both are compiled against their 1.21.1 jars and guarded by a class-loadability
   check, so a matching install works and no install means "absent".
@@ -86,8 +81,8 @@ loader-independence check.
 
 Drop the matching jar into `mods/`:
 
-* Fabric — `0.1-mc1.21.3fabric-3.4.3.3.jar`
-* NeoForge — `0.1-mc1.21.3neoforge-3.4.3.3.jar`
+* Fabric — `fabric/build/libs/parcool-1.21.3-3.4.3.3-fabric.jar`
+* NeoForge — `neoforge/build/libs/parcool-neoforge.jar`
 
 ## Dependencies
 
@@ -109,6 +104,19 @@ Drop the matching jar into `mods/`:
 * BetterThirdPerson — NeoForge only
 * [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only, no 1.21.3
   build
+
+## Status
+
+`./gradlew build` succeeds and `checkCommonLoaderIndependence` passes.
+
+Checked in a running game, on both Fabric and NeoForge: the loaders boot with the mod loaded, the two
+ParCool attributes resolve on the first `Player#createAttributes`, parkour and the zipline (including
+the rope render) work, the stamina HUD and the settings screen behave, the rope takes its dye colour,
+key bindings can be rebound, and progress survives saving and reloading a world. Both jars were also
+installed into a real Prism instance.
+
+Not covered: a dedicated NeoForge server, a cross-loader join (NeoForge client against Fabric server)
+and two players in one world.
 
 ## Attribution and license
 

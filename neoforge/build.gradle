@@ -20,8 +20,7 @@ evaluationDependsOn(':common')
 // `aboveGroundTickCount`, not an `f_110147_` token. So the mojmap-named artifact this module
 // produces is already what NeoForge loads, and the access transformer in
 // neoforge/src/main/resources/META-INF/accesstransformer.cfg is written in the same naming. The
-// 1.21.1 tree's AT had six `f_...`-style entries that therefore never matched anything; see
-// NOTES.md §4.
+// 1.21.1 tree's AT had six `f_...`-style entries that therefore never matched anything.
 
 repositories {
 	maven { url = 'https://www.cursemaven.com' }
@@ -41,7 +40,7 @@ neoForge {
 			// which is how the client half of the mixin set is verified.
 			jvmArguments.addAll '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
 			// `./gradlew :neoforge:runClient -PparcoolQuickPlay=host:port` boots straight into a server,
-			// which is how the cross-loader join (M2/M3/M4) is reproduced without a mouse. See
+			// which is how a cross-loader join is reproduced without a mouse. See
 			// BUILDING.md; the same property drives :fabric:runClient.
 			if (project.hasProperty('parcoolQuickPlay')) {
 				programArguments.addAll '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
@@ -143,7 +142,7 @@ tasks.named('neoForgeIdeSync') {
 }
 
 /**
- * The distributable NeoForge jar: the SRG-transformed :common artifact plus this module's own
+ * The distributable NeoForge jar: the mojmap-named :common artifact plus this module's own
  * classes, the loader metadata and the ServiceLoader registration.
  *
  * architectury-plugin's `neoForge()` transform normally does this, but it requires a Loom extension
@@ -154,7 +153,7 @@ tasks.named('neoForgeIdeSync') {
 // The access widener and the mixin config live in :common so both loaders ship the same copy. The
 // dev runtime loads this module from its own sourceSet output, so the files have to be present here
 // as well (the distributed jar picks them up from the :common transform artifact).
-// Explodes the SRG-transformed :common artifact so its classes are part of this module's own output.
+// Explodes the mojmap-named :common artifact so its classes are part of this module's own output.
 def explodedCommon = layout.buildDirectory.dir('explodedCommon')
 
 def explodeCommon = tasks.register('explodeCommon', Copy) {
