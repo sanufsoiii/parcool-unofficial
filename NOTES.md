@@ -268,6 +268,18 @@ player.
 
 copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
 
+### Re-published after the network decode fix
+
+The first pair above is the artifact that carried the released-buffer decode. Both were replaced;
+the network code is in the jar, so the bytes had to change and they did:
+
+```
+0.1-mc1.21.5fabric-3.4.3.3.jar     sha256 a70f5c6f8ec6e89d8cdbb9e0f74d59816e6d763ca61fce5ef1561026674d48b5
+0.1-mc1.21.5neoforge-3.4.3.3.jar   sha256 4cf4d8e6804355a7ad71239c9a33afe4df8fa7cd50c09404b603c73a91f018a8
+```
+
+Still not verified by a run — see the end of this file.
+
 ## 11. The mixin check, mechanically
 
 The 49 mixin references in this tree (every `@Mixin` target, every `@Inject`/`@Redirect`/
@@ -410,3 +422,79 @@ jar, never against the tree the code was copied from. (The read-only 1.21.11 tre
 
 Minecraft was not launched. The `setId` crash and its fix are established from the constructor
 bytecode of the two target jars, not from a run, and the mixin set remains statically verified only.
+
+## The network decode ran on a released buffer (found by launching the game, on 1.21.7)
+
+The same defect was present in this port and was fixed here from the 1.21.7 report. Minecraft was
+still not launched on 1.21.5, so this is a ported fix with no local run behind it.
+
+### The stack that found it (live 1.21.7 client)
+
+```
+[Server thread/ERROR] (Minecraft) Error executing task on Server
+io.netty.util.IllegalReferenceCountException: refCnt: 0
+  at io.netty.buffer.AbstractByteBuf.readByte(AbstractByteBuf.java:730)
+  at net.minecraft.network.VarLong.read(VarLong.java:28)
+  at net.minecraft.network.codec.ByteBufCodecs$8.decode(ByteBufCodecs.java:155)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.lambda$register$0(FabricParCoolNetwork.java:48)
+[Render thread/WARN] (ParCool) the server limitation snapshot has been missing for 10s,
+  so no action can start. Asking the server again (ParCoolIsActive=true).
+```
+
+It repeats every few seconds. The server task dies on every incoming ParCool packet, the limitation
+snapshot never arrives, and no action can start — which is what "almost nothing worked" meant.
+
+### Why it happened
+
+One line, identical in `FabricParCoolNetwork` and `NeoForgeParCoolNetwork`:
+
+```java
+(buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+```
+
+`NetworkManager.registerReceiver` hands the receiver a **raw** `RegistryFriendlyByteBuf` and releases
+it as soon as that lambda returns. `context.queue(...)` moves the work to the main thread, i.e. to
+*after* the release. The decode therefore reads memory netty has already freed, and the first
+`VarLong.read()` in any ParCool payload codec throws `IllegalReferenceCountException: refCnt: 0`.
+
+The queue is needed for **thread safety of the handler** — the handler touches the player, the level
+and the mod's own state, none of which may be touched from a netty thread. The queue is **not**
+needed for decoding. Decoding is pure byte-reading: safe on the netty thread, and only safe there.
+The correct order is decode first, queue only the handler:
+
+```java
+(buf, context) -> {
+    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+    context.queue(() -> handler.accept(payload, context));
+}
+```
+
+`NetworkChannel`, which the 1.21.3 Fabric path uses, has always had this shape — the channel decodes
+in its own decoder lambda and hands an already-built payload to the receiver, so
+`context.get().queue(() -> handler.accept(payload, …))` only ever queues the handler. The move to the
+raw id-based `NetworkManager` API collapsed those two lambdas into one and dragged the decode into
+the queue with them. That collapse is the entire regression, and it is why the 1.21.3 file is the
+reference for the correct order.
+
+The comment in the source is mandatory and must not be deleted or shortened: without it the next
+reader sees a decode that "could just as well" happen inside the `queue`, concludes the rewrite is
+equivalent, and puts the bug straight back.
+
+### This class of defect is invisible to everything except a live client
+
+Recorded separately on purpose, because it is the general lesson and not just this port's story:
+
+* `javac` sees `StreamCodec.decode(ByteBuf)` return `T` and `PacketContext.queue(Runnable)` return
+  `void`. Both signatures are correct. The bug lives entirely in *when* the call happens relative to
+  a release that happens outside the type system, in a lambda Architectury invokes.
+* `IllegalReferenceCountException` is a runtime netty invariant, not a type error. No annotation, no
+  null check and no assertion would flag it.
+* Nothing in the build exercises it. `:common:checkCommonLoaderIndependence` is a source-level
+  loader-leak check, the mixin checker is a static target check, and there is no client, no packet
+  capture and no integration test. Green build, green acceptance, dead mod — which is exactly what
+  1.21.5, 1.21.6 and 1.21.7 all reported before 1.21.7 was finally launched.
+* **The packets have to actually flow.** Without a client entering a world there is no inbound
+  ParCool packet, so the lambda never runs and the bug cannot manifest. A dedicated server with no
+  client connected proves nothing here either.
+* The only detector is a real client on a real server, and then reading the log. `refCnt: 0` in a
+  stack trace is the signature.
