@@ -98,6 +98,14 @@ Write the resolved values into `gradle.properties` and `settings.gradle`, and re
 where each came from. If Loom 1.7 warns that it is unsupported, that is expected for old MC targets;
 a newer Loom is usually fine and preferred if it still configures the older Minecraft.
 
+> **Calibration note from the 1.21.3 port.** 1.21.3 sits between the two columns above:
+> `architectury_api_version = 14.0.4` (the 14.x line targets 1.21.2/1.21.3; 13.x is the 1.21.1 line
+> and 15.x starts at 1.21.4), `neo_version = 21.3.97`, `loader_version = 0.16.10`,
+> `fabric_api_version = 0.114.1+1.21.3`, Loom `1.7.435`, moddev `1.0.24`, wrapper `8.10.2`. See
+> `NOTES.md` §1 for how each was derived. The Architectury line number is the one that decides
+> whether a *networking* bug you hit is a port bug or an upstream one — see the networking warning
+> in §6.
+
 Then confirm the project configures before writing any Java:
 
 ```bash
@@ -194,6 +202,51 @@ Also check the two fixes below, which are the same on every version and easy to 
   `"Tile1_X"` three times silently drops the Y and Z of both rope ends, so every zipline collapses
   onto a 1×0×1 line after a chunk reload.
 
+### Networking: Architectury is not loader-agnostic here, and a client cannot tell you
+
+> **Added by the 1.21.3 port after a live dedicated server broke it — read this before you choose a
+> networking shape.** `NOTES.md` §10 has the full write-up with the bytecode and the log evidence.
+> The short form, because it cost a real player-facing bug:
+>
+> * **Do not use `dev.architectury.networking.NetworkChannel` on Fabric.** Its `register` wraps the S2C
+>   half in `if (Platform.getEnvironment() == Env.CLIENT)` (`javap -c`, offsets 90–96 of
+>   `NetworkChannel.class`), so on a **dedicated server** it registers no S2C receiver, logs nothing,
+>   and then `NetworkAggregator.collectPackets(sink, S2C, id, buf)` reads `null` out of the empty
+>   `S2C_TYPE` map and throws `NullPointerException` on **every** server-to-client send. The server
+>   still reaches `Done (…)`. Client and single player are both fine, because the integrated server
+>   runs inside the client JVM.
+> * **Do not call `NetworkManager.registerReceiver(S2C, …)` on a dedicated server either.**
+>   `NetworkAggregator.Adaptor#registerS2C` carries `@Environment(EnvType.CLIENT)`, and Fabric Loader
+>   strips such members outside a client, so it dies with `AbstractMethodError` at mod init. This is
+>   true of **every** Architectury line 14–18 (checked 14.0.4, 15.0.3, 16.1.4, 17.0.6, 17.0.8, 18.0.5,
+>   18.0.8) and is *not* a version skew — the method is declared with the exact interface descriptor.
+> * **What to do instead**, which is also what both reference ports now do: use the id-based
+>   `NetworkManager` on both loaders, one wire id per direction, and on a dedicated server register
+>   the clientbound direction as a **type only**:
+>
+>   ```java
+>   if (clientbound && Platform.getEnvironment() == Env.SERVER) {
+>       NetworkManager.registerS2CPayloadType(wireId);
+>       return;
+>   }
+>   NetworkManager.registerReceiver(clientbound ? Side.S2C : Side.C2S, wireId, (buf, context) -> { … });
+>   ```
+>
+>   A dedicated server never *receives* a server-to-client packet, so the S2C receiver is dead weight
+>   there; `registerS2CPayloadType` is Architectury's own documented answer ("For S2C types,
+>   `registerReceiver` should be called on the client side, while `registerS2CPayloadType` should be
+>   called on the server side") and it fills `S2C_TYPE`/`S2C_CODECS`/`S2C_TRANSFORMERS` without
+>   touching the stripped member. The wire bytes do not change.
+> * **The buffer contract is the other half of this, and it is not Fabric-specific:**
+>   `registerReceiver` hands you a buffer and releases it the moment your receiver returns, so
+>   **decode inside the receiver lambda, before `context.queue(...)`**. Decoding inside the queued
+>   task throws `IllegalReferenceCountException: refCnt: 0` on the first packet that has any
+>   variable-length field. See `NOTES.md` §9.
+> * **Verify it on a dedicated server, from a clean Loom cache.** A dedicated server is the only
+>   oracle for this class of defect: not the compiler, not `./gradlew build`, not a client, not single
+>   player. Give it a `server-port` of its own — the sibling ports share this machine and all default
+>   to 25565.
+
 ## 7. Phase 4 — mixins
 
 Copy `parcool-common.mixins.json` from 1.21.11 and fix it up: keep only the mixins that exist in this
@@ -253,9 +306,18 @@ the one you are looking at.
 
 ## 9. Phase 6 — actually run both loaders
 
-> **Not done for this port.** The 1.21.3 port was explicitly told not to launch Minecraft (no
-> `runClient`, no `runServer`, no headless client, no Prism instance), so the acceptance used instead
-> is: `./gradlew build` succeeds from a clean tree and both artifacts are inspected
+> **Partly done for this port, and the order matters.** No client was ever launched here (the
+> orchestrator holds the single GPU), but a **dedicated Fabric server was**: `:fabric:runServer`
+> reached `Done (0.944s)` from a clean Loom cache and is what exposed the S2C registration defect in
+> §6. `NOTES.md` §10. That is the whole argument for running the server even when you cannot run the
+> client — a separate server process is the only thing that finds the loader-specific failures, and
+> it costs no GPU. The original acceptance below (`./gradlew build` green plus artifact inspection)
+> is still a valid floor, but on this port it was not sufficient: the build was green on a jar whose
+> entire server-to-client path threw `NullPointerException`.
+
+> **Not done for this port.** The 1.21.3 port was explicitly told not to launch the client, so the
+> client-side acceptance used instead is: `./gradlew build` succeeds from a clean tree and both
+> artifacts are inspected
 > (`accessWidener` namespace, refmap present or absent, no mojmap strings in the Fabric jar, no
 > intermediary strings in the NeoForge jar, mod metadata version strings). `NOTES.md` §6 lists what
 > that leaves unverified, in order of risk. Everything below is therefore still worth doing, but by
@@ -268,6 +330,21 @@ A port that only compiles is not a port.
 ./gradlew :fabric:runClient
 ./gradlew :neoforge:runclient
 ```
+
+**And run a dedicated server on each loader, even if you can only do that.** Delete the Loom cache
+first (`.gradle/loom-cache`, `*/build/loom-cache`, `common/build/devlibs`,
+`neoforge/build/explodedCommon`) or you are measuring yesterday's jar, give it its own
+`server-port` so it does not fight the sibling ports for 25565, `timeout 300`, and then:
+
+```bash
+grep -E 'Starting Minecraft server on|Done \(|AbstractMethodError|NullPointerException' <log>
+grep -c 'Registering S2C receiver' <log>   # 0 on a dedicated Fabric server is CORRECT …
+grep -c 'Registering C2S receiver' <log>   # … and the clientbound types must be visible some other way
+```
+
+`Done (…)` is necessary and nowhere near sufficient: on this port a fully broken server-to-client
+path sat behind a green `Done`. Never run `./gradlew --stop`, `pkill` or `killall` on this machine —
+the Gradle daemons are shared with the ports running in parallel.
 
 Before you start, decide how you will get into a world without a mouse, and put it in the run config
 if it is not already there — a `--quickPlaySingleplayer <world>` / `--quickPlayMultiplayer <host:port>`
@@ -339,6 +416,10 @@ did not create.
 
 - [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev.
+- [ ] A **dedicated** server boots on each loader from a deleted Loom cache, and the client actually
+      joins it and gets the limitation snapshot. This is the only check that finds the
+      loader-specific Architectury networking failures (`NOTES.md` §10) — a client, single player and
+      a green build all pass on a jar that cannot send a single server-to-client packet.
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
       commented-out blocks, no absolute local paths, no machine-specific paths in the build.

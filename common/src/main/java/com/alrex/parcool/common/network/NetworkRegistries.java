@@ -33,6 +33,14 @@ import java.util.function.BiConsumer;
  * A message that travels in both directions therefore needs <b>one id per direction</b>, which is
  * what this class does.
  *
+ * <p>On Fabric the same call is skipped entirely on a dedicated server, because architectury wraps
+ * the S2C half in {@code if (Platform.getEnvironment() == Env.CLIENT)}. The server then still reaches
+ * {@code Done (…)} but cannot send a single server-to-client packet:
+ * {@code NetworkAggregator.S2C_TYPE} is empty and
+ * {@code NetworkAggregator.collectPackets(sink, S2C, id, buf)} dereferences the
+ * {@code null} it read from that map. That is a live-server defect, invisible to a client and to a
+ * single player world - see {@code FabricParCoolNetwork} for the bytecode and the fix.
+ *
  * <h2>Compatibility</h2>
  * The payloads are plain 1.21.1 {@link CustomPacketPayload} records and their codecs are untouched,
  * so the encoded bytes are identical to upstream's. The ids keep the upstream

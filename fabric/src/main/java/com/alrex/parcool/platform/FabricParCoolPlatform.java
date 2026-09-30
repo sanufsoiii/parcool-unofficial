@@ -69,8 +69,9 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
         ((IPlayerForcedPose) player).parcool$setForcedPose(pose);
     }
 
-    /** Single instance: the Fabric implementation de-duplicates registrations per payload class,
-     *  which only works if the same object is returned for the whole mod lifetime. */
+    /** Single instance, for symmetry with the NeoForge side rather than for any de-duplication: the id
+     *  based registration keys everything by wire id, so the object is stateless and a fresh one per
+     *  call would behave identically. */
     private static final com.alrex.parcool.platform.ParCoolNetwork NETWORK =
             new com.alrex.parcool.platform.FabricParCoolNetwork();
 

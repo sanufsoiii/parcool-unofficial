@@ -18,17 +18,26 @@ import net.minecraft.network.codec.StreamCodec;
  *     ("Cannot register payload … as it is already registered"). The raw
  *     {@code NetworkManager.registerReceiver} is correct here, and a bidirectional message needs one
  *     id per direction (see {@code NetworkRegistries}).</li>
- *     <li><b>Fabric</b>: the raw {@code registerReceiver} path throws
- *     {@code AbstractMethodError: NetworkManagerImpl$1 does not define … registerS2C} — architectury-fabric
- *     13.0.11 does not implement the {@code NetworkAggregator.Adaptor} method that the common
- *     architectury artifact calls. {@code NetworkChannel} is the working path there, because on Fabric
- *     a payload type is registered once and serves both directions.</li>
+ *     <li><b>Fabric</b>: the same reasoning applies, plus a dedicated-server-only asymmetry. Fabric
+ *     Loader strips {@code @Environment(EnvType.CLIENT)} members, and architectury-fabric marks
+ *     {@code Adaptor#registerS2C} with it, so on a dedicated server the raw
+ *     {@code registerReceiver(S2C, …)} throws
+ *     {@code AbstractMethodError: … does not define … registerS2C} while the C2S half registers fine.
+ *     A client and a single player world both keep the method and never show it.</li>
+ *     <li><b>{@code NetworkChannel} is not usable on a dedicated Fabric server at all</b>, and the
+ *     failure is silent: it wraps its S2C registration in
+ *     {@code if (Platform.getEnvironment() == Env.CLIENT)}, so {@code Registering S2C receiver} is
+ *     never logged on the server, {@code NetworkAggregator.S2C_TYPE} stays empty, and
+ *     {@code NetworkChannel#sendToPlayer} then throws {@code NullPointerException} for every
+ *     server-to-client packet. The server still reaches {@code Done (…)}. See
+ *     {@code FabricParCoolNetwork} for the bytecode.</li>
  * </ul>
  *
- * <p>Note that the two loaders therefore put the same logical message under different wire ids
- * ({@code parcool:payload.*} on NeoForge, {@code parcool:main/<hash>} on Fabric). That is by design:
- * Architectury's {@code NetworkAggregator} collects packets on one side and re-sends them on the
- * other, which is what lets a Fabric client and a NeoForge server talk to each other.
+ * <p>So both loaders address a message by its explicit {@code parcool:payload.*} id (plus the
+ * {@code .c2s} variant for the client-to-server direction of a bidirectional message), and
+ * registration and sending both go through the id based {@code NetworkManager}. That keeps
+ * {@code NetworkAggregator.C2S_TYPE}/{@code S2C_TYPE} — which the id-based send reads — populated on
+ * both sides of a connection.
  *
  * <p>Sending takes the payload <b>object</b> rather than a pre-encoded buffer, because each platform
  * needs its own addressing: NeoForge sends by explicit id, Fabric by channel lookup.
