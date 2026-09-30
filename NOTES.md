@@ -83,7 +83,8 @@ cache reset.
 | Key mappings | **old side** | `KeyMapping#MAP` is `Map<InputConstants$Key, KeyMapping>`, `KeyMapping#getCategory()` returns `String`, the constructor is `(String, int, String)` | 1.21.1's `KeyBindings` verbatim, **including `restoreVanillaBindings()`** and the `KeyRecorder#onClientTick` call that drives it, plus the `isPollableKeysym` guard that stops the GLFW `Invalid key -1` spam. Lang key is `key.categories.parcool` |
 | Recipe ingredients | **old side** | `unzip -p ~/.gradle/caches/fabric-loom/1.21.8/minecraft-client.jar data/minecraft/recipe/{chain,oak_door,diamond_sword}.json` — plain strings, `"#tag"`, results as `{"id": …}` | 1.21.11's recipe JSONs except `minecraft:chain` (1.21.11's `minecraft:iron_chain` is a 1.21.9+ item) |
 | `pack.mcmeta` | **neither column** | `PackMetadataSection`'s codec declares only `description`, `pack_format`, `supported_formats` — **`min_format`/`max_format` do not exist**; `javap -v SharedConstants` gives `RESOURCE_PACK_FORMAT = 64`, `DATA_PACK_FORMAT = 81` | `pack_format: 81` + `supported_formats: [64, 81]`, no min/max |
-| Item models | `assets/<ns>/items/<id>.json` | decompiled `ClientItemInfoLoader` (`LISTER = FileToIdConverter.json("items")`); `assets/<ns>/models/item/**` is dead | `assets/parcool/items/*.json` kept, `assets/parcool/models/item/*.json` deleted |
+| Item definitions | `assets/<ns>/items/<id>.json` — decompiled `ClientItemInfoLoader` (`LISTER = FileToIdConverter.json("items")`); since 1.21.4 this is where an item says *which* model it uses | `assets/parcool/items/*.json` kept |
+| Item model files | `assets/<ns>/models/item/<id>.json` is still the model itself and is still loaded by `ModelManager`; the 1.21.4 move to `items/` did **not** retire it | the `items/*.json` here point at `parcool:item/…`, which only resolves through `models/item/`; 1.21.9 and 1.21.11 keep all three files and their inventories render | **correction:** the earlier claim that `models/item/**` is dead, and the deletion that followed it, were both wrong. Restored; see *The item model files were deleted by mistake* at the end of this file |
 | `Item` description id | **new side** | `BlockItem#getDescriptionId` is gone; `Item#getDescriptionId` is `final` and resolved from the properties | `useBlockDescriptionPrefix()` on the two hook items, so the `block.parcool.*` keys in the eleven language files are the ones used |
 | `Item.Properties#setId` | **mandatory** | `javap -c Item$Properties#build`: `Objects.requireNonNull(this.id, "Item id not set")`. Architectury's `DeferredRegister` does not set it | `Items.properties(name)` sets it; `Blocks` sets it on `BlockBehaviour.Properties#setId` and spells the flag `noCollission()` (vanilla's typo; `noCollision` does not exist) |
 | `KeyboardInput#tick` | **no arguments** | `javap KeyboardInput` → `public void tick()` (declared on `Input`, inherited) | the handler is `private void parcool$recordKeys(CallbackInfo ci)` with `method = "tick()V"` |
@@ -475,3 +476,84 @@ does not re-chase them:
 `CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC)`, so
 `MapCodec#orElse` already defaults it. An earlier note in this file claimed its absence broke
 every recipe; that claim was wrong and is retracted.
+
+## The item model files were deleted by mistake (found by looking at the inventory, not by any check)
+
+`common/src/main/resources/assets/parcool/models/item/` was empty — not one file. The three item
+*definitions* in `assets/parcool/items/` were still there, each naming a model by id:
+
+```json
+{ "model": { "type": "minecraft:model", "model": "parcool:item/iron_zipline_hook" } }
+```
+
+`parcool:item/iron_zipline_hook` resolves to `assets/parcool/models/item/iron_zipline_hook.json`. With
+that file gone, `ModelManager` finds nothing, and the inventory draws the missing-model black-magenta
+checkerboard for all three items.
+
+**Why the deletion was wrong.** Two different things were conflated:
+
+* `assets/<ns>/items/<item>.json` — the item *definition*: which model the item uses, plus its tints.
+  This is what moved in 1.21.4, when `ClientItemInfoLoader` (`LISTER = FileToIdConverter.json("items")`)
+  replaced the old item-model registration path.
+* `assets/<ns>/models/item/<item>.json` — the *model file* itself, still loaded by `ModelManager` in
+  every version including 1.21.8+. It did not go anywhere. The definition points at it by name; it is
+  the target of that pointer, not a duplicate of it.
+
+**Evidence.**
+
+* The three `items/*.json` in this port are byte-identical to 1.21.9 and 1.21.11
+  (md5 `e99deec9…`, `45fd4be4…`, `8995addb…` in all three ports) — so the definitions are not the
+  problem; the missing targets are.
+* `models/item/{iron_zipline_hook,wooden_zipline_hook,zipline_rope}.json` are byte-identical across
+  1.21.9 and 1.21.11 (per-file md5 `0d2165d3…`, `a647a1b4…`, `1952a170…`; concatenation md5
+  `31c5786d…` in both), and 1.21.9's inventory is confirmed by the user to render correctly. That is
+  the same file set that was deleted here, on versions that do not differ in any model format.
+* Restoring exactly those three files byte-for-byte makes the whole reference graph resolve in this
+  port: the three `items/*.json` → `models/item/*` → `models/block/{iron_zipline_hook,
+  wooden_zipline_hook}.json` → `textures/block/wooden_zipline_hook.png` and
+  `textures/item/zipline_rope_{base,overlay}.png`, with `blockstates/` for both hooks and
+  `models/block/iron_zipline_hook_orthogonal.json` all already present and unmodified.
+* The texture inventory of 1.21.7 and 1.21.8 is identical to 1.21.9 and 1.21.11 (same 25 files, same
+  paths), so nothing else in the asset tree went missing with them. A reference-graph walk over every
+  `items/*.json`, `blockstates/*.json`, `parent` and `textures` string in this port now reports no
+  unresolved target.
+
+**The restored files** (`models/item/`, copied verbatim from 1.21.9):
+
+```json
+{ "parent": "parcool:block/iron_zipline_hook" }
+{ "parent": "parcool:block/wooden_zipline_hook" }
+{ "parent": "item/generated",
+  "textures": { "layer0": "parcool:item/zipline_rope_base",
+                "layer1": "parcool:item/zipline_rope_overlay" } }
+```
+
+### Warning to the next port
+
+`assets/<ns>/items/<item>.json` and `assets/<ns>/models/item/<item>.json` are different files with
+different jobs. Porting the first does **not** mean the second is no longer needed. When you port or
+audit a tree that predates 1.21.4, keep the model files; the item definition only names them. Deleting
+`models/item/**` is caught by nothing except looking at the inventory.
+
+This class of defect is not caught by any static check in this port. The verifiers for this port looked
+at the mixin set and the access widener, and both were in fact correct while three item models were
+absent. The compiler cannot see it (a resource file is not compiled), and the jar structure cannot see
+it in general terms — the jar still contains `assets/parcool/items/*.json`, so a "does the jar have the
+item resources" check passes. The only evidence is the pixel result in a live client, and the
+mechanical substitute is a reference-graph walk: for every `items/*.json`, every `blockstates/*.json`
+and every `parent`/`textures` string, resolve the id against the asset tree and fail if the target
+file is absent. Do that walk before declaring a port done.
+
+### Re-published artifacts (after restoring the item model files)
+
+```
+0.1-mc1.21.8fabric-3.4.3.3.jar     sha256 4aa7c60980da89e91fbe19674ca88744fee6c6d5286fb63b1039690c6f19686f
+0.1-mc1.21.8neoforge-3.4.3.3.jar   sha256 ed03034913cd8c03b04f01116e89b49089db0c4b45c3402641d3766d54f9be8a
+```
+
+copied to `/home/sanufsoii/ports/готовые порты/parcool/`. Both differ from the previous pair
+(`f0abeb3c…` / `e6fee758…`) as they must — the three JSON resources are in them. Verified in both jars:
+`assets/parcool/models/item/iron_zipline_hook.json`, `…/wooden_zipline_hook.json` and
+`…/zipline_rope.json` are present. `:common:checkCommonLoaderIndependence`, `:common:build` and
+`build` are all green. **The game was not launched**, so "the inventory no longer shows the
+missing-model checkerboard" is not yet observed on 1.21.8.
