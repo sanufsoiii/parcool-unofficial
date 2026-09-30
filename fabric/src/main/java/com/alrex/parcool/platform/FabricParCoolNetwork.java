@@ -52,7 +52,7 @@ import java.util.function.BiConsumer;
  * registration on Fabric.</b>
  *
  * <h2>Architectury 18.x fixed this upstream, but the guard stays</h2>
- * This port runs {@code architectury 18.0.8}, the newest line that covers Minecraft 1.21.10
+ * This tree runs {@code architectury 18.0.8}, the newest line that covers Minecraft 1.21.10
  * (19.0.1 declares {@code ~1.21.11} and does not apply). {@code javap -v} on
  * {@code NetworkManagerImpl$1} from {@code architectury-fabric-18.0.8.jar} shows that
  * {@code registerS2C} carries <b>no</b> {@code @Environment} annotation any more. Instead Architectury
@@ -70,7 +70,7 @@ import java.util.function.BiConsumer;
  *
  * <p>So on 18.0.8 nothing is stripped, nothing is unimplemented, and the direct
  * {@code registerReceiver(S2C, ...)} call survives. <b>Verified: the dedicated server booted to
- * {@code Done (} on this port before this guard was added</b> - see NOTES.md. This is a genuinely
+ * {@code Done (} on this tree before this guard was added</b>. This is a genuinely
  * different situation from 1.21.8's 17.0.8, not a milder version of the same failure, and the log
  * confirms it. Being downgraded from 18.0.8 to a 1.21.7-built Architectury is therefore not the cause
  * of any server-side failure here.

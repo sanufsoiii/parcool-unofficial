@@ -14,10 +14,10 @@ It needs `python3` and a JDK on `PATH` (it shells out to `unzip` and `javap`).
 
 ## Why it self-tests
 
-The checker is only useful if it *can* fail. An earlier port verified its mixin targets with a regex
-like `\(([^)]*)\)`, which stops at the first `)` — i.e. inside the first method descriptor — so it
-silently skipped every target that had a descriptor and reported "0 problems" about a completely
-broken tree. Two things guard against a repeat here:
+The checker is only useful if it *can* fail. A regex like `\(([^)]*)\)` for a method's argument
+list stops at the first `)` — i.e. inside the first method descriptor — and silently skips every
+target that has a descriptor, which is how a checker ends up reporting "0 problems" about a completely
+broken tree. Two things guard against that here:
 
 * descriptors are parsed with balanced parentheses, and the method name is taken as the identifier
   immediately before the argument list (not as the last whitespace-separated token, which breaks on

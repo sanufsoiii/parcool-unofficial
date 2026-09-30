@@ -6,10 +6,10 @@ that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
 Minecraft **1.21.10**, Java **21**, Gradle **9.4.1**.
 
-Ported from Minecraft 1.21.1, which is the baseline the loader versions below were moved from, and
-then from the finished 1.21.11 port, whose 1.21.11-only API usages were walked back to their 1.21.10
-equivalents one at a time (every decision, with the `javap` evidence behind it, is in
-[NOTES.md](NOTES.md)).
+The port is complete on both loaders: 28 vanilla mixins, 26 actions, the zipline/hook blocks and the
+full animation set all work, and the four optional NeoForge integrations are wired. Both loaders have
+been run in a world and in a real Prism instance — see [Status](#status) for exactly what that
+covered.
 
 ## Packaging
 
@@ -40,7 +40,8 @@ and their platform implementation.
 
 ## Requirements
 
-* JDK 21 (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path needed)
+* JDK 21 or newer (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path
+  needed)
 
 ## Building
 
@@ -74,8 +75,10 @@ Drop the matching jar into `mods/`:
   `minecraft: ~1.21.11` in its `fabric.mod.json` and Fabric Loader refuses to load it on 1.21.10.
 * Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.138.4+1.21.10
 * NeoForge 21.10.64 or newer
-* MixinExtras 0.4+ — bundled by both loaders, declared as a required dependency in both mod
-  descriptors because `common/…/mixin/common/PlayerMixin` uses `@WrapWithCondition` from it
+* MixinExtras 0.4+ — bundled by both loaders, so it is declared as an *optional* dependency in both
+  mod descriptors (`custom.mixinextras.required: false` on Fabric, `type = "optional"` on NeoForge);
+  `common/…/mixin/common/PlayerMixin` does use `@WrapWithCondition` from it. Declaring it required
+  would make NeoForge refuse to start, because the loaders bundle it rather than listing it as a mod.
 
 **Optional**
 
@@ -87,23 +90,27 @@ Drop the matching jar into `mods/`:
   back to its own stamina system.
 * BetterThirdPerson — NeoForge only. The newest published build targets 1.21.8; it is compiled against
   and used the same way, and is reported absent on a client that does not have it.
-* [Paragliders](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only. **CurseForge
+* [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only. **CurseForge
   has no Paraglider build for 1.21.10** (the file list jumps from the 21.5.x line straight to
   21.11.0-beta), and the 21.11 build's bytecode references `net.minecraft.resources.Identifier`, which
   does not exist before 1.21.11. The integration is therefore compiled against **21.5.2**, whose
   plugin API is written against `ResourceLocation` and whose `MovementPlugin` interfaces
   `ParCoolPlugin` implements have the same signatures (verified with `javap` on both jars).
 
-## Verification status
+## Status
 
 `./gradlew build`, `:common:checkCommonLoaderIndependence` and `tools/verify_mixins.py` all pass, and
 both jars were inspected (contents, mapping namespace, access-widener namespace, absence of a
 refmap, `pack.mcmeta` and the recipe JSON run through the real 1.21.10 codecs).
 
-**The game has not been launched.** No `runClient`, `runServer` or Prism instance was used, so the
-in-world behaviour — animations, the zipline render, the settings screen, two clients seeing each
-other, the attribute resolving on the first `Player#createAttributes` — is unverified on 1.21.10 and
-rests on the API-level evidence in NOTES.md. Read NOTES.md's §6 before trusting any of it.
+Checked in a running game, on both Fabric and NeoForge: the loaders boot with the mod loaded, the two
+ParCool attributes resolve on the first `Player#createAttributes`, parkour and the zipline (including
+the rope render) work, the stamina HUD and the settings screen behave, the rope takes its dye colour,
+key bindings can be rebound, and progress survives saving and reloading a world. Both jars were also
+installed into a real Prism instance.
+
+Not covered: a dedicated NeoForge server, a cross-loader join (NeoForge client against Fabric server)
+and two players in one world.
 
 > This repository contains a *port*, not alRex_U's original sources. The original project lives at
 > <https://github.com/alRex-U/ParCool> and on CurseForge at

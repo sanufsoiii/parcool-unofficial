@@ -23,8 +23,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * {@link Camera#getLookVector()}, {@link Camera#getUpVector()} and {@link Camera#getLeftVector()}, so
  * they can be mutated in place) and the exported {@link Camera#rotation()} quaternion.
  *
- * <p>This is the one ported hook whose visual result must be verified by hand in Phase 6; the
- * pitch/yaw path is a direct translation, the roll path is new code.
+ * <p>This is the one ported hook whose visual result has to be looked at in game rather than
+ * reasoned about: the pitch/yaw path is a direct translation, the roll path is new code.
  */
 @Mixin(Camera.class)
 public abstract class CameraAnglesMixin {

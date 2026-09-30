@@ -1,11 +1,11 @@
 # Building ParCool (Architectury, Minecraft 1.21.10)
 
-Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
-`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` and
-no machine-specific path anywhere in the build.
+Requires JDK 21 or newer. The toolchain is declared through
+`java { toolchain { languageVersion = 21 } }` in `build.gradle`, and `org.gradle.java.home` is not
+set: there is no machine-specific path anywhere in the build.
 
 Versions (all in `gradle.properties` / `settings.gradle`, each read from a metadata endpoint rather
-than guessed — see [NOTES.md](NOTES.md) §1):
+than guessed — see the comment blocks of `gradle.properties` and `settings.gradle`):
 
 | | |
 |---|---|
@@ -32,7 +32,7 @@ than guessed — see [NOTES.md](NOTES.md) §1):
 ```
 
 **A single `./gradlew build` on a clean checkout does not work**, and that is inherited from the
-Architectury plugin rather than something this port introduced. Architectury Loom resolves the
+Architectury plugin rather than something this tree introduced. Architectury Loom resolves the
 `:common` project dependency while it *configures* `:fabric`, before the root `build` task graph has
 been able to depend on `:common:build`; on a clean tree the run dies with
 
@@ -72,8 +72,7 @@ Each contains the `:common` code and assets plus the loader module's own classes
 `parcool-common.mixins.json`, and the `ServiceLoader` file that binds `ParCoolPlatform`.
 
 The two are assembled differently on purpose — see the packaging rationale in
-[fabric/build.gradle](fabric/build.gradle) and [neoforge/build.gradle](neoforge/build.gradle), and
-§5 of [NOTES.md](NOTES.md) for what was verified about the results.
+[fabric/build.gradle](fabric/build.gradle) and [neoforge/build.gradle](neoforge/build.gradle).
 
 ## Running
 
@@ -83,7 +82,7 @@ The two are assembled differently on purpose — see the packaging rationale in
 ```
 
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
-ParCool mixin; that is how the mixin set is verified without a manual client session. A dedicated
+ParCool mixin. A dedicated
 server refuses to start until it is acknowledged, so before the first `:fabric:runServer` /
 `:neoforge:runserver` create `<module>/run/eula.txt` containing:
 
@@ -130,8 +129,6 @@ python3 tools/verify_mixins.py "$JAR" common/src/main/java
 It needs `python3` plus `unzip` and `javap` on `PATH`.
 
 **Read `tools/README.md` before trusting its output.** A checker that cannot fail is worse than no
-checker: an earlier port of this mod verified its targets with a regex that cut at the first `)`,
-silently skipped every target that had a method descriptor, and reported "0 problems" about an
-entirely broken tree. This one runs a self-test on every invocation — a wrong-arity target, a
-wrong-name target and a genuinely correct one — and refuses to report anything unless the first two
-are flagged and the third stays silent.
+checker: this one runs a self-test on every invocation — a wrong-arity target, a wrong-name target and
+a genuinely correct one — and refuses to report anything unless the first two are flagged and the
+third stays silent.
