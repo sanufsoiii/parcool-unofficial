@@ -698,3 +698,20 @@ Run under three clients at once (1.21.5, 1.21.6, 1.21.8). At boot on this build:
 
 Still not exercised on this port: NeoForge (never launched on any port), and the cross-loader
 join (a NeoForge client against this Fabric server).
+
+## Live-client result (human player, not an orchestrator)
+
+**NeoForge dev client, human in a world: all actions, zipline, HUD, settings and inventory textures
+work. Approved.**
+
+Log counters on that run, all zero: `IllegalAccessError`, `Exception caught during firing event`,
+`Ticking player`, `Registry is already frozen`, `IllegalReferenceCount`, `NullPointerException`,
+`GL ERROR`, `Invalid key`, `Mixin apply for mod parcool failed`, `BUILD FAILED`. `joined the game` = 1.
+
+This is the first NeoForge run on this port, so the attribute-registration split - register
+`Attributes.registerAll()` only from the Fabric entry point and resolve the holder on NeoForge - is
+now confirmed rather than merely argued from the NeoForge sources. It survives a real
+`Player#createAttributes`, which is the step that dies with "Registry is already frozen" if the
+split is wrong.
+
+Still not exercised on this port: the NeoForge dedicated server, and the cross-loader join.
