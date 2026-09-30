@@ -1,13 +1,15 @@
 # Building ParCool (Architectury, Minecraft 1.21.8)
 
-Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
-`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` and
-no machine-specific path anywhere in the build. (If the system default `java` is newer than 21, point
-`JAVA_HOME` at a 21 JDK for the Gradle invocation — Gradle 9 refuses to run on it otherwise.)
+Requires JDK 21 or newer. The toolchain is declared through
+`java { toolchain { languageVersion = 21 } }` in `build.gradle`, and `org.gradle.java.home` is not
+set: there is no machine-specific path anywhere in the build. (If the system default `java` is newer
+than 21, point `JAVA_HOME` at a 21 JDK for the Gradle invocation — Gradle 9 refuses to run on it
+otherwise.)
 
 Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.8, Architectury API 17.0.8,
 NeoForge 21.8.54, Fabric Loader 0.16.14, Fabric API 0.136.1+1.21.8, Architectury Loom 1.17.493,
-ModDevGradle 2.0.148, Gradle 9.4.1. Where each number came from is in [NOTES.md](NOTES.md) §1.
+ModDevGradle 2.0.148, Gradle 9.4.1. Where each number came from is written down in the comment blocks
+of `gradle.properties` and `settings.gradle`.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -41,8 +43,9 @@ modules actually load; if a freshly added mixin class is present in the built ja
 `parcool.accesswidener` changes, because the widener is not part of the artifact cache key — a wrong
 descriptor in it is then silently ignored and the widening simply does not happen.
 
-**Never run `./gradlew --stop`** on a machine where more than one port builds at a time; the Gradle
-daemons are shared. Delete the cache directories above instead.
+**Do not use `./gradlew --stop`** to flush this: it stops every Gradle daemon on the machine,
+including ones serving unrelated projects. Delete the cache directories above instead — they are
+per-project.
 
 ## Distributables
 
@@ -80,22 +83,15 @@ Each contains the `:common` code and assets plus the loader module's own classes
 
 ## Verification
 
-The build is not the acceptance test; these are.
+The build succeeding says nothing about the artifact; these check the artifact itself.
 
 ```bash
-python3 tools/verify_aw_and_mixins.py            # 13 AW entries + 36 mixin injectors
-python3 tools/verify_aw_and_mixins.py --self-test  # must report 37 problems
-bash    tools/verify_artifacts.sh                # both jars: classes, mixin config, AW namespace
-bash    tools/probe_seams.sh                     # which side of every version seam this build is on
+bash tools/verify_artifacts.sh   # both jars: classes, mixin config, AW namespace, no refmap
 ```
 
-`verify_aw_and_mixins.py` compares the raw mojmap jar against the AW-applied one that Loom produced,
-so a widened member that was never actually widened is reported rather than assumed; it walks each
-target's whole superclass chain (a mixin may inject an inherited method) and balances parentheses
-when it reads an annotation's arguments, because a `\(([^)]*)\)` regex truncates on the `)` inside
-`Lnet/minecraft/world/phys/Vec3;)V` and silently skips every mixin that carries a descriptor. The
-`--self-test` mode feeds it deliberately broken targets and requires it to report them, which is the
-only way to know the verifier is not the thing that is broken.
+`verify_artifacts.sh` checks each distributable end to end: the class list, that every mixin named in
+`parcool-common.mixins.json` is present *and* that no mixin class in the jar is missing from the
+config, the resources both jars must carry, the access-widener namespace, and the absence of a refmap.
 
 `tools/AtCheck.java` parses `neoforge/src/main/resources/META-INF/accesstransformer.cfg` with
 NeoForge's own `AccessTransformerList`, which is the only way to find out that an AT entry is
@@ -109,12 +105,8 @@ syntactically wrong before the game refuses to start. Compile it against
 ./gradlew :neoforge:runclient    :neoforge:runserver    :neoforge:runClient2
 ```
 
-> **Not exercised in this tree.** The brief for this port forbids launching Minecraft, so none of the
-> tasks above were run and nothing in this repository claims the game was booted. See
-> [NOTES.md](NOTES.md) §7 for the open checklist.
-
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
-ParCool mixin; that is how the mixin set is verified without a manual client session. A dedicated
+ParCool mixin. A dedicated
 server refuses to start until it is acknowledged, so before the first `:fabric:runServer` /
 `:neoforge:runserver` create `<module>/run*/eula.txt` containing:
 

@@ -24,7 +24,7 @@ import java.util.Objects;
  * <p><b>Why the two loaders register them differently.</b> {@code BuiltInRegistries.ATTRIBUTE} is
  * writable only while {@code Bootstrap#bootStrap} is running, and that pass is the one thing that
  * reaches {@code DefaultAttributes}' static initialiser, i.e. {@code Player#createAttributes}, on
- * Fabric. NeoForge (21.5 and later, the line this port targets; 21.8.54 here) closes the built-in
+ * Fabric. NeoForge (21.5 and later, the line this tree targets; 21.8.54 here) closes the built-in
  * registries before the mod constructors run, so a direct
  * {@code Registry.registerForHolder} there dies with "Registry is already frozen (trying to add key
  * parcool:max_stamina)" and NeoForge cannot start at all. There is no vanilla hook that sits inside

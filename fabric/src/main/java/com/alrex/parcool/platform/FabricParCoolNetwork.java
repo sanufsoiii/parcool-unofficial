@@ -16,7 +16,7 @@ import java.util.function.BiConsumer;
  *
  * <h2>Why the S2C side is registered differently on a dedicated server</h2>
  * The obvious implementation - {@code NetworkManager.registerReceiver(Side.S2C, id, receiver)} on both
- * sides - crashes a dedicated server at mod init. Reproduced on this port against
+ * sides - crashes a dedicated server at mod init. Reproduced on this tree against
  * {@code architectury-fabric 17.0.8}:
  *
  * <pre>
