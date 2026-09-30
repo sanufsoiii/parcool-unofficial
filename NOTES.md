@@ -366,6 +366,148 @@ So all of the following are unverified on 1.21.10 and rest on API-level evidence
 * that the recipes are craftable in game (the codecs accept them, but `category` in the recipe book
   and the creative tab are cosmetic and unconfirmed).
 
+## 7. The decode ran on a released buffer — `refCnt: 0`
+
+Found by launching a client, not by reading the code, and the faulty line had been carried into
+every port from 1.21.7 on. Fixed here in both `FabricParCoolNetwork` and
+`NeoForgeParCoolNetwork`, which were byte-identical on this line.
+
+### What the live client said
+
+```
+[Server thread/ERROR] (Minecraft) Error executing task on Server
+io.netty.util.IllegalReferenceCountException: refCnt: 0
+  at io.netty.buffer.AbstractByteBuf.readByte(AbstractByteBuf.java:730)
+  at net.minecraft.network.VarLong.read(VarLong.java:28)
+  at net.minecraft.network.codec.ByteBufCodecs$8.decode(ByteBufCodecs.java:155)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.lambda$register$0(FabricParCoolNetwork.java:48)
+[Render thread/WARN] (ParCool) the server limitation snapshot has been missing for 10s,
+  so no action can start. Asking the server again (ParCoolIsActive=true).
+```
+
+`lambda$register$0` is the receiver lambda registered in `register(...)`; the frames below it are
+the payload codec's own `VarLong` read. The second line is the consequence, not a separate bug: the
+limitation snapshot never lands, so the action watchdog fires and no action can start.
+
+### Why the decode read freed memory
+
+`NetworkManager.registerReceiver(Side, ResourceLocation, NetworkReceiver)` is Architectury's
+deprecated id overload. Its body is `NetworkAggregator#registerReceiver`
+(`dev/architectury/impl/NetworkAggregator.java` in the `architectury-18.0.5-sources.jar`; the same
+code is in 18.0.8 and 19.0.1):
+
+```java
+class_8710.class_9154<BufCustomPacketPayload> type = new class_8710.class_9154<>(id);
+...
+registerC2SReceiver(type, BufCustomPacketPayload.streamCodec(type), packetTransformers, (value, context) -> {
+    class_9129 buf = new class_9129(Unpooled.wrappedBuffer(value.payload()), context.registryAccess());
+    receiver.receive(buf, context);
+    buf.release();          // <-- the receiver gets a BORROWED buffer with an explicit deadline
+});
+```
+
+The contract is therefore: the receiver is handed a **borrowed** `RegistryFriendlyByteBuf` that is
+released the moment `receive` returns. `class_9129` is an `AbstractByteBuf` in its own right, so its
+`release()` drives its own `refCnt` to 0, and any later read trips `ensureAccessible()` →
+`IllegalReferenceCountException: refCnt: 0`. (It does not release the buffer it wraps, which is
+exactly why the failure is a `refCnt: 0` read rather than a corrupted-payload read.)
+
+This port's receiver threw that contract away:
+
+```java
+(buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+```
+
+`context.queue` is `MinecraftServer#execute` / `Minecraft#execute` — it hands the runnable to the
+main thread's task queue. The decode therefore did not run until the main thread drained the queue,
+which is by definition *after* `receive` returned and *after* `buf.release()`.
+
+`context.queue` is **not** the bug and must stay: it is what makes `handler.accept` thread-safe. The
+decode is the only thing that has to move out of it.
+
+### The fix, and the proof in the shipped bytecode
+
+Decode first, on the network thread, while the buffer is alive; queue only the handler:
+
+```java
+T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+context.queue(() -> handler.accept(payload, context));
+```
+
+Before (the previously published NeoForge jar) the queued runnable captured the buffer and the codec,
+and `decode` did not exist in the receiver at all:
+
+```
+private static void lambda$register$1(BiConsumer, StreamCodec, RegistryFriendlyByteBuf, PacketContext);
+   0: aload_3
+   5: invokedynamic #44  // InvokeDynamic #1:run:(BiConsumer;StreamCodec;RegistryFriendlyByteBuf;PacketContext;)Runnable
+  10: invokeinterface dev/architectury/networking/NetworkManager$PacketContext.queue:(Ljava/lang/Runnable;)V
+```
+
+After (rebuilt):
+
+```
+private static void lambda$register$1(StreamCodec, BiConsumer, RegistryFriendlyByteBuf, PacketContext);
+   2: invokeinterface net/minecraft/network/codec/StreamCodec.decode:(Ljava/lang/Object;)Ljava/lang/Object;
+  10: astore        4
+  17: invokedynamic #52  // InvokeDynamic #1:run:(BiConsumer;CustomPacketPayload;PacketContext;)Runnable
+  22: invokeinterface dev/architectury/networking/NetworkManager$PacketContext.queue:(Ljava/lang/Runnable;)V
+```
+
+`decode` at offset 2, `queue` at offset 22, and the queued `Runnable` now captures
+`(BiConsumer, CustomPacketPayload, PacketContext)` — no buffer crosses the thread boundary.
+
+This is the shape 1.21.3's `NetworkChannel` path already had: `CHANNEL.register(payload, encoder,
+decoder, handler)` takes the decoder as its own lambda, so Architectury invokes it while the buffer
+is live and only the handler is queued. 1.21.3 is read-only and was not touched; it is the
+correct-pattern reference for this file.
+
+### This class of defect is invisible to the compiler
+
+`./gradlew build` was green with the bug in place and stayed green. Nothing about the types is wrong:
+`erased.decode` returns exactly `T`, `context.queue` takes exactly a `Runnable`, and the lambda that
+does the wrong thing has precisely the right signature. There is no annotation, no lint and no test
+in this tree that can see it, because what is broken is an **ownership/lifetime rule** that lives
+entirely inside Architectury's `buf.release()` and is invisible from the call site.
+
+**The only thing that catches it is a live client that has entered a world.** Without a world there
+are no incoming ParCool payloads, the receiver lambda is never invoked, the released buffer is never
+read, and nothing is ever logged. The defect fires on the *first* packet, so it is latent until
+exactly the moment the mod starts doing its job.
+
+A world is necessary but not sufficient: the payload has to actually arrive. A session with no
+ParCool limitations configured produces no snapshot to receive and can therefore stay quiet with the
+bug fully present. So "it launched cleanly" and even "it got into a world" are both consistent with
+the bug being there. Only a session in which a ParCool packet is actually delivered — stamina, action
+sync, client settings, limitation snapshot — exercises the decoder.
+
+Corollary for every port: a port whose verification never launched the game has **no evidence either
+way** about this, and "it built" must never be written up as "it works".
+
+## 7. The decode ran on a released buffer — `refCnt: 0`
+
+Published artifacts after the fix (copied to `/home/sanufsoii/ports/готовые порты/parcool/`):
+
+```
+0.1-mc1.21.10fabric-3.4.3.3.jar
+  1 207 726 bytes, 516 entries, 350 classes
+  sha256 c51caa76ff726e1e6d53735c7082c6a3b6d107e042a546b2378db2247471b5b5
+0.1-mc1.21.10neoforge-3.4.3.3.jar
+  1 224 499 bytes, 533 entries, 360 classes
+  sha256 7d699599318696a5f0e1df84466eb9eae013e488af8f29112b1d9696cc4258db
+```
+
+Not byte-for-byte identical to the pre-fix pair
+(`ff53f9ecfba3d0b2df7337c6c902a8cb7ddbeef255273279deded7efe5c3a233`, 1 207 689 bytes, and
+`0cf4908a62fd583a6a6a53ef7d79e2b04fe6ff3c7b6f9e8cc749dd97c83c1939`, 1 224 517 bytes): +37 and
+−18 bytes. Entry and class counts are unchanged (516/350 and 533/360), so the only changed content
+is the body of the receiver lambda in `FabricParCoolNetwork#register` and
+`NeoForgeParCoolNetwork#register`.
+
+**The game was not launched for this fix, on either loader**, so none of the runtime behaviour
+claimed in §6 changed status: the network now decodes on a live buffer by construction and in the
+bytecode, but that a ParCool packet now actually round-trips has not been observed.
+
 ## Ingredient form and the `chain` / `iron_chain` rename (verified by the orchestrator)
 
 Two claims in the handoff for this port were wrong and are retracted here so the next person
