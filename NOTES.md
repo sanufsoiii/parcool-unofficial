@@ -817,3 +817,46 @@ copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
 * **Not verified:** no client was launched (the orchestrator holds the single GPU), and the server was
   booted with no players, so a real server -> client packet write has not been observed end to end.
   What is proven is that the server starts and registers the S2C payload *types*.
+
+## Spectator noclip was broken on every version (found by the user in a live world)
+
+The user could not fly through blocks in spectator mode on any port, and Ctrl+P did not help.
+
+**Root cause: ParCool was clearing a flag vanilla owns.** `Entity#noPhysics` is the whole mechanism
+behind spectator noclip - `Player#tick` contains, verified with `javap -c` on the mojmap jar:
+
+```
+ 2: invokevirtual net/minecraft/world/entity/Entity.isSpectator:()Z
+ 5: putfield      noPhysics:Z
+```
+
+`mixin/common/EntityMixin#onMove` then had this, at the head of `Entity#move` for every player:
+
+```java
+} else if (player.noPhysics) {
+    player.noPhysics = false;
+}
+```
+
+That branch exists to undo an upstream leak - upstream raised `noPhysics` for an enforced move and
+never gave it back, so a player who had used HideInBlock kept falling through the world. But it was
+unconditional, so on the first `move` of every tick it also cleared the flag vanilla had just set for
+a spectator. `Entity#move` branches on `noPhysics` as its first instruction, so with the flag gone
+the player collided with the world like a survival player. No ParCool action had to be running for
+this to fire, which is exactly why Ctrl+P changed nothing.
+
+**Fix: only ever give back a flag ParCool raised itself.** `BehaviorEnforcer` now carries
+`noPhysicsRaisedByParCool`, set wherever ParCool assigns `noPhysics = true` (`EntityMixin#onMove` and
+both sites in `HideInBlock`) and cleared on `HideInBlock#onStop`. The cleanup branch tests that flag
+instead of the shared one.
+
+**Note on the blast radius.** `mixin/common/EntityMixin.java` was byte-identical across all nine
+ports (md5 `0ec72484d9`), so the defect and the fix are uniform - which is also why it survived nine
+independent ports and a full green build on every one of them. A boot check, a mixin verifier and
+`checkCommonLoaderIndependence` cannot see this: the class applies, every `@Inject` resolves, and
+the bug only exists in the *value* a vanilla-owned field is being assigned.
+
+**Verified statically on the 1.21.9 reference build:** `javap -c net.minecraft.world.entity.player.Player`
+shows `isSpectator()` then `putfield noPhysics` in `tick()`, and no other vanilla class writes
+`noPhysics` except the three ParCool sites. **Not yet confirmed by a live spectator test** - that is
+the one check that closes this, and it is the user's to run.
