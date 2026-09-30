@@ -262,8 +262,8 @@ player.
 ## 10. Published artifacts
 
 ```
-0.1-mc1.21.5fabric-3.4.3.3.jar     sha256 7ad6f3000db0f4c987dcfcc2d8d2de54dc635a1c884592da144f71dea4947b3d
-0.1-mc1.21.5neoforge-3.4.3.3.jar   sha256 78ade57a5d2afc7d942f09938d7b3e35170659b601fa1c464227f581ff278d81
+0.1-mc1.21.5fabric-3.4.3.3.jar     sha256 64d093979ab0be49e58f344548b1dd49a26f4c7e40f33fb0fd852b0b63b435af
+0.1-mc1.21.5neoforge-3.4.3.3.jar   sha256 bca345bc16e8028d33cff1b99d7c0fb761b6a8bea89ad930f5f36708b99b99ee
 ```
 
 copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
