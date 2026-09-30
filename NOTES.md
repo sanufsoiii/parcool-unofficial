@@ -350,3 +350,35 @@ them:
 - The object form `{"item": ...}` for recipe ingredients does **not** parse on any of these
   versions: `Ingredient.CODEC` is a holder-set codec whose string branch is what
   `"minecraft:chain"` goes through. The string form is the correct one throughout.
+
+## `minecraft:iron_chain` in the rope recipe (fixed by the orchestrator, after the port was built)
+
+`data/parcool/recipe/zipline_rope.json` was shipped with `"C": "minecraft:iron_chain"`.
+**No such item exists in 1.21.3**, so the zipline rope was uncraftable — a silent datapack
+failure with a green build, the exact class of defect a compile check cannot see.
+
+Proof, from this port's own client resources jar
+(`neoforge/build/moddev/artifacts/neoforge-21.3.97-minecraft-resources-aka-client-extra.jar`):
+
+```
+unzip -l <jar> | grep -c iron_chain              -> 0
+unzip -l <jar> | grep 'models/item/chain.json'   -> assets/minecraft/models/item/chain.json
+unzip -l <jar> | grep 'recipe/chain.json'        -> data/minecraft/recipe/chain.json
+```
+
+The correct spelling is `minecraft:chain`.
+
+**When does the rename happen?** Verified across the resource jars of the sibling ports:
+
+| version | item in resources jar | correct recipe id |
+|---|---|---|
+| 1.21.2, 1.21.3 | `chain` | `minecraft:chain` |
+| 1.21.5, 1.21.6, 1.21.7, 1.21.8 | `chain` | `minecraft:chain` |
+| 1.21.9, 1.21.10 | `iron_chain` | `minecraft:iron_chain` |
+
+So the vanilla `chain` -> `iron_chain` rename lands somewhere in 1.21.9. Do not carry
+`iron_chain` backwards and do not carry `chain` forwards; read the target's own resources jar.
+
+This is not a port-local mistake: the read-only base tree
+`parcool-Architectury-API-1.21.11` also ships `iron_chain` (correct *there*), and copying that
+recipe into any pre-1.21.9 port silently breaks crafting there.
