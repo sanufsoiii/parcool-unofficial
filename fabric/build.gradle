@@ -92,6 +92,39 @@ dependencies {
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// architectury-fabric declares fabric-api as a HARD (scope=runtime, non-optional) dependency and
+	// Gradle resolves the conflict with "highest wins", so an Architectury that asks for a fabric-api
+	// newer than the 0.119.4+1.21.4 pinned above silently replaces it and Fabric Loader aborts the
+	// boot before the window exists. This port hit exactly that with architectury-fabric 16.1.4, which
+	// asks for 0.119.5+1.21.5 and also drags in fabric-renderer-api-v1 6.0.0+55bce67a07 /
+	// fabric-renderer-indigo 3.0.0+55bce67a07 (both demand >=1.21.5-beta.1):
+	//   [FabricLoader/Resolution] Immediate reason: [HARD_DEP architectury 16.1.4
+	//     {depends fabric-api @ [>=0.100.0]},
+	//     HARD_DEP_INCOMPATIBLE_PRESELECTED fabric-api 0.119.5+1.21.5
+	//     {depends minecraft @ [>=1.21.5- <1.21.6-)}, ROOT_FORCELOAD_SINGLE architectury 16.1.4]
+	//   [FabricLoader/ERROR] Incompatible mods found!
+	// gradle.properties now pins architectury_api_version=15.0.3, whose fabric-api request
+	// (0.110.5+1.21.4) is BELOW the pin, so the port's own fabric-api wins on its own and no
+	// override is needed here. That is also the version whose own mixins run on 1.21.4 - 16.x is a
+	// 1.21.5 build mislabelled "~1.21.4-" and hard-crashes in Blocks.<clinit>; see gradle.properties.
+	//
+	// If this ever needs defending mechanically rather than by version choice, the options are:
+	//  - `modImplementation(...) { force = true }` no longer exists. javap on Gradle 9.4.1
+	//    (gradle-core-api-9.4.1.jar / gradle-dependency-management-9.4.1.jar) shows
+	//    AbstractExternalModuleDependency has only `isForce()` and no `setForce(...)`, so the Groovy
+	//    DSL form dies with "Could not set unknown property 'force'". It was removed in Gradle 9.
+	//  - `configurations.matching { it.name.startsWith('mod') }.configureEach {
+	//     resolutionStrategy.force ... }` works, but it has to name Loom's internal configurations,
+	//    which are not API. This port has already been forced through a Loom migration
+	//    (1.7.435 -> 1.17.493, see settings.gradle), so the list is a moving target and a name that
+	//    silently stops resolving reintroduces the bug with no compile error.
+	//  - `exclude group: 'net.fabricmc.fabric-api'` on the declaration below is the position
+	//    independent one - it drops the offending EDGE, so it holds for every configuration the
+	//    project resolves, present and future, including the modCompileClasspath / modLocalRuntime /
+	//    productionRuntimeMods that Loom builds internally. It was verified to work on this port
+	//    (the runClient classpath then contained fabric-api-0.119.4+1.21.4.jar), but it was dropped
+	//    again because it only treats the symptom: with architectury 16.1.4 the client then died
+	//    anyway, in Architectury's own MixinFarmBlock, and no exclude on this line can reach that.
 	modImplementation "dev.architectury:architectury-fabric:${project.architectury_api_version}"
 	// javac reads ParCool's own classes from the plain mojmap jar (always in sync with :common, and
 	// immune to Loom's stale remap cache); `modImplementation` supplies the remapped artifact that

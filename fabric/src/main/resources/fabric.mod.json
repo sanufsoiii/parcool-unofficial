@@ -33,7 +33,7 @@
     "fabric-api": "*",
     "minecraft": "~1.21.4",
     "java": ">=21",
-    "architectury": ">=16.0.0"
+    "architectury": ">=15.0.3"
   },
   "custom": {
     "mixinextras": {
