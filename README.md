@@ -75,7 +75,7 @@ the loader-independence check and the list of what has and has not been exercise
 Drop the matching jar into `mods/`:
 
 * Fabric — `fabric/build/libs/parcool-1.21.8-3.4.3.3-fabric.jar`
-* NeoForge — `neoforge/build/libs/parcool-neoforge.jar`
+* NeoForge — `neoforge/build/libs/parcool-1.21.8-3.4.3.3-neoforge.jar`
 
 ## Dependencies
 
