@@ -55,7 +55,18 @@ public class NeoForgeParCoolNetwork implements ParCoolNetwork {
         NetworkManager.registerReceiver(
                 clientbound ? NetworkManager.Side.S2C : NetworkManager.Side.C2S,
                 wireId,
-                (buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+                (buf, context) -> {
+                    // The decode must happen HERE, on the netty thread, while the buffer is still
+                    // alive: registerReceiver hands the receiver a raw buffer and releases it as soon
+                    // as this lambda returns. Inside context.queue(...) that buffer already has
+                    // refCnt 0, and the first VarLong.read() of a ParCool payload codec throws
+                    // IllegalReferenceCountException, which kills the server task and with it every
+                    // ParCool packet. Only the handler is queued - for thread safety, not for
+                    // decoding. Do not "simplify" the decode back inside the queue: it is not an
+                    // equivalent rewrite, it is this bug.
+                    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+                    context.queue(() -> handler.accept(payload, context));
+                }
         );
     }
 
