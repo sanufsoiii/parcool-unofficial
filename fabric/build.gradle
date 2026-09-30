@@ -70,8 +70,8 @@ tasks.named('processResources') {
 	tasks.named(runTask) {
 		it.jvmArgs '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
 		// `./gradlew :fabric:runClient -PparcoolQuickPlay=host:port` boots straight into a server, and
-		// `-PparcoolQuickPlayWorld=<name>` into a saved world; both are how the cross-loader join
-		// (M2/M3/M4) and the in-world render pass are reproduced without a mouse.
+		// `-PparcoolQuickPlayWorld=<name>` into a saved world; both are how a cross-loader join
+		// and the in-world render pass are reproduced without a mouse.
 		if (runTask.startsWith('runClient') && project.hasProperty('parcoolQuickPlay')) {
 			it.args '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
 		}
