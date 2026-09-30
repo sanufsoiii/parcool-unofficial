@@ -1106,3 +1106,25 @@ Note for whoever reconciles the publish folder: the `0.1-mc1.21.2*` files that w
 `684732eaf9bb0edaa0eef865fc6b4bd7ec8cf84feac13e9947c388b1d118bce8`, which matched **neither** this
 port's own §8 record (`95fe10c2…` / `c7f63d5b…`) nor anything built from the current tree. The
 folder had already drifted; the two hashes above are what the current tree produces.
+
+## Live-client results (human player, not an orchestrator)
+
+| version | what was run | outcome |
+|---|---|---|
+| 1.21.2 | dedicated server + client that quickPlays into it | player joined, ParCool active, actions, zipline, HUD, textures in inventory all work. **Confirmed good by the user.** |
+
+Server log on the run that passed:
+
+```
+[11:26:32] [Server thread/INFO] (Minecraft) Starting Minecraft server on *:25565
+[11:26:33] [Server thread/INFO] (Minecraft) Done (0.831s)! For help, type "help"
+[11:26:49] [Server thread/INFO] (Minecraft) Player519 joined the game
+[11:26:49] [Server thread/INFO] (ParCool) Limitation of 17cd00bc-... was loaded
+```
+
+`AbstractMethodError` 0, `Error starting minecraft server` 0, `refCnt: 0` 0 on both sides,
+`GL ERROR` 0, `Invalid key` 0, mixin apply failures 0.
+
+The one line that does appear and is harmless:
+`No data fixer registered for parcool:zipline_hook` - NBT schema migration warning for the
+block entity, not a failure.
