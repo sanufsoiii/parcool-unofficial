@@ -410,3 +410,47 @@ copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
 * **Not verified:** no client was launched (the orchestrator holds the single GPU), and the server was
   booted with no players, so a real server -> client packet write has not been observed end to end.
   What is proven is that the server starts and registers the S2C payload *types*.
+
+## Zipline render crash (found by the user in a live world, 1.21.6)
+
+Client died with `exit value 255` the moment a rope was drawn:
+
+```
+[Render thread/ERROR] (Minecraft) Reported exception thrown!
+net.minecraft.ReportedException: Rendering entity in world
+  at EntityRenderDispatcher.render(EntityRenderDispatcher.java:184)
+Caused by: java.lang.ExceptionInInitializerError
+  at com.alrex.parcool.mixin.client.ZiplineRopeRenderer.render(ZiplineRopeRenderer.java:121)
+Caused by: java.lang.NullPointerException: Cannot read field "vertexShader" because "snippet" is null
+  at RenderPipeline$Builder.withSnippet(RenderPipeline.java:338)
+  at com.alrex.parcool.client.renderer.RenderTypes.registerPipeline(RenderTypes.java:75)
+  at com.alrex.parcool.client.renderer.RenderTypes.<clinit>(RenderTypes.java:45)
+```
+
+**Cause: static-initialisation order, not the API.** This port carried a private copy of the
+three uniform declarations, declared *after* the `static {}` block that calls
+`registerPipeline`, on the documented assumption that
+`RenderPipelines.MATRICES_FOG_SNIPPET` is private in 1.21.6. That field is public:
+
+```
+javap -p net.minecraft.client.renderer.RenderPipelines     # 1.21.6 mojmap jar
+  public static final RenderPipeline$Snippet MATRICES_FOG_SNIPPET;
+```
+
+Java runs static initialisers in declaration order, so the block that calls `registerPipeline`
+saw the copy while it was still `null`, and `RenderPipeline.builder(null)` produced the NPE.
+
+**Why nothing caught it.** The class initialises without throwing at load time, the mod loads,
+the main menu works, the HUD works, every action works. The failure needs a rope entity in view.
+A boot check, a jar-structure check, a mixin-target verifier and `checkCommonLoaderIndependence`
+all pass on this build. It took a human walking into a world with a zipline.
+
+**Fix:** use the public vanilla `RenderPipelines.MATRICES_FOG_SNIPPET`, exactly as 1.21.5,
+1.21.7, 1.21.8, 1.21.9 and 1.21.10 do, and delete the local copy. That removes the
+declaration-order hazard instead of merely moving the fields around.
+
+**Warning for the next port:** never hand-roll a `RenderPipeline.Snippet` as a field declared
+below a `static {}` that uses it. If a local copy is genuinely unavoidable it must be declared
+above every initialiser that reads it. And check the field's real visibility with `javap -p`
+rather than inferring it from neighbouring versions - here the neighbouring ports could see it,
+and 1.21.6 could not, but not for the reason claimed.

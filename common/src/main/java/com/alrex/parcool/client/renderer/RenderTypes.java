@@ -1,7 +1,6 @@
 package com.alrex.parcool.client.renderer;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -31,8 +30,38 @@ import net.minecraft.client.renderer.RenderType;
  * {@code neoforge/src/main/resources/META-INF/accesstransformer.cfg} (NeoForge).
  *
  * <p>{@code RenderPipelines#register} is private, but the map it fills is public, so the two
- * pipelines are registered the same way vanilla's are. {@code RenderPipelines#MATRICES_FOG_SNIPPET}
- * is private as well, hence the local copy of the three uniform declarations it is built from.
+ * pipelines are registered the same way vanilla's are.
+ *
+ * <h2>Do not hand-roll the snippet</h2>
+ * An earlier version of this file carried a private copy of the three uniform declarations,
+ * declared *below* the static initialiser block, on the stated assumption that
+ * {@code RenderPipelines#MATRICES_FOG_SNIPPET} is private in 1.21.6. Both halves of that are
+ * wrong. The field is public:
+ *
+ * <pre>
+ * javap -p net.minecraft.client.renderer.RenderPipelines   # 1.21.6 mojmap jar
+ *   public static final RenderPipeline$Snippet MATRICES_FOG_SNIPPET;
+ * </pre>
+ *
+ * and Java runs static initialisers in declaration order, so the block that calls
+ * {@code registerPipeline} executed while the copy was still {@code null}. The failure was not
+ * at build time and not at load time - the class initialised fine, and the mod loaded. It
+ * surfaced only when a rope was actually drawn:
+ *
+ * <pre>
+ * [Render thread/ERROR] (Minecraft) Reported exception thrown!
+ * net.minecraft.ReportedException: Rendering entity in world
+ * Caused by: java.lang.ExceptionInInitializerError
+ *   at ZiplineRopeRenderer.render(ZiplineRopeRenderer.java:121)
+ * Caused by: java.lang.NullPointerException: Cannot read field "vertexShader" because "snippet" is null
+ *   at RenderPipeline$Builder.withSnippet(RenderPipeline.java:338)
+ *   at com.alrex.parcool.client.renderer.RenderTypes.registerPipeline(RenderTypes.java:75)
+ *   at com.alrex.parcool.client.renderer.RenderTypes.&lt;clinit&gt;(RenderTypes.java:45)
+ * </pre>
+ *
+ * and the client died with exit code 255. Using the public vanilla snippet, as the 1.21.5, 1.21.7,
+ * 1.21.8, 1.21.9 and 1.21.10 ports do, removes the declaration-order hazard entirely instead of
+ * merely reordering the fields around it.
  */
 public class RenderTypes {
     public static final RenderType ZIPLINE_3D;
@@ -59,20 +88,11 @@ public class RenderTypes {
         );
     }
 
-    /**
-     * A copy of {@code RenderPipelines#MATRICES_FOG_SNIPPET}, which is private in 1.21.6. The rope
-     * pipeline is built from the same three uniform buffers, so it gets the same globals.
-     */
-    private static final RenderPipeline.Snippet MATRICES_FOG_SNIPPET = RenderPipeline.builder()
-            .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
-            .withUniform("Projection", UniformType.UNIFORM_BUFFER)
-            .withUniform("Fog", UniformType.UNIFORM_BUFFER)
-            .buildSnippet();
-
     private static RenderPipeline registerPipeline(String location, boolean cull) {
         // Same shaders and sampler the 1.21.1 RENDERTYPE_LEASH_SHADER shard selected, so the rope
         // still renders exactly as it did there; only the draw mode and the culling differ.
-        RenderPipeline pipeline = RenderPipeline.builder(MATRICES_FOG_SNIPPET)
+        // The snippet is vanilla's public MATRICES_FOG_SNIPPET, the same one the other ports use.
+        RenderPipeline pipeline = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
                 .withLocation(location)
                 .withVertexShader("core/rendertype_leash")
                 .withFragmentShader("core/rendertype_leash")
