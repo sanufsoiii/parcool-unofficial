@@ -579,3 +579,138 @@ does not re-chase them:
 `CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC)`, so
 `MapCodec#orElse` already defaults it. An earlier note in this file claimed its absence broke
 every recipe; that claim was wrong and is retracted.
+
+---
+
+## Dedicated server: verified, but the defect everyone was told about does **not** exist on 18.0.5
+
+The brief said this port had the same defect as 1.21.4 / 1.21.8 — a dedicated Fabric server dying at
+mod init with `AbstractMethodError` on `Adaptor#registerS2C`, caused by Fabric Loader's
+`EnvironmentStripper` deleting a member annotated `@Environment(EnvType.CLIENT)`. **That is not the
+case here. It was checked, and the check is the finding.**
+
+### The check: `javap` on the two Architectury versions, side by side
+
+`javap -v -p` on `dev/architectury/networking/fabric/NetworkManagerImpl$1.class`:
+
+| architectury-fabric | `registerS2C` carries `RuntimeInvisibleAnnotations: EnvType.CLIENT`? |
+|---|---|
+| `17.0.8` (the 1.21.8 port) | **yes** |
+| `18.0.5` (this port) | **no** |
+
+On 17.0.8 the annotation is there, so the member is stripped on a dedicated server and the class stops
+implementing `NetworkAggregator$Adaptor` → `AbstractMethodError` on the first `registerS2CReceiver`.
+On 18.0.5 the annotation is gone. Architectury moved the side split *into the method body*
+(`javap -c`):
+
+```
+  0: invokestatic  PayloadTypeRegistry.playS2C()
+  5: invokeinterface PayloadTypeRegistry.register   // <- payload type registered on BOTH sides
+ 11: invokestatic  Platform.getEnvironment()
+ 14: getstatic     Env.CLIENT
+ 17: if_acmpne     26                               // <- client-only receiver registration
+ 20: aload_1
+ 21: aload_2
+ 22: aload_3
+ 23: invokestatic  ClientNetworkManagerImpl.registerS2C
+ 26: return
+```
+
+So on 18.0.5 nothing is stripped, nothing is unimplemented, and
+`NetworkManager.registerReceiver(S2C, id, receiver)` is safe on a dedicated server. This is a
+**different situation, not a milder version of the same failure** — and the same holds for 18.0.8,
+which is the version 1.21.10 runs.
+
+Consequence for the brief's other question — *is being pinned down to a 1.21.7-built Architectury
+causing a server-side failure?* — no. The downgrade from 18.0.8 to 18.0.5 (needed to keep fabric-api
+from being out-ranked, see *Phase 8*) is not the cause of anything on the server side.
+
+### Evidence: the dedicated server booted on the **pre-fix** code
+
+Before touching `FabricParCoolNetwork.java`, a plain `./gradlew :fabric:runServer`:
+
+```
+575:[12:12:14] [Server thread/INFO] (Minecraft) Starting Minecraft server on *:25565
+613:[12:12:16] [Server thread/INFO] (Minecraft) Done (1.533s)! For help, type "help"
+```
+
+No `AbstractMethodError`. Log kept at `/tmp/opencode/srv-1.21.9-BEFORE.log`. Recording this matters:
+without it, the post-fix `Done (` below proves nothing.
+
+### The guard, applied anyway
+
+`fabric/src/main/java/com/alrex/parcool/platform/FabricParCoolNetwork.java` now starts `register`
+with:
+
+```java
+if (clientbound && Platform.getEnvironment() == Env.SERVER) {
+    NetworkManager.registerS2CPayloadType(wireId);
+    return;
+}
+```
+
+On this port that switch is **behaviourally a no-op on a dedicated server** — be precise about it
+rather than claiming a crash was fixed. `javap -c` on `NetworkAggregator` shows `registerS2CType` and
+`registerS2CReceiver` fill `S2C_TYPE`, `S2C_CODECS` and `S2C_TRANSFORMERS` with the same values, and
+both end up at `PayloadTypeRegistry.playS2C().register(type, BufCustomPacketPayload.streamCodec(type))`;
+only `S2C_RECEIVER`, which a server never reads, is left empty. It is kept for three reasons:
+
+1. It is what Architectury's javadoc on `NetworkManager#registerS2CPayloadType` prescribes. Relying on
+   an upstream accident rather than the documented contract is exactly what left the 17.x ports one
+   version bump away from crashing at mod init.
+2. It keeps the same code as 1.21.2, 1.21.8 and 1.21.10 — the compiled `register` body is identical
+   across all four, only the comments and the class javadoc differ — so the next port copy does not
+   have to work out which shape it inherited.
+3. If Architectury restores the annotation, or a future bump lands on a 17.x-shaped line, the port is
+   already on the safe path.
+
+The correct decode order was **not** touched: the payload is still decoded before `context.queue(...)`,
+because `registerReceiver` releases the buffer as soon as the receiver lambda returns, and decoding
+inside the queue would read freed memory (`IllegalReferenceCountException: refCnt: 0`). See *The
+decode ran on a released buffer*.
+
+### Proof, from the log after the fix
+
+Clean Loom cache (`.gradle/loom-cache`, `fabric/build/loom-cache`, `common/build/loom-cache`,
+`common/build/devlibs`, `neoforge/build/explodedCommon`), then `./gradlew :fabric:runServer`:
+
+```
+598:[12:28:58] [Server thread/INFO] (Minecraft) Starting Minecraft server on *:25565
+625:[12:28:59] [Server thread/INFO] (Minecraft) Done (0.369s)! For help, type "help"
+```
+
+`grep -c AbstractMethodError` on `/tmp/opencode/srv-1.21.9.log`: **0**.
+
+### Warning to the next port
+
+**`@Environment(EnvType.CLIENT)` stripping is a defect class that the compiler cannot see, a client
+cannot see, and single player cannot see. Only a dedicated server catches it. If you touch Fabric
+networking registration, boot `:fabric:runServer` and look for `Done (`. A client run is not a
+substitute and a green build is not a substitute.**
+
+And before assuming you have this bug, check which side of Architectury's own fix you are on:
+`javap -v` on `NetworkManagerImpl$1`, look for the `Environment` annotation on `registerS2C`. It is
+present through the 17.x line (14.0.4, 15.0.3, 16.1.4, 17.0.6, 17.0.8) and gone from 18.0.5 onward.
+Spending the `javap` first is much cheaper than spending a server boot.
+
+### Artifacts after this change
+
+| file | sha256 | vs. before |
+|---|---|---|
+| `parcool-1.21.9-3.4.3.3-fabric.jar` | `16116e6e8a7dc65b51bb3776589665d5953ad1dca5b96e2477dda9936d94622b` | changed from `9a4d9948321e0cf33195c49f93b383fef45eae011563a2ec3cafbfc624481f77` — the edit is in the Fabric module, so it must change |
+| `neoforge/build/libs/parcool.jar` | `398fc4bd829842073050dcb825c1d9f91c120fd3c18e1c2193c421fca4803fc1` | **unchanged** — confirms the fix is Fabric-specific and touched neither `common/.../platform/ParCoolNetwork.java` nor the NeoForge module |
+
+Published to `/home/sanufsoii/ports/готовые порты/parcool/` as
+`0.1-mc1.21.9fabric-3.4.3.3.jar` and `0.1-mc1.21.9neoforge-3.4.3.3.jar`.
+`:common:checkCommonLoaderIndependence`, `:common:build` and `build` are all green.
+
+### Still unverified
+
+* **The client was not launched** — the orchestrator holds the single GPU. The client path is
+  untouched by the edit, but "the client still boots and still receives S2C packets" is *not*
+  observed on this port.
+* **A real S2C packet was never delivered by a live player.** The server was started empty, so
+  `NetworkAggregator.S2C_TYPE` / `S2C_CODECS` were populated but never exercised. Real sending means
+  a player joining (limitation snapshot, stamina broadcast, action state, breakfall event). A green
+  `Done (` does not prove sending works.
+* NeoForge's dedicated server was not launched either.

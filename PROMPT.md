@@ -222,8 +222,28 @@ the one you are looking at.
 
 A port that only compiles is not a port.
 
+> ### The dedicated server is not optional, and it is the only thing that catches one defect class
+>
+> Fabric Loader's `EnvironmentStripper` deletes members annotated `@Environment(EnvType.CLIENT)` when
+> the game runs on a **dedicated server**. Architectury's `NetworkAggregator.Adaptor#registerS2C` is
+> annotated that way on the 14.x–17.x lines, so `NetworkManager.registerReceiver(Side.S2C, …)` compiles
+> fine, works on a client, works in single player (the integrated server shares the client JVM and its
+> class loader), and then kills a dedicated server at mod init with `AbstractMethodError`. On 18.0.5
+> and 18.0.8 the annotation is gone and Architectury does the side split inside the method body, so
+> this port is **not** currently exposed — but that is an upstream accident, not a contract, and the
+> next port down to a 17.x line is one build away from crashing at mod init.
+>
+> **Run `./gradlew :fabric:runServer` and require both `Starting Minecraft server on` and `Done (`.**
+> A client run is not a substitute, single player is not a substitute, and a green build is not a
+> substitute. It is headless and cheap, so run it before anything else. If you need to know whether
+> the port is actually exposed, `javap -v` on
+> `dev/architectury/networking/fabric/NetworkManagerImpl$1.class` and look for the `Environment`
+> annotation on `registerS2C`: present through the 17.x line, gone from 18.0.5 onward. Full analysis
+> and the verified logs are in NOTES.md.
+
 ```bash
 ./gradlew build
+./gradlew :fabric:runServer        # headless; require "Starting Minecraft server on" and "Done ("
 ./gradlew :fabric:runClient
 ./gradlew :neoforge:runclient
 ```
@@ -298,6 +318,10 @@ did not create.
 
 - [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev.
+- [ ] `./gradlew :fabric:runServer` prints `Starting Minecraft server on` **and** `Done (`, and
+      `grep -c AbstractMethodError` on the log is `0`. Headless, no GPU needed. This is the only check
+      that catches `@Environment(EnvType.CLIENT)` stripping, which the compiler, the client and single
+      player all miss. — **done on this tree; see NOTES.md.**
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
       commented-out blocks, no absolute local paths, no machine-specific paths in the build.
