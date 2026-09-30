@@ -714,3 +714,41 @@ Published to `/home/sanufsoii/ports/готовые порты/parcool/` as
   a player joining (limitation snapshot, stamina broadcast, action state, breakfall event). A green
   `Done (` does not prove sending works.
 * NeoForge's dedicated server was not launched either.
+
+## NeoForge crash on world entry: the access transformer was not mirroring the widener (live client)
+
+A live NeoForge client created a world, the player joined, and the world died on the first
+player tick:
+
+```
+[Server thread/ERROR] [ne.ne.bu.EventBus/EVENTBUS]: Exception caught during firing event:
+  class com.alrex.parcool.common.action.AdditionalProperties tried to access private field
+  net.minecraft.world.entity.Entity.onGround
+java.lang.IllegalAccessError: ... AdditionalProperties.onTick(AdditionalProperties.java:29)
+  at TRANSFORMER/parcool@3.4.3.3/com.alrex.parcool.common.action.ActionProcessor.onTick(ActionProcessor.java:77)
+  at TRANSFORMER/architectury@.../dev.architectury.event.forge.EventHandlerImplCommon.event(EventHandlerImplCommon.java:144)
+  at TRANSFORMER/neoforge@.../net.neoforged.neorge.event.EventHooks.firePlayerTickPost(EventHooks.java:961)
+[Server thread/ERROR] [minecraft/MinecraftServer]: Encountered an unexpected exception
+net.minecraft.ReportedException: Ticking player
+```
+
+**Cause.** `neoforge/src/main/resources/META-INF/accesstransformer.cfg` did not mirror
+`common/src/main/resources/parcool.accesswidener`. The old comment claimed the members are
+"already public there", based on `javap` against the NeoForge runtime artifact. The check was
+accurate and the conclusion was wrong: those bytes are the state *before* NeoForge applies its own
+access transformers, and at launch the classes are transformed in memory, after which the members
+are private. The Fabric client never showed it, because the widener already widens all of them.
+
+**The rule this establishes, for every port:** an AT entry for an already-public member is
+harmless; a missing entry for a member that ends up private is a crash the moment a player ticks.
+The cost is asymmetric, so the AT must duplicate the widener rather than be a "residual" of it.
+"Already public in the jar" is not evidence that an AT entry is unnecessary.
+
+**Second, independent lesson.** An access transformer and an access widener are the same list
+written twice, and the two can drift apart with nothing to notice: compilation only needs one of
+them, the Fabric side only exercises the other, and the drift is invisible until a NeoForge player
+ticks. If you widen a member for Fabric, check the NeoForge file in the same commit.
+
+**For this port:** Added the seven missing entries; the file had only ArgumentTypeInfos#register and
+RenderPipelines#PIPELINES_BY_LOCATION against nine widener entries, so the same crash was
+waiting on the first player tick.
