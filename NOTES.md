@@ -187,11 +187,24 @@ README.md. Paraglider is the only one also pulled onto the runtime classpath, be
    not needed here: `Limitations` is compiled against the *NeoForge* jar for `:neoforge` and against
    the AW-applied Loom jar for `:common`, and the member is only reached from `common/…/Limitations`,
    which the Architectury widener covers.)
-5. **All five `data/parcool/recipe/*.json` were missing the mandatory `category` field.**
-   `javap -c` on `ShapedRecipe$Serializer` / `CustomRecipe$Serializer` in the 1.21.9 jar shows
-   `Codec.fieldOf("category")`, i.e. required — a datapack load failure ("Missing field category")
-   that makes every ParCool item uncraftable while the build stays green. Added `"category": "misc"`
-   to all five, matching vanilla's own recipes in the jar.
+5. **All five `data/parcool/recipe/*.json` were checked against the real 1.21.9 recipe codecs — and
+   the handoff's "missing mandatory `category`" claim does NOT hold for this version, so nothing was
+   changed.** The claim is based on `Codec.fieldOf("category")`, which is what `javap -c` shows on all
+   three serializers. The decompiled 1.21.9 source shows what follows that call, and it is
+   `MapCodec.orElse(CraftingBookCategory.MISC)`:
+
+       ShapedRecipe.java:108      CraftingBookCategory.CODEC.fieldOf("category").orElse(MISC)…
+       ShapelessRecipe.java:87    (same)
+       CustomRecipe.java:39       (same)
+       TransmuteRecipe.java:116, AbstractCookingRecipe.java:75  (same)
+
+   So `category` is **optional** on 1.21.9 and defaults to `misc`. Confirmed by execution: all five
+   shipped files decode successfully through `ShapedRecipe.Serializer#codec()` /
+   `ShapelessRecipe.Serializer#codec()` / `CustomRecipe.Serializer#codec()` *both with and without*
+   the field (`/tmp/opencode/recipecheck/RecipeTest.java`, with vanilla's own `iron_chain.json` and
+   `white_dye.json` as controls that decode through the same path). The five files are therefore left
+   exactly as the 1.21.11 tree has them. If the claim is meant for some other version, it is not this
+   one.
 6. **`PlayerMixin`'s `@WrapWithCondition` targeted a method that does not exist on 1.21.9.**
    `Player#causeExtraKnockback` is a 1.21.11 extraction; on 1.21.9 the `setSprinting(false)` is still
    inline in `Player#attack` (verified in the 1.21.9 bytecode, and the method is absent from
@@ -210,6 +223,20 @@ README.md. Paraglider is the only one also pulled onto the runtime classpath, be
 9. **`ClientWorldMixin`/`hideInBlock`/`ZiplineHookTileEntity` etc. comments** said "1.21.11" where they
    described behaviour that is 1.21.9's. Reworded, keeping the five places where a 1.21.11 comparison
    is the point of the sentence.
+
+## Handoff claims checked and found NOT to hold on 1.21.9
+
+Recorded so the next port does not re-derive them. Each was tested, not inferred.
+
+* **"All five recipes are missing a mandatory `category`."** False for 1.21.9 — see bug 5 above.
+* **"`minecraft:iron_chain` does not exist on 1.21.9."** False — it does; see bug 7 above.
+* **"Architectury 19.0.x may be the 1.21.9 line."** False — 19.0.1 declares `~1.21.11`.
+* **"`Registry#get` returns the value on 1.21.1 and an `Optional` on 1.21.11."** It returns an
+  `Optional` on **all three** (1.21.1, 1.21.9, 1.21.11) — the row in the brief's table is simply wrong.
+* **"`Item$Properties#setId` and `BlockItem#useBlockDescriptionPrefix` are missing from both reference
+  trees."** `setId` is present in both; `useBlockDescriptionPrefix` is present in 1.21.7's `Items.java`
+  and was carried over here.
+* **"`Limitations` filename validation vanished."** Present in all three trees.
 
 ## Bugs looked at and confirmed already correct in the base
 

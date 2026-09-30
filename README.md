@@ -44,8 +44,8 @@ loader has been booted here. What *was* verified, statically:
 * every entry of the shipped access widener names a member that exists, with the declared descriptor;
 * `pack.mcmeta` was decoded with the game's own `PackMetadataSection` codec, for both the client
   resource and the server data pack type;
-* all five recipe files decode against the 1.21.9 `ShapedRecipe`/`CustomRecipe` serializer codecs,
-  including the mandatory `category` field.
+* all five recipe files decode against the 1.21.9 `ShapedRecipe` / `ShapelessRecipe` /
+  `CustomRecipe` serializer codecs, with vanilla's own recipes as controls.
 
 The first thing to do on a machine that can run the game is
 `./gradlew :fabric:runClient` and `./gradlew :neoforge:runclient`.
