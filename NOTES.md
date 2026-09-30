@@ -501,3 +501,20 @@ class, and a green build. "The exception is gone" and "actions can now start" ar
 that evidence, not observed. The 1.21.3 Fabric jar is byte-for-byte the one published before this
 change (`fd1bc39e815fbe1aedc9462b123cbe1469c50246e242fc68aa71f7c3c693574e`) — nothing in it was
 touched, which is the point.
+
+### Artifacts for this fix
+
+```
+0.1-mc1.21.3fabric-3.4.3.3.jar     sha256 fd1bc39e815fbe1aedc9462b123cbe1469c50246e242fc68aa71f7c3c693574e
+0.1-mc1.21.3neoforge-3.4.3.3.jar   sha256 0cb84a6135bdbcb6dd818a11e451e7dda962f7177fa287a04ffcd5ad81963bc0
+```
+
+The **Fabric** hash is byte-for-byte what was published before this change
+(`fd1bc39e815fbe1aedc9462b123cbe1469c50246e242fc68aa71f7c3c693574e`) — that file is correct already
+and nothing in it was touched, which is exactly why the rebuild produced an identical jar.
+
+The **NeoForge** hash differs from the previously published `37c834b0…`: that jar contained the
+released-buffer decode, this one decodes on the network thread. Code changed, so the hash must
+change.
+
+The game was not launched to validate either.
