@@ -10,7 +10,7 @@ evaluationDependsOn(':common')
 // NOTE: architectury-plugin's `neoForge()` transform is intentionally not declared. It requires a Loom
 // extension in this project, and a Loom-based NeoForge setup aborts while merging the Mojang and
 // NeoForge mappings (`RuntimeException: Unfixable conflicts` on 1.7.x, i.e. the 1.21.1 line). The
-// ModDevGradle toolchain is what this port uses - it is also what upstream ParCool 3.4.3.3 uses - and
+// ModDevGradle toolchain is what this tree uses - it is also what upstream ParCool 3.4.3.3 uses - and
 // the distributable below is assembled explicitly instead.
 //
 // The step architectury-plugin would have done is a mojmap -> SRG remap, and it is not needed: the
@@ -56,7 +56,7 @@ neoForge {
 			// which is how the client half of the mixin set is verified.
 			jvmArguments.addAll '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
 			// `./gradlew :neoforge:runClient -PparcoolQuickPlay=host:port` boots straight into a server,
-			// which is how the cross-loader join (M2/M3/M4) is reproduced without a mouse. See
+			// which is how a cross-loader join is reproduced without a mouse. See
 			// BUILDING.md; the same property drives :fabric:runClient.
 			if (project.hasProperty('parcoolQuickPlay')) {
 				programArguments.addAll '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
@@ -135,10 +135,9 @@ dependencies {
 	//   BetterThirdPerson 435044  5965876  BetterThirdPerson-neoforge-1.9.0 (MC 1.21.4, exact)
 	//   ShoulderSurfing   243190  6543497  ShoulderSurfing-NeoForge-1.21.4-4.12.0 (MC 1.21.4, exact)
 	//
-	// Paraglider and EpicFight have no 1.21.4 build in the CurseForge listing this machine can reach
-	// (it exposes only a truncated page of Paraglider's files), so both are compiled against their
-	// 1.21.1 build - the same situation the 1.21.1 and 1.21.11 ports are in. The APIs ParCool touches
-	// (`Paraglider.playerStates()`, EpicFight's `getPlayerPatch()`) are unchanged across those builds.
+	// Paraglider and EpicFight publish no 1.21.4 build, so both are compiled against their 1.21.1
+	// build. The APIs ParCool touches (`Paraglider.playerStates()`, EpicFight's
+	// `getPlayerPatch()`) are unchanged across those builds.
 	// Patchouli is only an optional book dependency and is never referenced from source.
 	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7795089"
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8175609"
@@ -157,7 +156,7 @@ tasks.named('neoForgeIdeSync') {
 }
 
 /**
- * The distributable NeoForge jar: the SRG-transformed :common artifact plus this module's own
+ * The distributable NeoForge jar: the mojmap-named :common artifact plus this module's own
  * classes, the loader metadata and the ServiceLoader registration.
  *
  * architectury-plugin's `neoForge()` transform normally does this, but it requires a Loom extension
@@ -168,7 +167,7 @@ tasks.named('neoForgeIdeSync') {
 // The access widener and the mixin config live in :common so both loaders ship the same copy. The
 // dev runtime loads this module from its own sourceSet output, so the files have to be present here
 // as well (the distributed jar picks them up from the :common transform artifact).
-// Explodes the SRG-transformed :common artifact so its classes are part of this module's own output.
+// Explodes the mojmap-named :common artifact so its classes are part of this module's own output.
 def explodedCommon = layout.buildDirectory.dir('explodedCommon')
 
 def explodeCommon = tasks.register('explodeCommon', Copy) {

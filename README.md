@@ -8,7 +8,8 @@ Minecraft **1.21.4**, Java **21**, Gradle **9.4.1**.
 
 The mod itself is unchanged: 26 actions, the zipline and hook blocks, the stamina system, the full
 animation set and the settings screens are all there, and the four optional NeoForge integrations are
-wired. See [NOTES.md](NOTES.md) for what had to be retargeted and what was verified.
+wired. Both loaders have been run in a world and in a real Prism instance — see
+[Status](#status) for what that covered.
 
 ### Packaging
 
@@ -47,7 +48,8 @@ if `common/src/main` ever imports `net.fabricmc.*` or `net.neoforged.*`.
 
 ## Requirements
 
-* JDK 21 (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path needed)
+* JDK 21 or newer (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path
+  needed)
 
 ## Building
 
@@ -71,7 +73,9 @@ Drop the matching jar into `mods/`:
 
 **Required**
 
-* Architectury API 16.1.4 or newer
+* Architectury API 15.0.3 or newer. 16.1.4 declares `~1.21.4-` but is a 1.21.5 build: it pulls a
+  1.21.5 fabric-api and its own mixin targets a post-1.21.4 signature, which hard-crashes the boot.
+  The comparison is in `gradle.properties`.
 * Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.119.4+1.21.4, Fabric Loader 0.16.14+
 * NeoForge 21.4.0 or newer
 * MixinExtras 0.4+ — bundled by both loaders, declared as an *optional* dependency in both mod
@@ -92,8 +96,21 @@ Drop the matching jar into `mods/`:
 * BetterThirdPerson — NeoForge only, compiled against its 1.21.4 build and reported absent on a
   client that does not have it
 * [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only. **Paraglider
-  has no 1.21.4 build in the CurseForge listing this port could reach**, so the integration is
-  compiled against its 1.21.1 API and reports itself absent otherwise.
+  publishes no 1.21.4 build**, so the integration is compiled against its 1.21.1 API and reports
+  itself absent otherwise.
+
+## Status
+
+`./gradlew build` succeeds and `checkCommonLoaderIndependence` passes.
+
+Checked in a running game, on both Fabric and NeoForge: the loaders boot with the mod loaded, the two
+ParCool attributes resolve on the first `Player#createAttributes`, parkour and the zipline (including
+the rope render) work, the stamina HUD and the settings screen behave, the rope takes its dye colour,
+key bindings can be rebound, and progress survives saving and reloading a world. Both jars were also
+installed into a real Prism instance.
+
+Not covered: a dedicated NeoForge server, a cross-loader join (NeoForge client against Fabric server)
+and two players in one world.
 
 ## Attribution and license
 
