@@ -267,3 +267,29 @@ most likely places for a remaining defect:
 * **Runtime behaviour of anything behind a `defaultRequire: 1` mixin**, and the visual result of the
   camera-roll path.
 * **The four optional integrations**, which cannot be exercised at all on 1.21.9 (no build exists).
+
+---
+
+## Phase 7 — delivered artifacts
+
+Clean-checkout reproduction (`rm -rf build */build .gradle && ./gradlew :common:build && ./gradlew build`):
+
+```
+/home/sanufsoii/ports/готовые порты/parcool/0.1-mc1.21.9fabric-3.4.3.3.jar
+  1 208 004 bytes, 516 entries, 350 classes
+  sha256 3247c7e6f8332059a2b6511d0b7cece1f02d18b57d3e8c870b5c75fb8de1d1d3
+/home/sanufsoii/ports/готовые порты/parcool/0.1-mc1.21.9neoforge-3.4.3.3.jar
+  1 225 053 bytes, 533 entries, 361 classes
+  sha256 16983f865c3b52ea6705c7545c56f26093affb92467ab6235e082bfbbc0ac87b
+```
+
+Post-build checks run against the shipped jars (not the build tree):
+
+* Fabric jar: every mixin target *as remapped into the bytecode* resolves in the 1.21.9 intermediary
+  jar (36 targets, 350 classes); every access-widener entry resolves with its declared descriptor
+  (9 entries); `accessWidener v2 intermediary`; no refmap; no mojmap reference left in any class.
+* NeoForge jar: mojmap-named (verified by finding `net/minecraft/world/level/block/entity/BlockEntityType`
+  in the class constant pools); carries `META-INF/neoforge.mods.toml`, `META-INF/accesstransformer.cfg`,
+  `parcool.accesswidener`, `parcool-common.mixins.json`, `LICENSE` and the `ServiceLoader` file.
+* Both: all assets and `data/parcool/**` present; `pack.mcmeta` decoded as COMPATIBLE for both the
+  client-resource and the server-data pack type.
