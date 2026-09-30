@@ -52,7 +52,7 @@ and regenerate before trusting it.
 ```bash
 ./gradlew build
 # -> fabric/build/libs/parcool-1.21.3-3.4.3.3-fabric.jar
-# -> neoforge/build/libs/parcool-neoforge.jar
+# -> neoforge/build/libs/parcool-1.21.3-3.4.3.3-neoforge.jar
 ```
 
 (the plain `jar` task also leaves `parcool-1.21.3-3.4.3.3.jar` / `parcool.jar` next to them; those are
@@ -71,8 +71,8 @@ unzip -p fabric/build/libs/parcool-1.21.3-3.4.3.3-fabric.jar parcool.accesswiden
 #   -> accessWidener v2 intermediary, and NO refmap entry
 
 # NeoForge: mojmap, mojmap-named access transformer
-unzip -p neoforge/build/libs/parcool-neoforge.jar parcool.accesswidener | head -1   # v2 named
-unzip -p neoforge/build/libs/parcool-neoforge.jar META-INF/accesstransformer.cfg
+unzip -p neoforge/build/libs/parcool-1.21.3-3.4.3.3-neoforge.jar parcool.accesswidener | head -1   # v2 named
+unzip -p neoforge/build/libs/parcool-1.21.3-3.4.3.3-neoforge.jar META-INF/accesstransformer.cfg
 ```
 
 ## Running
