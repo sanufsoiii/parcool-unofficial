@@ -252,9 +252,30 @@ A port that only compiles is not a port — but on this machine launching the ga
 so acceptance is `./gradlew build` plus inspection of the two artifacts, and the in-game checklist
 below is handed to whoever can run it. **Do not claim the boxed items are done.**
 
+> ### The dedicated server is not optional, and it is the only thing that catches one defect class
+>
+> Fabric Loader's `EnvironmentStripper` deletes members annotated `@Environment(EnvType.CLIENT)` when
+> the game runs on a **dedicated server**. Architectury's `NetworkAggregator.Adaptor#registerS2C` is
+> annotated that way on the 14.x–17.x lines, so `NetworkManager.registerReceiver(Side.S2C, …)` compiles
+> fine, works on a client, works in single player (the integrated server shares the client JVM and its
+> class loader), and then kills a dedicated server at mod init with `AbstractMethodError`. On 18.0.5
+> and 18.0.8 the annotation is gone and Architectury does the side split inside the method body, so
+> this port is **not** currently exposed — but that is an upstream accident, not a contract, and the
+> next port down to a 17.x line is one build away from crashing at mod init.
+>
+> **`./gradlew :fabric:runServer` is headless and needs no GPU.** It does not belong in the
+> "not available here" bucket with the client. Require both `Starting Minecraft server on` and
+> `Done (`, and `grep -c AbstractMethodError <log>` must be `0`. A client run is not a substitute,
+> single player is not a substitute, and a green build is not a substitute. To find out whether a port
+> is actually exposed, `javap -v` on
+> `dev/architectury/networking/fabric/NetworkManagerImpl$1.class` and look for the `Environment`
+> annotation on `registerS2C`: present through the 17.x line, gone from 18.0.5 onward. Full analysis
+> and the verified logs are in NOTES.md.
+
 ```bash
 ./gradlew :common:build && ./gradlew build   # one invocation does not work, see BUILDING.md
 # NOT RUN HERE: ./gradlew :fabric:runClient   ./gradlew :neoforge:runclient
+# RUN ANYWAY (headless, no GPU): ./gradlew :fabric:runServer
 ```
 
 Before you start, decide how you will get into a world without a mouse, and put it in the run config
@@ -327,6 +348,11 @@ did not create.
 
 - [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry) — as `./gradlew :common:build && ./gradlew build`; a single invocation cannot work, see BUILDING.md.
 - [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev. **Not attempted in this environment — see NOTES.md §6.**
+- [ ] `./gradlew :fabric:runServer` prints `Starting Minecraft server on` **and** `Done (`, and
+      `grep -c AbstractMethodError` on the log is `0`. Headless, no GPU needed, so it is *not* blocked
+      by the "no game launches here" restriction. It is the only check that catches
+      `@Environment(EnvType.CLIENT)` stripping, which the compiler, the client and single player all
+      miss. — **done on this tree; see NOTES.md.**
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
       commented-out blocks, no absolute local paths, no machine-specific paths in the build.
