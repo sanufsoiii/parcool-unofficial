@@ -671,3 +671,113 @@ distributables. **The game was not launched** — no `:fabric:runClient`, no `:n
 server — because the brief for this port forbids it. In particular, "the recipes now appear in the
 recipe book and craft" and "the hooks show a translated name" are *expected* from the evidence, not
 observed.
+
+## 11. Defect 4 (found by running the game): the payload was decoded in a released buffer
+
+Found by launching a client, not by building. Both loaders, both files:
+`fabric/src/main/java/com/alrex/parcool/platform/FabricParCoolNetwork.java` and
+`neoforge/src/main/java/com/alrex/parcool/platform/NeoForgeParCoolNetwork.java`.
+
+### The stack, from the log of a live client
+
+```
+[Server thread/ERROR] (Minecraft) Error executing task on Server
+io.netty.util.IllegalReferenceCountException: refCnt: 0
+  at io.netty.buffer.AbstractByteBuf.readByte(AbstractByteBuf.java:730)
+  at net.minecraft.network.VarLong.read(VarLong.java:28)
+  at net.minecraft.network.codec.ByteBufCodecs$8.decode(ByteBufCodecs.java:155)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.lambda$register$0(FabricParCoolNetwork.java:48)
+[Render thread/WARN] (ParCool) the server limitation snapshot has been missing for 10s,
+  so no action can start. Asking the server again (ParCoolIsActive=true).
+```
+
+and again every few seconds, indefinitely.
+
+### Root cause
+
+One line, identical on Fabric and NeoForge, at `lambda$register$0`:
+
+```java
+(buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+```
+
+`NetworkManager.registerReceiver` hands the lambda a **raw** buffer on the network thread and
+releases it as soon as the lambda returns. That is not an inference from the log — it is what
+Architectury's own source does. `dev.architectury.impl.NetworkAggregator#registerReceiver(Side,
+ResourceLocation, List, NetworkReceiver)` (architectury 14.0.4, the version this port pins):
+
+```java
+registerC2SReceiver(type, BufCustomPacketPayload.streamCodec(type), packetTransformers, (value, context) -> {
+    class_9129 buf = new class_9129(Unpooled.wrappedBuffer(value.payload()), context.registryAccess());
+    receiver.receive(buf, context);   // <- ParCool's lambda runs here, buf is still alive
+    buf.release();                    // <- and is freed the moment the lambda returns
+});
+```
+
+`PacketContext#queue` is `taskQueue.execute(runnable)` — it **defers** the runnable. On the server
+that is the main-thread task queue, so the runnable body runs strictly *after* the lambda returned
+and *after* `buf.release()`. The decode therefore reads a `ByteBuf` whose `refCnt` is already 0,
+which is exactly what `VarLong.read` -> `AbstractByteBuf.readByte` checks. The first ParCool packet
+in each direction kills the server task and the limitation snapshot never arrives, so no action can
+start: the "almost nothing works" report.
+
+`queue` is needed for **thread safety of the handler**, not for decoding. The handler touches the
+player, the level and ParCool's own state, all of which are main-thread-only; the decode is pure
+buffer arithmetic and has no reason to be off the network thread.
+
+### The fix
+
+Decode first, on the network thread, while the buffer is still alive; queue only the handler.
+
+```java
+(buf, context) -> {
+    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+    context.queue(() -> handler.accept(payload, context));
+}
+```
+
+The comment in the source repeats this causal chain on purpose. Without it the next reader sees
+"decode is just reading a local, hoist it back into the lambda" and puts the bug back — the code is
+byte-identical in intent and only the statement order differs.
+
+### Proof in the built artifact
+
+`javap -p -c` on the class inside both distributables shows the decode at offset 2 and the queue at
+offset 22 of the same synthetic method, and a second synthetic method whose entire body is a single
+`BiConsumer.accept` — i.e. the queued runnable no longer touches the buffer:
+
+```
+private static void lambda$register$1(StreamCodec, BiConsumer, RegistryFriendlyByteBuf, PacketContext);
+   2: invokeinterface  StreamCodec.decode:(Ljava/lang/Object;)Ljava/lang/Object;
+  10: astore        4                      <- payload held in a local
+  17: invokedynamic  run:(BiConsumer;CustomPacketPayload;PacketContext;)Runnable
+  22: invokeinterface  PacketContext.queue:(Ljava/lang/Runnable;)V
+
+private static void lambda$register$0(BiConsumer, CustomPacketPayload, PacketContext);
+   2: invokeinterface  BiConsumer.accept:(Ljava/lang/Object;Ljava/lang/Object;)V
+```
+
+### This class of defect is invisible to the compiler and only a live client catches it
+
+**`./gradlew build` is green on the broken code and stays green on the fixed code.** There is nothing
+to compile wrong: `buf` is a live `RegistryFriendlyByteBuf` parameter, `decode` takes it, and
+capturing it in a nested lambda is perfectly legal Java. The buffer's refcount is a *runtime* netty
+property, and the window in which it is valid is a *lifetime* property of Architectury's
+`registerReceiver` contract — neither is expressible in the type system.
+
+It is equally invisible to a test: without a client that has **joined a world**, no ParCool packet
+ever travels, the receiver lambda is never invoked, and the released-buffer read never happens. The
+port's whole verification story up to this point — `checkCommonLoaderIndependence`, `:common:build`,
+`./gradlew build`, mixin-target checks against the real jars, unzipping the distributables — passes
+just as happily on code that dies on the first packet.
+
+So the only oracle that found this class of defect is a client launched by a human, entering a world,
+with a server on the other end. Build output, compiler warnings, jar contents and mixin validation
+are all necessary and none of them is sufficient.
+
+### What was NOT verified
+
+**The game was not launched for this fix.** No `:fabric:runClient`, no `:neoforge:runClient`, no
+dedicated server. The evidence above is: Architectury's own source for the buffer contract,
+`javap` on the built class, and a green build. "The exception no longer appears" and "actions can
+now start" are *expected* from that evidence, not observed.
