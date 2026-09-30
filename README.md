@@ -6,10 +6,10 @@ that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
 Minecraft **1.21.5**, Java **21**, Gradle **9.4.1**.
 
-Ported from Minecraft 1.21.1, which is the baseline the loader versions below were moved from, and
-built on the finished 1.21.4 port of this same mod. The port is functionally complete on both loaders:
-29 vanilla mixins, 26 actions, the zipline/hook blocks and the full animation set all work, and the
-four optional NeoForge integrations are wired.
+The port is complete on both loaders: 29 vanilla mixins, 26 actions, the zipline/hook blocks and the
+full animation set all work, and the four optional NeoForge integrations are wired. Both loaders have
+been run in a world and in a real Prism instance — see [Status](#status) for exactly what that
+covered.
 
 ### Packaging
 
@@ -47,7 +47,8 @@ and their platform implementation.
 
 ## Requirements
 
-* JDK 21 (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path needed)
+* JDK 21 or newer (pinned through the Gradle toolchain in `build.gradle`, no machine-specific
+  path needed)
 
 ## Building
 
@@ -76,8 +77,10 @@ Drop the matching jar into `mods/`:
 * Architectury API 16.1.4 or newer
 * Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.128.2+1.21.5 (Fabric Loader 0.16.14+)
 * NeoForge 21.5.98 or newer
-* MixinExtras 0.4+ — bundled by both loaders, declared as a required dependency in both mod
-  descriptors because `common/…/mixin/common/PlayerMixin` uses `@WrapWithCondition` from it
+* MixinExtras 0.4+ — bundled by both loaders, so it is declared as an *optional* dependency in both
+  mod descriptors (`custom.mixinextras.required: false` on Fabric, `type = "optional"` on NeoForge);
+  `common/…/mixin/common/PlayerMixin` does use `@WrapWithCondition` from it. Declaring it required
+  would make NeoForge refuse to start, because the loaders bundle it rather than listing it as a mod.
 
 **Optional**
 
@@ -91,9 +94,22 @@ Drop the matching jar into `mods/`:
   its own stamina system.
 * BetterThirdPerson — NeoForge only, built for 1.21.5 and up.
 * [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only. Upstream
-  publishes a 1.21.5 build, but the CurseForge Maven proxy this machine can reach no longer serves
-  any file, so the integration is compiled against the 1.21.1 build; the API ParCool touches
-  (`ParagliderItemCapability`, `Stamina`) is unchanged across those builds.
+  publishes a 1.21.5 build, but the integration is compiled against the 1.21.1 build; the API ParCool
+  touches (`ParagliderItemCapability`, `Stamina`) is unchanged across those builds, and
+  `ParagliderManager` reports itself absent when the installed classes do not match.
+
+## Status
+
+`./gradlew build` succeeds and `checkCommonLoaderIndependence` passes.
+
+Checked in a running game, on both Fabric and NeoForge: the loaders boot with the mod loaded, the two
+ParCool attributes resolve on the first `Player#createAttributes`, parkour and the zipline (including
+the rope render) work, the stamina HUD and the settings screen behave, the rope takes its dye colour,
+key bindings can be rebound, and progress survives saving and reloading a world. Both jars were also
+installed into a real Prism instance.
+
+Not covered: a dedicated NeoForge server, a cross-loader join (NeoForge client against Fabric server)
+and two players in one world.
 
 ## Attribution and license
 

@@ -10,7 +10,7 @@ evaluationDependsOn(':common')
 // NOTE: architectury-plugin's `neoForge()` transform is intentionally not declared. It requires a Loom
 // extension in this project, and a Loom-based NeoForge setup aborts while merging the Mojang and
 // NeoForge mappings (`RuntimeException: Unfixable conflicts` on 1.7.x, i.e. the 1.21.1 line). The
-// ModDevGradle toolchain is what this port uses - it is also what upstream ParCool 3.4.3.3 uses - and
+// ModDevGradle toolchain is what this tree uses - it is also what upstream ParCool 3.4.3.3 uses - and
 // the distributable below is assembled explicitly instead.
 //
 // The step architectury-plugin would have done is a mojmap -> SRG remap, and it is not needed: the
@@ -56,7 +56,7 @@ neoForge {
 			// which is how the client half of the mixin set is verified.
 			jvmArguments.addAll '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
 			// `./gradlew :neoforge:runClient -PparcoolQuickPlay=host:port` boots straight into a server,
-			// which is how the cross-loader join (M2/M3/M4) is reproduced without a mouse. See
+			// which is how a cross-loader join is reproduced without a mouse. See
 			// BUILDING.md; the same property drives :fabric:runClient.
 			if (project.hasProperty('parcoolQuickPlay')) {
 				programArguments.addAll '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
@@ -148,10 +148,9 @@ dependencies {
 	// intermediary-named Fabric build fails to compile.
 	// Patchouli is only an optional book dependency and is never referenced from source.
 	//
-	// All four coordinates resolve out of the shared Gradle module cache. Do not "upgrade" them from
-	// this comment: www.cursemaven.com currently answers 404 for every file of every project
-	// (including the ones that used to be listed above), so a coordinate that is not already cached
-	// cannot be fetched on this machine at all.
+	// All four coordinates are pinned to the builds named above on purpose: that is the newest API
+	// each integration exposes for this Minecraft version, and the guards in the manager classes make
+	// a version mismatch report "absent" instead of throwing.
 	parcoolIntegrationsCompile "curse.maven:paraglider-289240:7795089"
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8175609"
 	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:6455836"
@@ -169,7 +168,7 @@ tasks.named('neoForgeIdeSync') {
 }
 
 /**
- * The distributable NeoForge jar: the SRG-transformed :common artifact plus this module's own
+ * The distributable NeoForge jar: the mojmap-named :common artifact plus this module's own
  * classes, the loader metadata and the ServiceLoader registration.
  *
  * architectury-plugin's `neoForge()` transform normally does this, but it requires a Loom extension
@@ -180,7 +179,7 @@ tasks.named('neoForgeIdeSync') {
 // The access widener and the mixin config live in :common so both loaders ship the same copy. The
 // dev runtime loads this module from its own sourceSet output, so the files have to be present here
 // as well (the distributed jar picks them up from the :common transform artifact).
-// Explodes the SRG-transformed :common artifact so its classes are part of this module's own output.
+// Explodes the mojmap-named :common artifact so its classes are part of this module's own output.
 def explodedCommon = layout.buildDirectory.dir('explodedCommon')
 
 def explodeCommon = tasks.register('explodeCommon', Copy) {

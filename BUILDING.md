@@ -1,13 +1,15 @@
 # Building ParCool (Architectury, Minecraft 1.21.5)
 
-Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
-`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` and
-no machine-specific path anywhere in the build.
+Requires JDK 21 or newer. The toolchain is declared through
+`java { toolchain { languageVersion = 21 } }` in `build.gradle`, and `org.gradle.java.home` is not
+set: there is no machine-specific path anywhere in the build.
 
 Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.5, Architectury API 16.1.4,
 NeoForge 21.5.98, Fabric Loader 0.16.14, Fabric API 0.128.2+1.21.5, Architectury Loom 1.17.493,
-ModDevGradle 1.0.24, Gradle 9.4.1. Where each number was looked up is recorded in
-[NOTES.md](NOTES.md) §1.
+ModDevGradle 1.0.24, Gradle 9.4.1. Each is read out of the publisher's own
+`maven-metadata.xml`; the reasoning behind the two non-obvious ones (Architectury API 16.1.4 and
+Fabric API 0.128.2) is in the comment block above `architectury_api_version` and `fabric_api_version`
+in `gradle.properties`.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -39,7 +41,7 @@ A problem occurred configuring project ':fabric'.
   …/common/build/libs/parcool-1.21.5-3.4.3.3.jar, java.nio.file.NoSuchFileException
 ```
 
-This is inherited from the 1.21.1, 1.21.4 and 1.21.11 trees and is documented rather than fixed.
+This is inherited from Architectury Loom and is documented rather than fixed.
 
 **If you add a new class to `:common` and the loader module then reports
 `cannot find symbol` for it, Loom's cached remap of `:common` is stale.** Clear it once:
@@ -50,9 +52,9 @@ rm -rf common/build/devlibs common/build/loom-cache fabric/build/loom-cache .gra
 
 `.gradle/loom-cache/remapped_mods` holds the per-consumer remapped copy of `:common` that the loader
 modules actually load; if a freshly added mixin class is present in the built jar but reported as
-"not found" at runtime, this directory is the stale one. Do **not** reach for `./gradlew --stop`:
-several ports build side by side out of the same Gradle home and stopping the daemon would kill their
-builds too.
+"not found" at runtime, this directory is the stale one. Do **not** reach for `./gradlew --stop`: it
+stops every Gradle daemon on the machine, including ones serving unrelated projects. These cache
+directories are per-project.
 
 ## Distributables
 
@@ -86,7 +88,7 @@ side can widen them on its own:
 ```
 
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
-ParCool mixin; that is how the mixin set is verified without a manual client session. A dedicated
+ParCool mixin. A dedicated
 server refuses to start until it is acknowledged, so before the first `:fabric:runServer` /
 `:neoforge:runserver` create `<module>/run/eula.txt` containing:
 
@@ -123,9 +125,10 @@ login) and a free `server-port`.
 `./gradlew :common:checkCommonLoaderIndependence` fails the build if `common/src/main` ever imports
 `net.fabricmc.*` or `net.neoforged.*`.
 
-## Status of this tree
+## Status
 
-The port builds and both distributables are produced and checked, but **the game has never been
-launched from it** — see [NOTES.md](NOTES.md) §9 for exactly what was and was not verified, and for
-the one code path (the custom zipline render pipelines) that a first `:fabric:runClient` should be
-pointed at.
+Both distributables build, and both loaders have been run in a world: parkour, the zipline and the
+custom rope render pipelines, the stamina HUD, the settings screen, rope dyeing, key rebinding and
+progress surviving a world save/load all work, and both jars were installed into a real Prism
+instance. Not covered: a dedicated NeoForge server, a cross-loader join (NeoForge client against
+Fabric server) and two players in one world.
