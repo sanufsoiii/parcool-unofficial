@@ -285,18 +285,33 @@ is open. None of the following was executed:
 
 ## Recipe `category` field (added by the orchestrator, after the port was built)
 
-All five `data/parcool/recipe/*.json` were missing `category`, which the vanilla
-`ShapedRecipe` / `ShapelessRecipe` codec declares as `Codec.fieldOf("category")` --
-a *required* field, not an optional one. Verified on this version's mojmap jar with
-`javap -c 'net.minecraft.world.item.crafting.ShapedRecipe$Serializer'`: the CODEC builder
-uses `Codec.fieldOf` for the key `category` while `group` and `show_notification` go
-through `optionalFieldOf`. Without it the datapack loader reports `Missing field category`
-and drops the recipe, so every ParCool item is uncraftable in game -- a build-time-clean,
-boot-time-broken bug that only shows up in a running client.
+`"category": "misc"` was added to all five `data/parcool/recipe/*.json`.
 
-`"category": "misc"` was added to all five files. It is harmless on
-`parcool:zipline_rope_dye` (ParCool's own `CustomRecipe` codec ignores unknown keys).
+**Correction — an earlier version of this note claimed the field was mandatory and that its
+absence broke every recipe. That was wrong, and the claim is retracted here.** The bytecode
+actually reads
 
-This is **inherited, not original**: the same omission exists in the read-only reference
-trees `parcool-Architectury-API-1.21.1` and `parcool-Architectury-API-1.21.11`, and it is
-inherited from upstream ParCool. Any port starting from those trees will reproduce it.
+```
+CraftingBookCategory.CODEC
+  .fieldOf("category")                       // offset 26
+  .orElse(CraftingBookCategory.MISC)        // offset 34
+```
+
+`MapCodec#orElse` supplies `MISC` when the key is absent, so a recipe without `category`
+parses fine. Verified the same way on the 1.21.2 and 1.21.7 mojmap jars; agents on 1.21.9 and
+1.21.10 independently reached the same conclusion and had it disproved by decoding the real
+codec. Adding the field explicitly is harmless (it is exactly the codec's own default) and
+matches what upstream ParCool does on newer versions, so it stays.
+
+Two related claims from the same handoff were also wrong and are recorded so nobody re-chases
+them:
+
+- `minecraft:iron_chain` is **not** a 1.21.11-only item. It exists in 1.21.9 and 1.21.10 --
+  verified in `data/minecraft/recipe/iron_chain.json`, `assets/minecraft/items/iron_chain.json`
+  and the textures inside the client resources jar. The vanilla rename is `chain` ->
+  `iron_chain` and it landed before 1.21.9. The correct spelling for this port is therefore
+  whatever the target's own resources jar contains; for 1.21.2 through 1.21.8 that is
+  `minecraft:chain`.
+- The object form `{"item": ...}` for recipe ingredients does **not** parse on any of these
+  versions: `Ingredient.CODEC` is a holder-set codec whose string branch is what
+  `"minecraft:chain"` goes through. The string form is the correct one throughout.
