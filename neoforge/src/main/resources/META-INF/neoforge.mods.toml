@@ -39,7 +39,7 @@ side = "BOTH"
 [[dependencies.parcool]]
 modId = "architectury"
 type = "required"
-versionRange = "[18.0.0,)"
+versionRange = "[17.0.8,)"
 ordering = "AFTER"
 side = "BOTH"
 
