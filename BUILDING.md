@@ -54,7 +54,7 @@ reported as "not found" at runtime, that directory is the stale one.
 ```bash
 ./gradlew build
 # -> fabric/build/libs/parcool-1.21.7-3.4.3.3-fabric.jar
-# -> neoforge/build/libs/parcool-neoforge.jar
+# -> neoforge/build/libs/parcool-1.21.7-3.4.3.3-neoforge.jar
 ```
 
 The Fabric jar contains the remapped `:common` code and assets plus the fabric module's own classes,
