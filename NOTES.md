@@ -365,3 +365,26 @@ So all of the following are unverified on 1.21.10 and rest on API-level evidence
 * two clients on one server seeing each other's animations;
 * that the recipes are craftable in game (the codecs accept them, but `category` in the recipe book
   and the creative tab are cosmetic and unconfirmed).
+
+## Ingredient form and the `chain` / `iron_chain` rename (verified by the orchestrator)
+
+Two claims in the handoff for this port were wrong and are retracted here so the next person
+does not re-chase them:
+
+- **The object form `{"item": ...}` for recipe ingredients does not parse on any of these
+  versions.** `Ingredient.CODEC` is a holder-set codec (`Codec.either(HolderSetCodec,
+  Item.CODEC)`) whose string branch is what a bare `"minecraft:chain"` goes through, and
+  `Item.CODEC` is `BuiltInRegistries.ITEM.holderByNameCodec()`. The string form is correct
+  from 1.21.1 through 1.21.11. The brief's table row claiming the object form arrived in
+  1.21.5 is not reproducible.
+- **`minecraft:iron_chain` is not a 1.21.11-only item.** It exists in 1.21.9 and 1.21.10 --
+  confirmed in `data/minecraft/recipe/iron_chain.json`, `assets/minecraft/items/iron_chain.json`
+  and the textures inside the client resources jar. The vanilla rename `chain` -> `iron_chain`
+  landed before 1.21.9. So the correct spelling is version-dependent: `minecraft:chain` for
+  1.21.1 through 1.21.8, `minecraft:iron_chain` for 1.21.9 and 1.21.10. This port must use
+  whatever its own target's resources jar contains.
+
+`"category": "misc"` is present in all five recipes here. It is a no-op: the codec is
+`CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC)`, so
+`MapCodec#orElse` already defaults it. An earlier note in this file claimed its absence broke
+every recipe; that claim was wrong and is retracted.
