@@ -741,3 +741,51 @@ Run under three clients at once (1.21.5, 1.21.6, 1.21.8). At boot on this build:
 
 Still not exercised on this port: NeoForge (never launched on any port), and the cross-loader
 join (a NeoForge client against this Fabric server).
+
+## The NeoForge "Warning while loading mods" window on 1.21.8 (identified from a screenshot)
+
+On this port a NeoForge dev client opens a second window before the main menu:
+
+```
+Warning while loading mods
+1 warning has occurred during loading
+
+The mod architectury uses the @OnlyIn annotation; the runtime member-stripping behaviour of this
+annotation is no longer present, which may lead to issues if that behaviour was relied upon
+
+[Open Mods Folder]  [Open log file]
+[Proceed to main menu]  [Quit Game]
+```
+
+It is **NeoForge's mod-loading screen, not a crash dialog and not ParCool**. The text on the screen
+is character-for-character the single `OnlyInWarningsHandler` line in the log; the other 91 lines
+of that warning family are the per-member listings (`@OnlyIn used on method ...`) that NeoForge
+collapses into one warning. "Proceed to main menu" is the tell - the screen is offering a way
+past itself, so it is non-fatal by design.
+
+**Which ports show it, and why.** Exactly the two ports on Architectury 17.0.8:
+
+| port | architectury | OnlyIn log lines | window |
+|---|---|---|---|
+| 1.21.2 | 14.0.4 | 0 | no |
+| 1.21.3 | 14.0.4 | 0 | no |
+| 1.21.4 | 15.0.3 | 0 | no |
+| 1.21.5 | 16.1.4 | 0 | no |
+| 1.21.6 | 17.0.6 | 0 | no |
+| **1.21.7** | **17.0.8** | **92** | **yes** |
+| **1.21.8** | **17.0.8** | **92** | **yes** |
+| 1.21.9 | 18.0.5 | 0 | no |
+| 1.21.10 | 18.0.8 | 0 | no |
+
+Architectury moved off Forge's `@OnlyIn` between 17.0.8 and 18.0.5, so this window is a property of
+the dependency version, not of the target Minecraft version and not of ParCool.
+
+**Cannot be fixed from here without breaking the port.** The obvious move - bump Architectury to
+18.0.5 to silence it - is wrong for 1.21.7 and 1.21.8: architectury-fabric 18.0.5 declares
+`minecraft: ~1.21.7`, so it does load on 1.21.8, but it is a build against the 1.21.7 codebase and
+those two ports are the ones already flagged for that risk. Trading a cosmetic warning for an
+unverified dependency is a bad trade; the warning stays and is documented instead.
+
+**Not observed in a production client.** I have not run the published jar in a real Prism instance,
+so I cannot claim the window is absent there - only that it is a dev-mode loading screen, that it
+offers a way past itself, and that the underlying notice is about Architectury.
