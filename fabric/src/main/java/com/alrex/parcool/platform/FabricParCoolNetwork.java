@@ -128,11 +128,11 @@ public class FabricParCoolNetwork implements ParCoolNetwork {
                 clientbound ? NetworkManager.Side.S2C : NetworkManager.Side.C2S,
                 wireId,
                 (buf, context) -> {
-                    // Декод обязан происходить здесь, на сетевом потоке, пока буфер жив: registerReceiver
-                    // отдаёт сырой буфер и освобождает его, как только лямбда вернулась. Внутри
-                    // context.queue(...) буфер уже refCnt 0, и любой VarLong.read() роняет поток
-                    // IllegalReferenceCountException. В очередь уходит только обработчик — ради
-                    // потокобезопасности, а не ради декодирования.
+                    // The decode has to happen here, on the network thread, while the buffer is still
+                    // alive: registerReceiver hands the lambda a raw buffer and releases it as soon as
+                    // the lambda returns. Inside context.queue(...) the buffer is already refCnt 0, and
+                    // any VarLong.read() then kills the thread with IllegalReferenceCountException. Only
+                    // the handler belongs in the queue, for thread safety, not the decoding.
                     T payload = erased.decode((RegistryFriendlyByteBuf) buf);
                     context.queue(() -> handler.accept(payload, context));
                 }
