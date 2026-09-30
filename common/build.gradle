@@ -97,7 +97,3 @@ tasks.register('checkCommonLoaderIndependence') {
 }
 
 tasks.named('check').configure { dependsOn 'checkCommonLoaderIndependence' }
-
-tasks.register('printCommonCompileClasspath') {
-	doLast { println configurations.compileClasspath.files.join('\n') }
-}

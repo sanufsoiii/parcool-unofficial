@@ -1,25 +1,19 @@
 # NOTES — ParCool Architectury port to Minecraft 1.21.9
 
-Working notes for this port. Findings, dead ends, decisions that the code cannot explain on its own,
-and upstream bugs. Read-only reference trees are 1.21.11 (base) and 1.21.1 (second worked example).
+Working notes for this port. Findings, dead ends, decisions the code cannot explain on its own, and
+upstream bugs. Read-only reference trees: 1.21.11 (base) and 1.21.1 (second worked example).
 
 ---
 
 ## Phase 0 — orientation
 
-Read `README.md` / `BUILDING.md` / `build.gradle` of both reference trees, plus their git history
-(1.21.11 has three commits: import, packaging/move-tick/animator fixes, and the move-recursion guard
-moved out of the mixin into a plain mod class).
+`README.md` / `BUILDING.md` / the three `build.gradle` files of both reference trees were read, plus
+1.21.11's git history (three commits: import, packaging/move-tick/animator fixes, and the
+move-recursion guard moved out of the mixin into a plain mod class).
 
-Base tree layout copied verbatim: root + `common` (loom) + `fabric` (loom) + `neoforge` (ModDevGradle),
-250 Java files, one `parcool-common.mixins.json`, one `parcool.accesswidener`, one
+The base tree was copied verbatim: root + `common` (loom) + `fabric` (loom) + `neoforge`
+(ModDevGradle), 250 Java files, one `parcool-common.mixins.json`, one `parcool.accesswidener`, one
 `META-INF/accesstransformer.cfg`.
-
-**Known defect carried in from the base tree (per the handoff brief, to be re-checked here):**
-`ConfigSpec#persist()` in 1.21.11 writes nothing — it only sets an unreadable `dirty` flag, so GUI
-settings never survive a restart. The 1.21.1 tree has the working implementation. Same for
-`BufferUtil`: 1.21.11 turned `ensureRoom` into a `static` over uninitialised state and dropped the
-overflow checks from `putVector3i`/`putVec3`. Both must be taken from 1.21.1 here.
 
 ---
 
@@ -29,64 +23,220 @@ Every number below was read out of a metadata endpoint on 2026-09-30.
 
 | Property | Value | Where it came from |
 |---|---|---|
-| `minecraft_version` | `1.21.9` | target; present in `launchermeta.mojang.com/mc/game/version_manifest_v2.json` (released 2025-09-30, between 1.21.8 and 1.21.10) |
-| `neo_version` | `21.9.16-beta` | last entry of the `21.9.*` line in `maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml`; there is no non-beta 1.21.9 NeoForge build, every 1.21.9 build carries the `-beta` suffix |
+| `minecraft_version` | `1.21.9` | target; `launchermeta.mojang.com/mc/game/version_manifest_v2.json` (released 2025-09-30) |
+| `neo_version` | `21.9.16-beta` | last `21.9.*` entry in `maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml`. **There is no non-beta NeoForge build for 1.21.9** — every `21.9.x` release carries the `-beta` suffix, and the next entry in the list is `21.11.42` |
 | `loader_version` | `0.19.5` | `meta.fabricmc.net/v2/versions/loader/1.21.9` → `loader[0].loader.version` |
-| `fabric_api_version` | `0.134.1+1.21.9` | highest `<version>*+1.21.9</version>` in `maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml` (0.134.0 then 0.134.1, then the line moves to 1.21.10) |
-| `architectury_api_version` | `19.0.1` | **see below** |
+| `fabric_api_version` | `0.134.1+1.21.9` | highest `<version>*+1.21.9</version>` in `maven.fabricmc.net/.../fabric-api/maven-metadata.xml` (the line jumps from 0.134.1 straight to `0.136.0+1.21.10`) |
+| `architectury_api_version` | **`18.0.8`** | see below |
 | `dev.architectury.loom` | `1.17.493` | highest published version in `maven.architectury.dev/dev/architectury/architectury-loom/maven-metadata.xml` |
-| `architectury-plugin` | `3.5.170` | highest in `maven.architectury.dev/architectury-plugin/architectury-plugin.gradle.plugin/maven-metadata.xml` |
-| `net.neoforged.moddev` | `2.0.148` | highest in `maven.neoforged.net/releases/net/neoforged/moddev/net.neoforged.moddev.gradle.plugin/maven-metadata.xml` (2.0.147 → 2.0.148, then it stops) |
-| Gradle wrapper | `9.4.1` | unchanged from the base tree; already cached in `~/.gradle/wrapper/dists` |
+| `architectury-plugin` | `3.5.170` | highest in `architectury-plugin.gradle.plugin/maven-metadata.xml` |
+| `net.neoforged.moddev` | `2.0.148` | highest in `net.neoforged.moddev.gradle.plugin/maven-metadata.xml` (2.0.147 → 2.0.148 → end) |
+| Gradle wrapper | `9.4.1` | unchanged from the base tree; already in `~/.gradle/wrapper/dists` |
+| Java | 21 | `version.json` of the 1.21.9 client: `java_version: 21` |
 
-### Architectury API line for 1.21.9
+### Architectury API for 1.21.9 — the brief's guess was wrong
 
-`architectury-fabric`'s `fabric.mod.json` is the discriminator. Downloaded and read the
-`depends.minecraft` out of every candidate jar in the 16.x–19.x range:
+The handoff guessed that "19.0.x may be the 1.21.9 line rather than 1.21.11-only". It is not.
+Downloaded every candidate jar in the 16.x–19.x range and read `depends.minecraft` out of its own
+`fabric.mod.json`:
 
-| architectury-fabric | `depends.minecraft` | usable on 1.21.9 |
+| architectury-fabric | `depends.minecraft` | accepts 1.21.9 |
 |---|---|---|
-| 16.0.3, 16.1.4 | `~1.21.4-` | no (1.21.4 line) |
+| 16.0.3, 16.1.4 | `~1.21.4-` | no |
 | 17.0.3, 17.0.4 | `~1.21.6~` | no |
 | 17.0.6 | `~1.21.6` | no |
-| 17.0.8, 18.0.2 – 18.0.8 | `~1.21.7` | **yes** (`~1.21.7` = `>=1.21.7 <1.22.0`) |
-| 19.0.1 | `~1.21.11` | no (`>=1.21.11`, and 1.21.9 < 1.21.11) |
+| 17.0.8, 18.0.2 – 18.0.8 | `~1.21.7` (`>=1.21.7 <1.22.0`) | **yes** |
+| 19.0.1 | `~1.21.11` | no — `1.21.9 < 1.21.11` |
 
-So on the *nominal* Fabric dependency check the 18.x line is the one that accepts 1.21.9, and
-**19.0.1 is not** — the handoff brief guessed that 19.0.x might be the 1.21.9 line, and it is not:
-19.0.1 declares `~1.21.11`, i.e. it refuses 1.21.9 outright.
+So **19.0.1 refuses 1.21.9 outright**, and 18.0.8 is the newest line whose version predicate accepts
+it. Note the gap: Architectury published nothing between `18.0.8` (1.21.7 line) and `19.0.1`
+(1.21.11), so 1.21.8 / 1.21.9 / 1.21.10 all fall into the `~1.21.7` window.
 
-That still leaves 18.0.8, which was *compiled* against MC 1.21.7. Whether its own bytecode survives on
-1.21.9 is a different question from whether its version predicate does, and it is not something the
-predicate answers. Recorded as an open risk below.
+`architectury-neoforge` cannot be used to discriminate: **every** build in 16.x–19.x declares the
+same `minecraft [1.21.4,)` / `neoforge [21.0.110-beta,)`.
 
-NeoForge side: `architectury-neoforge` declares `minecraft [1.21.4,)` / `neoforge [21.0.110-beta,)` in
-**both** 18.0.8 and 19.0.1, so the NeoForge metadata does not discriminate at all — the Fabric
-`fabric.mod.json` is the only usable signal.
+**Open risk, not resolved:** 18.0.8 was *compiled* against MC 1.21.7, and a version predicate that
+covers 1.21.9 does not prove its bytecode survives there. Architectury API's mixins touch
+`KeyMapping`, `BlockEntityType`, `ResourceLocation`, … ; if 1.21.8–1.21.10 changed any of the members
+its mixins target, the result is a mixin apply failure at boot on Fabric. The compiler accepts it
+(:common:compileJava and :fabric:compileJava both pass), and the NeoForge side is unaffected because
+its version range is wide. This cannot be closed without launching the game, which phase 6 of this
+task forbids — see "Not verified" below.
 
-### Carried-over build facts from the already-finished ports
+### Build facts carried over from the finished ports
 
 * `./gradlew build` in one invocation does **not** work on a clean checkout: Architectury Loom resolves
-  the `:common` project dependency while it *configures* `:fabric`, so `:common`'s jar has to exist
-  first. Working sequence: `./gradlew :common:build && ./gradlew build`. Inherited from 1.21.11 and
-  documented in `BUILDING.md`; **not** "fixed", only documented.
+  the `:common` project dependency while it *configures* `:fabric`, so `:common`'s jar must exist
+  first. Working sequence: `./gradlew :common:build && ./gradlew build`. Inherited from 1.21.11,
+  documented in `BUILDING.md`, **not** "fixed".
+* ModDevGradle on Gradle 9 does not wire up Gradle's `RepositoriesPlugin`, so Mojang's own
+  `libraries.minecraft.net` had to be added explicitly to `neoforge/build.gradle`. The 1.21.11 tree
+  does not have it. Recorded in the file with the symptom (`Could not find com.mojang:jtracy`).
 * `minecraft-merged-*-sources.jar` in the Loom cache is generated *with the project's access widener
-  already applied*, so it lies about member visibility. The truth is `javap` against the
-  mojmap/named jar.
-* ModDevGradle on Gradle 9 does not pick up `RepositoriesPlugin`, so Mojang's
-  `libraries.minecraft.net` has to be listed explicitly in `neoforge/build.gradle`, otherwise
-  `Could not find com.mojang:jtracy`. The base tree does **not** have that repository yet and will
-  need it — see phase 1 findings.
-* Loom 1.17.493 requires Gradle ≥ 9 (`architectury-plugin` 3.5.170 calls `disableObfuscation()`, which
-  does not exist below Loom 1.17), so the wrapper stays on 9.4.1.
-* `~/.gradle` is shared with the sibling 1.21.x ports, and `/tmp` is shared too — no snapshot files
-  under fixed names in `/tmp`.
-* `org.gradle.jvmargs=-Xmx2G` for this tree: three Gradle daemons run in parallel on this machine.
-* `JAVA_HOME=/usr/lib/jvm/java-21-openjdk` on every Gradle invocation; the system `java` is 25 and
-  Gradle 9 will not run on it.
+  already applied* and therefore lies about member visibility. Every access question was answered
+  from `javap` against the plain mojmap named jar instead.
 
 ---
 
-## Phases 2–7
+## Phase 2/3 — version deltas, and how each was decided
 
-(filled in as the work proceeds)
+`javap` against the mojmap named jars of **1.21.7 / 1.21.9 / 1.21.11** side by side, plus
+vineflower-decompiled 1.21.9 sources where a signature was not enough. 1.21.9 is genuinely a mix: it
+keeps 1.21.7's renderer and key-mapping shape but already has 1.21.11's render-state rework, which is
+why the version table in the brief ("1.21.1 old side / 1.21.11 new side") is misleading here.
+
+| Area | 1.21.9 actually is | Taken from |
+|---|---|---|
+| `ResourceLocation` vs `Identifier` | **`ResourceLocation`** — `net.minecraft.resources.Identifier` does not exist. The rename is 1.21.11-only | 1.21.11 tree, `Identifier` → `ResourceLocation` in 32 files |
+| `PlayerModel` package | **`net.minecraft.client.model.PlayerModel`** (1.21.11 moved it to `.model.player`) | 1.21.11 source, import fixed |
+| Render types | **`RenderType` + `RenderStateShard` + `CompositeState`**, no `client.renderer.rendertype` package at all | 1.21.7 `RenderTypes.java` rewritten by hand, plus the 1.21.7 AW/AT block |
+| `RenderPipeline` | already exists, `MATRICES_FOG_SNIPPET`/`PIPELINES_BY_LOCATION` still private | 1.21.7 |
+| Entity rendering | **new side**: `AvatarRenderState`, `AvatarRenderer`, `extractRenderState`/`submit` | 1.21.11 |
+| `KeyMapping.Category` | **new side**: record, `MAP` is `Map<Key, List<KeyMapping>>` | 1.21.11 |
+| one-mapping-per-key conflict | **gone** — multi-mapping table, so `restoreVanillaBindings` is correctly absent | 1.21.11 (no action) |
+| `Screen#resize` | **old side**: `(Minecraft, int, int)`; 1.21.11 dropped the `Minecraft` parameter | 1.21.7 form |
+| `Screen#keyPressed` / `mouseClicked` | **new side**: `KeyEvent` / `MouseButtonEvent` | 1.21.11 |
+| `Camera` | **old side**: `setup(BlockGetter,…)`, `getYRot()/getXRot()`, `getUpVector()/getLeftVector()` returning live `Vector3f` | 1.21.1 `CameraAnglesMixin`, rewritten |
+| `SoundInstance` | **old side**: `getLocation()`, `getIdentifier()` does not exist | 1.21.7 one-liner |
+| `Commands.LEVEL_GAMEMASTERS` | **old side**: an `int` + `CommandSourceStack#hasPermission(int)`; the `PermissionCheck`/`PermissionSet` rework is 1.21.11-only | 1.21.7, 8 call sites in 2 files |
+| `BlockEntityType` | no `Builder`, private ctor, private static `register` — same as 1.21.7 **and** 1.21.11 | 1.21.11 (`BlockEntityTypeInvoker` + platform seam) kept; both work, the invoker needs no AW |
+| `ArgumentTypeInfos#register` | **old side**: still `private static` (1.21.11 made it public) | needs the 1.21.7 AW entry — see the bug list |
+| `LevelResource#<init>` | **old side**: still `private`; 1.21.11 made it public | not needed on NeoForge (public there); not needed on Fabric either since… see bug list |
+| `Player#canInteractWithEntity` | **present** on 1.21.9 (removed in 1.21.10+), so `getVisibilityPercent` is the only hook and both exist — the 1.21.11 choice is still correct | 1.21.11 |
+| `Entity#hurt` split | **new side**: `final void hurt` + `hurtOrSimulate`/`hurtServer` exist already on 1.21.7 | 1.21.11 |
+| `jumpFromGround` on `LivingEntity` | new side (as in 1.21.7) | 1.21.11 `LivingEntityJumpMixin` |
+| `Player#causeExtraKnockback` | **absent** — 1.21.11-only extraction; `setSprinting(false)` is still inline in `Player#attack` | 1.21.7 `@WrapWithCondition` target |
+| `pack.mcmeta` | `PackFormat` record, `RESOURCE_PACK_FORMAT=69`, `DATA_PACK_FORMAT=88`, `lastPreMinorVersion` = 64 (client) / 81 (server) | new shape, see below |
+| Recipe ingredients | string form still accepted (`Ingredient.CODEC` → `HolderSetCodec`) | 1.21.7 strings kept |
+| `Item.Properties#setId` | required, `useBlockDescriptionPrefix()` present | 1.21.7 `Items.java` (adds `blockItemProperties`) |
+| Entity/BlockEntity save | **new side**: `ValueInput`/`ValueOutput` | 1.21.11 |
+| Attribute holder lookup | `Registry#get` returns `Optional` — the brief's "1.21.1 returns the value" row is **wrong for all three** versions checked | n/a |
+| `minecraft:chain` vs `iron_chain` | 1.21.9 has `IRON_CHAIN` (renamed from 1.21.7's `CHAIN`) | see bug list |
+
+### `pack.mcmeta`, decided by executing the codec
+
+The shape matters, so it was tested rather than guessed. `PackMetadataSection.forPackType(...)`
+was called directly against the 1.21.9 classes with a hand-written classpath and both real format
+numbers from `version.json` (`resource_major: 69`, `data_major: 88`):
+
+```
+pack_format 88 / min 88 / max 88 / supported_formats [88,88]
+  CLIENT_RESOURCES: PARSE FAILED: "key supported_formats is deprecated starting from pack format 65"
+  SERVER_DATA:      PARSE FAILED: "key supported_formats is deprecated starting from pack format 82"
+
+pack_format 88 / min 88 / max 88
+  CLIENT_RESOURCES: range=[88.0, 88.*] current=69.0 -> TOO_NEW  *** NOT COMPATIBLE ***
+  SERVER_DATA:      range=[88.0, 88.*] current=88.0 -> COMPATIBLE
+
+pack_format 88 / min 64 / max 88 / supported_formats [64,88]      <- shipped
+  CLIENT_RESOURCES: range=[64.0, 88.*] current=69.0 -> COMPATIBLE
+  SERVER_DATA:      range=[64.0, 88.*] current=88.0 -> COMPATIBLE
+```
+
+So on 1.21.9 `supported_formats` must be present *and* `min_format` must be at or below
+`lastPreMinorVersion` (64 / 81), and the declared range has to straddle both 69 and 88. The 1.21.11
+tree's `pack_format: 81 / supported_formats: [81, 81]` would have been **TOO_OLD** on 1.21.9.
+The harness is `/tmp/opencode/packtest/PackTest.java` (it needs
+`SharedConstants.tryDetectVersion()` + `Bootstrap.bootStrap()` and `SharedConstants` steals
+`System.out`, hence the private `OUT` stream).
+
+### Optional integrations — none of them has a 1.21.9 build
+
+Checked the full CurseForge file list per project (the public `www.curseforge.com/api/v1/mods/<id>/files`
+endpoint; `api.curseforge.com` needs a key and returns 403).
+
+| Mod | Compiled against | Why |
+|---|---|---|
+| Paraglider | `6739612` = 21.5.2 (MC 1.21.5) | 1.21.9 has no build. 21.5.2's API is spelled with `ResourceLocation`; the 21.11.0-beta.6 build uses `Identifier` and would not compile here |
+| ShoulderSurfing | `6496668` = 1.21.1-4.11.0 | the 5.x line publishes only 1.21.1 and 1.21.11, and 5.x changed `IShoulderSurfingPlugin#register` to take an `IEventBus` instead of `IShoulderSurfingRegistrar` |
+| BetterThirdPerson | `6455836` = 1.21.5-1.9.0 | newest NeoForge build at all; CurseForge lists it for 1.21.5–1.21.8 |
+| EpicFight | `7489617` = 21.15.1-mc1.21.1 | its 1.21.1 line is still the latest release |
+
+**Therefore all four integrations are compile-only and inert at runtime on 1.21.9**: no published
+build declares this Minecraft version, so a 1.21.9 client cannot install one. That is stated in
+README.md. Paraglider is the only one also pulled onto the runtime classpath, because its
+`@ParagliderPlugin` plugin class has to be discoverable by Paraglider's own loader.
+
+---
+
+## Bugs found and fixed
+
+1. **`ConfigSpec#persist()` wrote nothing** (inherited from the 1.21.11 base). It only set a `dirty`
+   flag that nothing ever read, and the settings screens reach the file *only* through it, so every
+   change made in the GUI was dropped and the config reverted on next launch. Restored the 1.21.1
+   behaviour (write on `persist()`), keeping the flag. Verified the write volume is fine: the screens
+   call `save()` on tab switch / screen close, not per frame.
+2. **`BufferUtil.ensureRoom` was `static` over uninitialised state, and `putVector3i`/`putVec3` had
+   their checks deleted** (inherited from the base). The static reference was set once in the
+   constructor and never per action, so the check described the wrong buffer and threw nothing, while
+   the two widest writers were unchecked — i.e. exactly the silent overflow the method exists to
+   prevent. Took the 1.21.1 implementation (instance method, checks restored) and documented why.
+3. **`RenderTypes` registered its pipelines on the first frame.** `ShaderManager#apply` precompiles
+   `RenderPipelines#getStaticPipelines()` during the resource reload, long before the rope renderer
+   exists, and aborts the game on the first pipeline that fails to compile. Added the explicit
+   `RenderTypes.register()` and called it from `Renderers.register()`.
+4. **`RenderType#create` and friends were reachable only through another mod's access widener.**
+   `:common` compiled against a Loom jar whose access wideners are the union of every dependency's, and
+   both **Architectury API** (`architectury.accessWidener`, `transitive-accessible`) and
+   **fabric-transitive-access-wideners-v1** widen exactly the members `client/renderer/RenderTypes`
+   needs. The mod's own `parcool.accesswidener` mentioned none of them, so the dependency was
+   invisible: blank the AW and `:common` still compiles, which is how it was found. All five render
+   members are now declared in `parcool.accesswidener`, so the mod is self-sufficient rather than
+   relying on the internals of two other mods.
+   (`LevelResource`'s private constructor is in the same category — Architectury widens it — but it is
+   not needed here: `Limitations` is compiled against the *NeoForge* jar for `:neoforge` and against
+   the AW-applied Loom jar for `:common`, and the member is only reached from `common/…/Limitations`,
+   which the Architectury widener covers.)
+5. **All five `data/parcool/recipe/*.json` were missing the mandatory `category` field.**
+   `javap -c` on `ShapedRecipe$Serializer` / `CustomRecipe$Serializer` in the 1.21.9 jar shows
+   `Codec.fieldOf("category")`, i.e. required — a datapack load failure ("Missing field category")
+   that makes every ParCool item uncraftable while the build stays green. Added `"category": "misc"`
+   to all five, matching vanilla's own recipes in the jar.
+6. **`PlayerMixin`'s `@WrapWithCondition` targeted a method that does not exist on 1.21.9.**
+   `Player#causeExtraKnockback` is a 1.21.11 extraction; on 1.21.9 the `setSprinting(false)` is still
+   inline in `Player#attack` (verified in the 1.21.9 bytecode, and the method is absent from
+   `javap`). Under `defaultRequire: 1` a missing target is a hard boot failure. Retargeted to
+   `attack`, as in 1.21.7.
+7. **`minecraft:iron_chain` in `zipline_rope.json` is correct for 1.21.9 — the brief's warning was
+   aimed at the wrong version.** 1.21.9 is *after* the rename: `javap` on the 1.21.9 jar shows
+   `Items.IRON_CHAIN` and `Blocks.IRON_CHAIN`, the item model is
+   `assets/minecraft/models/item/iron_chain.json`, and vanilla's own `data/minecraft/recipe/iron_chain.json`
+   builds it from `iron_ingot` + `iron_nugget`. There is no `minecraft:chain` in 1.21.9. So the 1.21.11
+   tree's value is kept unchanged; the rule is "not 1.21.2–1.21.7, which is where `chain` is correct".
+8. **NeoForge's AT listed eight entries that are already public on 21.9.16-beta.** Trimmed to the two
+   that are still private there (`ArgumentTypeInfos#register`, `RenderPipelines#PIPELINES_BY_LOCATION`),
+   each verified against `neoforge/build/moddev/artifacts/neoforge-21.9.16-beta.jar`, with the
+   measured visibility of every other member recorded in the file.
+9. **`ClientWorldMixin`/`hideInBlock`/`ZiplineHookTileEntity` etc. comments** said "1.21.11" where they
+   described behaviour that is 1.21.9's. Reworded, keeping the five places where a 1.21.11 comparison
+   is the point of the sentence.
+
+## Bugs looked at and confirmed already correct in the base
+
+* `Limitations` filename/UUID validation is present in all three trees (the brief's "vanished" claim
+  does not apply to 1.21.11 or 1.21.9).
+* `ZiplineRopeEntity` writes six distinct NBT keys (`Tile1_X/Y/Z`, `Tile2_X/Y/Z`).
+* `KeyBindings#isDown`/`isMetaKeyDown` reject an unbound keysym before `glfwGetKey`.
+* `Item.Properties#setId` is set explicitly for every item (Architectury's `DeferredRegister` does not).
+* `~25` unused imports are upstream in both reference trees; left alone as instructed.
+* `Item.Properties#useBlockDescriptionPrefix()` — the brief lists this as missing from both reference
+  trees; it *is* present in 1.21.7's `Items.java` (added there), and 1.21.9 needed the same, so it
+  was taken.
+
+## Not verified (no game was launched)
+
+Phase 6 of the brief asks for a dev-run on both loaders and a Prism instance. The task instructions
+for this port forbid launching Minecraft of any kind, so the following remain untested and are the
+most likely places for a remaining defect:
+
+* **Both loaders booting.** The strongest proxy used was a three-stage static verification, all
+  passing: (a) every mixin target in the source resolves in the 1.21.9 mojmap jar, including exact
+  descriptors; (b) every `@Inject`/`@Redirect` **handler arity** matches its target's parameter count
+  — the failure mode the brief warns about, which `javap` on the *target* cannot catch; (c) every
+  remapped target inside the **shipped** Fabric jar resolves in the 1.21.9 *intermediary* jar, since
+  Loom's static remap rewrites targets into the bytecode and the jar ships no refmap to fix a
+  mistake at runtime. Both verifiers are self-tested against a deliberately broken target.
+* **Architectury API 18.0.8's own mixins applying on 1.21.9** (the open risk from phase 1).
+* **Runtime behaviour of anything behind a `defaultRequire: 1` mixin**, and the visual result of the
+  camera-roll path.
+* **The four optional integrations**, which cannot be exercised at all on 1.21.9 (no build exists).
