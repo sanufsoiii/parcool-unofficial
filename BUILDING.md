@@ -52,7 +52,7 @@ per-project.
 ```bash
 ./gradlew build
 # -> fabric/build/libs/parcool-1.21.8-3.4.3.3-fabric.jar
-# -> neoforge/build/libs/parcool-neoforge.jar
+# -> neoforge/build/libs/parcool-1.21.8-3.4.3.3-neoforge.jar
 ```
 
 Each contains the `:common` code and assets plus the loader module's own classes, metadata
