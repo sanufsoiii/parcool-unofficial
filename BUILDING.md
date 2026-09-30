@@ -1,6 +1,8 @@
 # Building ParCool (Architectury, Minecraft 1.21.1)
 
-Requires JDK 21 (configured via `org.gradle.java.home` in `gradle.properties`).
+Requires JDK 21 or newer. The toolchain is declared through
+`java { toolchain { languageVersion = 21 } }` in `build.gradle`, and `org.gradle.java.home` is not
+set: there is no machine-specific path anywhere in the build.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|

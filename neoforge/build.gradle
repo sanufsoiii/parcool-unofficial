@@ -87,12 +87,11 @@ dependencies {
 	implementation "dev.architectury:architectury-neoforge:${project.architectury_api_version}"
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
-	// Optional integrations, and the only jars that had to move with the port:
-	//   Paraglider       7794499  Paraglider-neoforge-21.11.0-beta.6   (MC 1.21.11)
-	//   ShoulderSurfing  8950509  ShoulderSurfing-NeoForge-1.21.11-5.1.1
-	//   BetterThirdPerson 6455836 the newest NeoForge build (1.21.8)
-	// EpicFight has no 1.21.11 build on CurseForge or Modrinth (its 1.21.1 line, 21.17.3.1, is the
-	// latest release), so extern/epicfight is excluded from compilation - see sourceSets below.
+	// Optional integrations. EpicFight publishes nothing past its 1.21.1 line, so that is the API
+	// extern/epicfight compiles against; every entry point guards itself with
+	// EpicFightManager#isEpicFightUsable, which reports EpicFight absent when its classes are not
+	// loadable, and ParCool then falls back to its own stamina system. Paraglider,
+	// ShoulderSurfing and BetterThirdPerson are guarded the same way.
 	// Patchouli is only an optional book dependency and is never referenced from source.
 	parcoolIntegrationsCompile "curse.maven:paraglider-289240:6739615"
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:7489617"
@@ -111,7 +110,7 @@ tasks.named('neoForgeIdeSync') {
 }
 
 /**
- * The distributable NeoForge jar: the SRG-transformed :common artifact plus this module's own
+ * The distributable NeoForge jar: the mojmap-named :common artifact plus this module's own
  * classes, the loader metadata and the ServiceLoader registration.
  *
  * architectury-plugin's `neoForge()` transform normally does this, but it requires a Loom extension
@@ -122,7 +121,7 @@ tasks.named('neoForgeIdeSync') {
 // The access widener and the mixin config live in :common so both loaders ship the same copy. The
 // dev runtime loads this module from its own sourceSet output, so the files have to be present here
 // as well (the distributed jar picks them up from the :common transform artifact).
-// Explodes the SRG-transformed :common artifact so its classes are part of this module's own output.
+// Explodes the mojmap-named :common artifact so its classes are part of this module's own output.
 def explodedCommon = layout.buildDirectory.dir('explodedCommon')
 
 def explodeCommon = tasks.register('explodeCommon', Copy) {
