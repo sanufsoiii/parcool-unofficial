@@ -73,7 +73,7 @@ public abstract class LivingEntityMixin extends Entity {
 	public boolean parCool$isLivingOnCustomLadder(@Nonnull BlockState state, @Nonnull Level world, @Nonnull BlockPos pos, @Nonnull LivingEntity entity) {
 		boolean isSpectator = (entity instanceof Player && entity.isSpectator());
 		if (isSpectator) return false;
-		// Per the approved port plan (section 3.6) the full-bounding-box branch is gone: its gate was
+		// The full-bounding-box branch is gone: its gate was
 		// the NeoForge-only NeoForgeConfig.SERVER.fullBoundingBoxLadders, so vanilla behaviour (the
 		// single-block test below) is what runs. It was deleted rather than left behind as dead code
 		// because the branch carried two bugs of its own - an int < double comparison that let a block
