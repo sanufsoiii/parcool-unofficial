@@ -687,3 +687,14 @@ copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
 * **Not verified:** no client was launched (the orchestrator holds the single GPU), and the server was
   booted with no players, so a real server -> client packet write has not been observed end to end.
   What is proven is that the server starts and registers the S2C payload *types*.
+
+## Live-client result (human player, not an orchestrator)
+
+Fabric client, human in a world: **all actions, zipline, HUD, settings and inventory textures work.
+Approved.** Fabric dedicated server reaches `Done (` with `AbstractMethodError` 0.
+
+Run under three clients at once (1.21.5, 1.21.6, 1.21.8). At boot on this build:
+`Mixin apply failed` 0, `IllegalReferenceCount` 0, `GL ERROR` 0, `Invalid key` 0.
+
+Still not exercised on this port: NeoForge (never launched on any port), and the cross-loader
+join (a NeoForge client against this Fabric server).
