@@ -415,6 +415,9 @@ and per the resources jar (`assets/minecraft/items/chain.json` exists, `iron_cha
 
 ## 10. Published artifacts
 
+Superseded by §13 — the hashes below are the ones published *before* the mixin fixes, the
+Architectury downgrade and the network fix. Kept for the history, not as the current artifact.
+
 ```
 0.1-mc1.21.4fabric-3.4.3.3.jar     sha256 e85246799a4ecf9abdccf9970fccfc4c8dddb05d39a3a93cc7e376e3c307f714
 0.1-mc1.21.4neoforge-3.4.3.3.jar   sha256 cb7f18254649f5b843daa975bfd68a1d205b76efe4bd782817ba5895c465846f
@@ -667,3 +670,17 @@ server. The evidence for the two mixins is `javap` on the 1.21.4 dev jar and the
 Architectury/fabric-api poms and `fabric.mod.json`s. That the two `InvalidInjectionException`
 boot aborts are gone is *expected* from that evidence, not observed — a mixin is validated against
 the real runtime class, and only a launch proves the whole set applies.
+
+## 13. Published artifacts (current)
+
+```
+0.1-mc1.21.4fabric-3.4.3.3.jar     sha256 95af859e742cda42812895890156ed1da6b29d5227b0655d79b5d8acceff1114
+0.1-mc1.21.4neoforge-3.4.3.3.jar   sha256 2c4612113c28332033f6acbac057d49605e08f14bf9fbc75ab23db73f93cc35d
+```
+
+copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
+
+Both hashes necessarily differ from §10: this build carries the two mixin fixes, the
+`architectury_api_version` 16.1.4 -> 15.0.3 downgrade (which also moves the `architectury` floor in
+`fabric.mod.json` and `neoforge.mods.toml`), and the network decode fix on both loaders. The game
+was not launched to validate any of it.
