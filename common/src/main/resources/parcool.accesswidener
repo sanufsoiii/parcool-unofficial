@@ -1,12 +1,27 @@
 accessWidener v2 named
 
 # NeoForge exposes these via patches/ATs; on Fabric they need widening. Verified against the
-# mojmap 1.21.11 jar: LivingEntity#swimAmount / #swimAmountO and Entity#onGround are private there and
+# mojmap 1.21.9 jar: LivingEntity#swimAmount / #swimAmountO and Entity#onGround are private there and
 # Player#canPlayerFitWithinBlocksAndEntitiesWhen is protected.
 accessible field net/minecraft/world/entity/LivingEntity swimAmount F
 accessible field net/minecraft/world/entity/LivingEntity swimAmountO F
 accessible field net/minecraft/world/entity/Entity onGround Z
 
-# NeoForge widens these; ParCool calls them directly. 1.21.11 already made LevelResource's constructor
-# public, so only the Player helper still has to be widened.
+# NeoForge widens these; ParCool calls them directly. LevelResource's constructor is public on
+# NeoForge, so only the Player helper still has to be widened for Fabric.
 accessible method net/minecraft/world/entity/player/Player canPlayerFitWithinBlocksAndEntitiesWhen (Lnet/minecraft/world/entity/Pose;)Z
+
+# client/renderer/RenderTypes.java: 1.21.9 moved culling and the vertex format into RenderPipeline and
+# deleted RenderStateShard#CULL / #NO_CULL / RENDERTYPE_LEASH_SHADER, so the rope has to build its own
+# pipeline out of RenderType#create + RenderStateShard's two private constants + the two private
+# RenderPipelines members it is assembled from. All of them are inaccessible from another package.
+#
+# These four entries are NOT redundant with fabric-api: :common compiles only because
+# fabric-transitive-access-wideners-v1 happens to widen RenderType#create, which makes the dependency
+# on that one module invisible until it is removed. Declaring them here is what makes the mod
+# self-sufficient; see NOTES.md, "fabric-api was silently widening RenderType#create".
+accessible method net/minecraft/client/renderer/RenderType create (Ljava/lang/String;ILcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/client/renderer/RenderType$CompositeState;)Lnet/minecraft/client/renderer/RenderType$CompositeRenderType;
+accessible field net/minecraft/client/renderer/RenderStateShard NO_TEXTURE Lnet/minecraft/client/renderer/RenderStateShard$EmptyTextureStateShard;
+accessible field net/minecraft/client/renderer/RenderStateShard LIGHTMAP Lnet/minecraft/client/renderer/RenderStateShard$LightmapStateShard;
+accessible field net/minecraft/client/renderer/RenderPipelines PIPELINES_BY_LOCATION Ljava/util/Map;
+accessible field net/minecraft/client/renderer/RenderPipelines MATRICES_FOG_SNIPPET Lcom/mojang/blaze3d/pipeline/RenderPipeline$Snippet;

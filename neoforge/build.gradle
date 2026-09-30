@@ -222,3 +222,7 @@ tasks.named('assemble') {
 tasks.withType(Jar).configureEach {
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+tasks.register('printCompileClasspath') {
+	doLast { println configurations.compileClasspath.files.join('\n') }
+}

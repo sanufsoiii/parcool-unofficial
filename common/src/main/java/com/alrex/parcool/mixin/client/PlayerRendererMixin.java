@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Runs ParCool's per-frame action rotation ({@code Animation#rotatePre} / {@code rotatePost}) around
  * the player's own body rotation.
  *
- * <h2>What 1.21.11 changed</h2>
+ * <h2>What 1.21.9 changed</h2>
  * {@code PlayerRenderer} is gone; the same renderer is {@code AvatarRenderer}, and it no longer
  * receives the entity - it receives an {@link AvatarRenderState}. Its rotation hook lost the
  * {@code partialTick} argument and now takes {@code (state, poseStack, bodyRot, scale)}, where

@@ -124,7 +124,7 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     }
 
     /**
-     * The custom culling box 1.21.1 kept in {@code Entity#getBoundingBoxForCulling()}. 1.21.11 moved
+     * The custom culling box 1.21.1 kept in {@code Entity#getBoundingBoxForCulling()}. 1.21.9 moved
      * that method onto {@code EntityRenderer}, so {@code ZiplineRopeRenderer} reads it from here
      * instead; the box and its {@code null} fallback are unchanged.
      */
@@ -148,7 +148,7 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     }
 
     /**
-     * 1.21.11 split {@code Entity#hurt} into a final client/server split: {@code hurt} is now
+     * 1.21.9 split {@code Entity#hurt} into a final client/server split: {@code hurt} is now
      * {@code final void} and every entity implements {@code hurtServer}. The rope is a marker entity
      * with no hitbox and no health, so it is invulnerable, exactly as it was when it simply had no
      * {@code hurt} override in 1.21.1.

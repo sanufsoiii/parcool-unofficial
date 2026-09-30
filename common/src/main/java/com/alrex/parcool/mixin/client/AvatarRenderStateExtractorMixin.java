@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Stashes the player on the render state, see {@link AvatarRenderStateEntityMixin}.
  *
- * <p>1.21.11's {@code AvatarRenderer#extractRenderState(Avatar, AvatarRenderState, float)} - the
+ * <p>1.21.9's {@code AvatarRenderer#extractRenderState(Avatar, AvatarRenderState, float)} - the
  * renderer's type parameter is bounded by {@code Avatar & ClientAvatarEntity}, and the descriptor uses
  * the erasure {@code Avatar} - is the only place where the renderer still holds the entity. It runs once
  * per frame before any {@code submit}, so it is the exact equivalent of the entity that 1.21.1's

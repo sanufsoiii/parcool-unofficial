@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ArgumentTypeInfos.class)
 public abstract class ArgumentTypeInfosMixin {
 
-    // 1.21.1 kept this private, 1.21.11 made it public static; a shadow may not narrow access, and
+    // 1.21.1 kept this private, 1.21.9 made it public static; a shadow may not narrow access, and
     // the access widener entry the method used to need is gone with it.
     @Shadow
     public static <A extends ArgumentType<?>, T extends ArgumentTypeInfo.Template<A>>

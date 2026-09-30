@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 /**
  * The rope between two zipline hooks.
  *
- * <h2>What changed in 1.21.11</h2>
+ * <h2>What changed in 1.21.9</h2>
  * {@code EntityRenderer} no longer draws anything itself: it extracts a render state from the entity
  * and then submits geometry through {@link SubmitNodeCollector}, which owns the buffers. So the rope
  * data is copied into {@link RopeRenderState} in {@link #extractRenderState} and the geometry is
@@ -56,7 +56,7 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity, Zipli
         state.color = entity.getColor();
         state.zipline = entity.getZipline();
         state.render3d = ParCoolConfig.Client.Booleans.Enable3DRenderingForZipline.get();
-        // The light has to be sampled while the entity is still around: 1.21.11's submit() only sees
+        // The light has to be sampled while the entity is still around: 1.21.9's submit() only sees
         // the render state, so the four levels the vertex maths needs are resolved here, exactly the
         // values 1.21.1 read inside render().
         state.startBlockLight = getBlockLightLevel(entity, start);
@@ -297,7 +297,7 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity, Zipli
     }
 
     /**
-     * The rope's per-frame data. 1.21.11 entity renderers are stateless by contract - the renderer is
+     * The rope's per-frame data. 1.21.9 entity renderers are stateless by contract - the renderer is
      * shared, the state is not - so everything the geometry needs is copied out of the entity first.
      */
     public static class RopeRenderState extends net.minecraft.client.renderer.entity.state.EntityRenderState {

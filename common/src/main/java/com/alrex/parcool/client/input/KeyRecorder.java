@@ -31,7 +31,7 @@ public class KeyRecorder {
 	 * NeoForge fires the event from — so the sampled key states see the same values on both loaders.
 	 */
 	public static void onClientTick() {
-		// 1.21.11 needs no repair pass here any more: `KeyMapping.MAP` is a `Map<Key, List<KeyMapping>>`,
+		// 1.21.9 needs no repair pass here any more: `KeyMapping.MAP` is a `Map<Key, List<KeyMapping>>`,
 		// so several bindings may share one physical key and `KeyMapping#set` feeds all of them. The
 		// 1.21.1 single-mapping-per-key table (and the `restoreVanillaBindings` workaround with it) is
 		// gone, and the physical polling in `KeyBindings#isDown` stays the source of truth either way.

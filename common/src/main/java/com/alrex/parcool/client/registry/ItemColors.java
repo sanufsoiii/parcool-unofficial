@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
  * "Attempted to load class ... for invalid dist DEDICATED_SERVER". Keeping the tint source in a class
  * only the client loads removes that verification edge.
  *
- * <h2>How the tint is applied in 1.21.11</h2>
+ * <h2>How the tint is applied in 1.21.9</h2>
  * 1.21.1 had {@code ColorHandlerRegistry.registerItemColors(ItemColor, items)}, and Architectury 19
  * dropped that method entirely - item tints are now declared per model in
  * {@code assets/parcool/items/zipline_rope.json} and resolved through a codec that is registered in

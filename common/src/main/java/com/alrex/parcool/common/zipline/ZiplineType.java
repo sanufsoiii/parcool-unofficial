@@ -19,7 +19,7 @@ public enum ZiplineType {
     private final String translationID;
 
     /**
-     * 1.21.11's block entity save hooks are {@code ValueOutput}/{@code ValueInput} based and therefore
+     * 1.21.9's block entity save hooks are {@code ValueOutput}/{@code ValueInput} based and therefore
      * codec based. The wire form is the plain ordinal, exactly what {@link #save()} wrote, so
      * connections written by 1.21.1 still load.
      */

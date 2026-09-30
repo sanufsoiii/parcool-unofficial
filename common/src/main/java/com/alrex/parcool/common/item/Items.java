@@ -15,7 +15,7 @@ public class Items {
 	public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ParCool.MOD_ID, Registries.ITEM);
 
     /**
-     * 1.21.11's {@code Item} constructor resolves the description id from the properties and that
+     * 1.21.9's {@code Item} constructor resolves the description id from the properties and that
      * now requires the item's registry key to be set
      * ({@code Objects.requireNonNull(this.id, "Item id not set")}) - NeoForge's
      * {@code DeferredRegister.Items} does that, Architectury's does not, so the key is set here. It is
