@@ -55,7 +55,7 @@ moment, so a single `./gradlew build` right after the wipe still reads the *old*
 ```bash
 ./gradlew build
 # -> fabric/build/libs/parcool-1.21.6-3.4.3.3-fabric.jar
-# -> neoforge/build/libs/parcool-neoforge.jar
+# -> neoforge/build/libs/parcool-1.21.6-3.4.3.3-neoforge.jar
 ```
 
 Each contains the `:common` code and assets plus the loader module's own classes, metadata
@@ -69,7 +69,7 @@ unzip -p fabric/build/libs/*-fabric.jar parcool.accesswidener | head -1
 # must print: accessWidener<TAB>v2<TAB>intermediary
 # `v2 named` makes Fabric Loader abort the boot before the window exists.
 
-unzip -l neoforge/build/libs/parcool-neoforge.jar | grep -c 'class_'
+unzip -l neoforge/build/libs/parcool-1.21.6-3.4.3.3-neoforge.jar | grep -c 'class_'
 # must be 0 - the NeoForge jar is mojmap-named on purpose
 ```
 
