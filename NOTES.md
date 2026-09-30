@@ -421,3 +421,249 @@ and per the resources jar (`assets/minecraft/items/chain.json` exists, `iron_cha
 ```
 
 copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
+
+## 11. Defect found by running the game: the payload was decoded in a released buffer
+
+Found by launching a client, not by building. **Both loaders**:
+`fabric/src/main/java/com/alrex/parcool/platform/FabricParCoolNetwork.java` and
+`neoforge/src/main/java/com/alrex/parcool/platform/NeoForgeParCoolNetwork.java`.
+
+### The stack, from the log of a live client
+
+```
+[Server thread/ERROR] (Minecraft) Error executing task on Server
+io.netty.util.IllegalReferenceCountException: refCnt: 0
+  at io.netty.buffer.AbstractByteBuf.readByte(AbstractByteBuf.java:730)
+  at net.minecraft.network.VarLong.read(VarLong.java:28)
+  at net.minecraft.network.codec.ByteBufCodecs$8.decode(ByteBufCodecs.java:155)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.lambda$register$0(FabricParCoolNetwork.java:48)
+[Render thread/WARN] (ParCool) the server limitation snapshot has been missing for 10s,
+  so no action can start. Asking the server again (ParCoolIsActive=true).
+```
+
+and again every few seconds, indefinitely.
+
+### Root cause
+
+One line, identical on both loaders, at `lambda$register$0`:
+
+```java
+(buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+```
+
+`NetworkManager.registerReceiver` hands the lambda a **raw** buffer on the network thread and
+releases it as soon as the lambda returns. Not inferred from the log — it is what Architectury
+15.0.3 (the version this port now pins) does in
+`dev.architectury.impl.NetworkAggregator#registerReceiver(Side, ResourceLocation, List, NetworkReceiver)`:
+
+```java
+registerC2SReceiver(type, BufCustomPacketPayload.streamCodec(type), packetTransformers, (value, context) -> {
+    class_9129 buf = new class_9129(Unpooled.wrappedBuffer(value.payload()), context.registryAccess());
+    receiver.receive(buf, context);   // <- ParCool's lambda runs here, buf is still alive
+    buf.release();                    // <- and is freed the moment the lambda returns
+});
+```
+
+`PacketContext#queue` is `taskQueue.execute(runnable)` — it **defers**. On the server that is the
+main-thread task queue, so the runnable body runs strictly *after* the lambda returned and *after*
+`buf.release()`. The decode then reads a `ByteBuf` whose `refCnt` is already 0, which is exactly
+what `VarLong.read` -> `AbstractByteBuf.readByte` checks. The first ParCool packet in each direction
+kills the server task, the limitation snapshot never arrives, and no action can start.
+
+`queue` exists for **thread safety of the handler**, not for decoding. The handler touches the
+player, the level and ParCool's own state, all main-thread-only; the decode is pure buffer
+arithmetic with no thread affinity of its own.
+
+### The fix
+
+Decode on the network thread, while the buffer is alive; queue only the handler.
+
+```java
+(buf, context) -> {
+    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+    context.queue(() -> handler.accept(payload, context));
+}
+```
+
+The comment in the source restates the causal chain deliberately. Without it the next reader sees
+"the decode is just a local read, inline it again" and reinstates the bug — the two forms are
+identical in intent and differ only in statement order.
+
+`javap -p -c` on the class inside both distributables shows `decode` at offset 2 and `queue` at
+offset 22 of one synthetic method, plus a second synthetic method whose entire body is a single
+`BiConsumer.accept` — the queued runnable no longer touches the buffer.
+
+### This class of defect is invisible to the compiler and only a live client catches it
+
+**`./gradlew build` is green on the broken code and stays green on the fixed code.** Nothing is wrong
+to compile: `buf` is a live `RegistryFriendlyByteBuf` parameter, `decode` accepts it, capturing it
+in a nested lambda is legal Java. The refcount is a *runtime* netty property and the validity window
+is a *lifetime* property of Architectury's `registerReceiver` contract; neither is expressible in
+the type system, so javac has nothing to say.
+
+Equally invisible to a test: **without a client that has joined a world, no ParCool packet ever
+travels**, the receiver lambda is never invoked, and the released-buffer read never happens. This
+port's whole verification story — `checkCommonLoaderIndependence`, `:common:build`, `./gradlew
+build`, the mixin-target checks against the real jars, unzipping the distributables — passes just as
+happily on code that dies on the first packet.
+
+The only oracle that finds this class of defect is a client a human launched, entering a world, with
+a server at the other end. Compilation, build output, jar contents and mixin validation are all
+necessary and none is sufficient.
+
+### What was NOT verified for this fix
+
+**The game was not launched.** No `:fabric:runClient`, no `:neoforge:runClient`, no server. The
+evidence is Architectury's own source for the buffer contract, `javap` on the built classes, and a
+green build. "The exception is gone" and "actions can now start" are *expected* from that evidence,
+not observed.
+
+## 12. The two mixin defects, and the Architectury version that goes with them
+
+Carried over from the interrupted agent's working tree, verified here against the real 1.21.4 jar
+before being accepted and committed.
+
+### 12.1 `KeyboardInputMixin` — wrong descriptor, hard boot failure
+
+`common/src/main/java/com/alrex/parcool/mixin/client/KeyboardInputMixin.java` inherited the 1.21.1
+shape:
+
+```java
+@Inject(method = "tick", at = @At("RETURN"))
+private void parcool$recordKeys(boolean slowDown, float movingSpeed, CallbackInfo ci)
+```
+
+`KeyboardInput#tick` has **no parameters** on 1.21.4. Verified with
+`javap -p net.minecraft.client.player.KeyboardInput` against the Loom-provisioned
+`minecraft-merged-1.21.4-*.jar`:
+
+| version | `KeyboardInput#tick` |
+|---|---|
+| 1.21.2 | `public void tick(boolean, float)` |
+| 1.21.3 | `public void tick(boolean, float)` |
+| **1.21.4** | **`public void tick()`** |
+| 1.21.5+ | `public void tick()` |
+
+So on 1.21.4 the handler must take the `CallbackInfo` and nothing else, and the target is written
+as the explicit `tick()V`:
+
+```
+Mixin apply for mod parcool failed parcool-common.mixins.json:client.KeyboardInputMixin from mod
+  parcool -> net.minecraft.client.player.KeyboardInput: InvalidInjectionException: Invalid
+  descriptor on ...->@Inject::parcool$recordKeys(ZFLorg/spongepowered/asm/mixin/injection/
+  callback/CallbackInfo;)V! Expected (Lorg/spongepowered/asm/mixin/injection/callback/
+  CallbackInfo;)V but found (ZFLorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;)V
+```
+
+Note the class in the trace: `KeyboardInputMixin`, and the expected/found pair is exactly the
+parameter-list difference above. The port's 1.21.2 and 1.21.3 siblings keep
+`tick(boolean, float)` and their handlers are correct **there** — the shape is version-specific, so
+do not copy one port's mixin into another.
+
+### 12.2 `LivingEntityFallMixin` — redirect on a method `causeFallDamage` never calls
+
+`@Redirect` targeted `LivingEntity.hurtOrSimulate(DamageSource, float)Z`, but on 1.21.4
+`causeFallDamage` does not call it. `javap -c` on the 1.21.4 jar, inside
+`public boolean causeFallDamage(float, float, DamageSource)`:
+
+```
+  38: aload_0
+  39: aload_3        // the DamageSource
+  40: iload         5 // calculateFallDamage result
+  42: i2f
+  43: invokevirtual #944  // Method hurt:(Lnet/minecraft/world/damagesource/DamageSource;F)V
+  46: iconst_1
+  47: ireturn
+```
+
+`javap -p` on `Entity` confirms `hurtOrSimulate` **does exist** on 1.21.4
+(`public final boolean hurtOrSimulate(DamageSource, float)`) next to
+`public final void hurt(DamageSource, float)` — so the class and the method were found, and only
+the *call* was absent. A redirect with zero matching invocations is a validation failure, not a
+silent no-op, and with `defaultRequire = 1` it aborts the boot:
+
+```
+InvalidInjectionException: Injection validation failed: Redirector parcool$applyDamageMultiplier(...)Z
+  ... expected 1 invocation(s) but 0 succeeded. Scanned 0 target(s).
+```
+
+Redirecting the callee also fixes the return type: the target is `void`, so the handler is `void`.
+1.21.2 and 1.21.3 already redirect `hurt(...)V` and their handlers return `void` — 1.21.4 simply
+had the 1.21.1 target string left in it.
+
+### 12.3 Why Architectury went from 16.1.4 to 15.0.3
+
+`gradle.properties` now pins `architectury_api_version=15.0.3`, and
+`fabric.mod.json` / `neoforge.mods.toml` lower their Architectury floors from `>=16.0.0` to
+`>=15.0.3` to match.
+
+**The hard dependency chain.** `architectury-fabric`'s pom declares fabric-api as a plain
+`runtime`-scope (i.e. hard, non-optional) dependency:
+
+| architectury-fabric | fabric-api it asks for | that fabric-api's own `depends.minecraft` |
+|---|---|---|
+| 15.0.3 | `0.110.5+1.21.4` | `>=1.21.4- <1.21.5-` |
+| 16.0.1 | `0.119.0+1.21.5` | `>=1.21.5- <1.21.6-` |
+| 16.0.3 | `0.119.5+1.21.5` | `>=1.21.5- <1.21.6-` |
+| 16.1.4 | `0.119.5+1.21.5` | `>=1.21.5- <1.21.6-` |
+
+This port declares `fabric_api_version=0.119.4+1.21.4`. Gradle resolves the conflict with
+"highest version wins", and version ordering across the `0.119.x+1.21.4` / `0.119.x+1.21.5` split
+is by the numeric `0.119.x` part, so with 16.1.4 the pulled `0.119.5+1.21.5` **beats** the port's
+own `0.119.4+1.21.4` and silently replaces it — on a port whose target is 1.21.4. Fabric Loader then
+refuses to boot:
+
+```
+[FabricLoader/Resolution] Immediate reason: [HARD_DEP architectury 16.1.4
+  {depends fabric-api @ [>=0.100.0]},
+  HARD_DEP_INCOMPATIBLE_PRESELECTED fabric-api 0.119.5+1.21.5
+  {depends minecraft @ [>=1.21.5- <1.21.6-)}, ROOT_FORCELOAD_SINGLE architectury 16.1.4]
+[FabricLoader/ERROR] Incompatible mods found!
+```
+
+**15.0.3 flips the comparison.** Its `0.110.5+1.21.4` is *below* the port's own `0.119.4+1.21.4`,
+so the port's fabric-api wins on its own merits, and that jar's own `depends.minecraft` is
+`>=1.21.4- <1.21.5-` — which matches this port's target exactly. The substitution that caused the
+defect cannot occur, so no `exclude`, no `resolutionStrategy.force` and no
+`{ force = true }` is needed anywhere. Verified by reading the published poms and the
+`fabric.mod.json` inside the published fabric-api jars, not by reading a version table.
+
+**16.x is a 1.21.5 build wearing a `~1.21.4-` label.** The version predicate alone cannot tell the
+candidates apart, because 15.0.3, 16.0.1, 16.0.2, 16.0.3 and 16.1.4 *all* declare
+`depends.minecraft = "~1.21.4-"` in their `fabric.mod.json`. What separates them is the last
+parameter of `FarmBlock#fallOn` in the refmap target of `architectury.mixins.json`'s `MixinFarmBlock`.
+`javap` on the 1.21.4 dev jar gives `public void fallOn(Level, BlockState, BlockPos, Entity, float)`
+— a `float` — while 16.x's refmap asks for the post-1.21.4 signature with a `double`, and javap on
+the 1.21.7/1.21.9 jars confirms 16.x's expectation there. So even with the fabric-api substitution
+defended against, 16.x hard-crashes in Architectury's **own** mixin before the window exists:
+
+```
+Mixin apply for mod architectury failed architectury.mixins.json:MixinFarmBlock from mod
+  architectury -> net.minecraft.world.level.block.FarmBlock: InvalidInjectionException:
+  Injection validation failed: @Inject annotation on fallOn could not find any targets
+  matching '.../FarmBlock;method_9554(...;Entity;D)V' in net.minecraft.world.level.block.FarmBlock.
+#@!@# Game crashed! Crash report saved to: .../run/crash-reports/crash-...-client.txt
+```
+
+No `exclude` on ParCool's dependency line can reach a mixin inside Architectury's own jar, which is
+why the fix is the version choice rather than a resolution rule. `fabric/build.gradle` carries the
+full argument as a comment, including why the mechanical alternatives were rejected
+(`AbstractExternalModuleDependency` has no `setForce(...)` on Gradle 9 — the Groovy `force = true`
+form was removed — and `configurations.matching { ... }` has to name Loom's internal, non-API
+configurations, which is a moving target on a tree already forced through a Loom migration from
+1.7.435 to 1.17.493).
+
+**The NeoForge half of the downgrade costs nothing.** `architectury-neoforge:15.0.3` exists on
+`maven.architectury.dev` and its `neoforge.mods.toml` requires `minecraft [1.21.4,)` /
+`neoforge [21.0.110-beta,)` — this port pins NeoForge `21.4.158`, which is inside that range. The
+build resolving and compiling against it is the proof that the API surface ParCool uses is
+unaffected: `:neoforge:compileJava` and the whole `./gradlew build` pass on 15.0.3 with no
+architectury-symbol errors.
+
+### 12.4 What was NOT verified for the mixin and Architectury work
+
+**The game was not launched for any of this.** No `:fabric:runClient`, no `:neoforge:runClient`, no
+server. The evidence for the two mixins is `javap` on the 1.21.4 dev jar and the published
+Architectury/fabric-api poms and `fabric.mod.json`s. That the two `InvalidInjectionException`
+boot aborts are gone is *expected* from that evidence, not observed — a mixin is validated against
+the real runtime class, and only a launch proves the whole set applies.
