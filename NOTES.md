@@ -382,3 +382,122 @@ So the vanilla `chain` -> `iron_chain` rename lands somewhere in 1.21.9. Do not 
 This is not a port-local mistake: the read-only base tree
 `parcool-Architectury-API-1.21.11` also ships `iron_chain` (correct *there*), and copying that
 recipe into any pre-1.21.9 port silently breaks crafting there.
+
+## 9. Defect found by running the game: the NeoForge payload was decoded in a released buffer
+
+Found by launching a client, not by building. **NeoForge only** — see the last subsection for why
+this port's Fabric side was already correct and was deliberately left untouched.
+
+### The stack, from the log of a live client
+
+```
+[Server thread/ERROR] (Minecraft) Error executing task on Server
+io.netty.util.IllegalReferenceCountException: refCnt: 0
+  at io.netty.buffer.AbstractByteBuf.readByte(AbstractByteBuf.java:730)
+  at net.minecraft.network.VarLong.read(VarLong.java:28)
+  at net.minecraft.network.codec.ByteBufCodecs$8.decode(ByteBufCodecs.java:155)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.lambda$register$0(FabricParCoolNetwork.java:48)
+[Render thread/WARN] (ParCool) the server limitation snapshot has been missing for 10s,
+  so no action can start. Asking the server again (ParCoolIsActive=true).
+```
+
+and again every few seconds, indefinitely. On NeoForge the equivalent frame is
+`NeoForgeParCoolNetwork.lambda$register$0` — the identical one-liner is on both loaders in this
+port, and the Fabric trace above is the frame the 1.21.7 client logged.
+
+### Root cause
+
+```java
+(buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+```
+
+`NetworkManager.registerReceiver` hands the lambda a **raw** buffer on the network thread and
+releases it as soon as the lambda returns. This is not inferred from the log; it is what
+Architectury 14.0.4 (the version this port pins) does in
+`dev.architectury.impl.NetworkAggregator#registerReceiver(Side, ResourceLocation, List, NetworkReceiver)`:
+
+```java
+registerC2SReceiver(type, BufCustomPacketPayload.streamCodec(type), packetTransformers, (value, context) -> {
+    class_9129 buf = new class_9129(Unpooled.wrappedBuffer(value.payload()), context.registryAccess());
+    receiver.receive(buf, context);   // <- ParCool's lambda runs here, buf is still alive
+    buf.release();                    // <- and is freed the moment the lambda returns
+});
+```
+
+`PacketContext#queue` is `taskQueue.execute(runnable)` — it **defers**. On the server that is the
+main-thread task queue, so the runnable body runs strictly *after* the lambda returned and *after*
+`buf.release()`. The decode then reads a `ByteBuf` whose `refCnt` is already 0, which is exactly
+what `VarLong.read` -> `AbstractByteBuf.readByte` checks. The first ParCool packet in each direction
+kills the server task, the limitation snapshot never arrives, and no action can start.
+
+`queue` exists for **thread safety of the handler**, not for decoding. The handler touches the
+player, the level and ParCool's own state, all main-thread-only; the decode is pure buffer
+arithmetic with no thread affinity of its own.
+
+### The fix
+
+Decode on the network thread, while the buffer is alive; queue only the handler.
+
+```java
+(buf, context) -> {
+    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+    context.queue(() -> handler.accept(payload, context));
+}
+```
+
+The comment in the source restates this causal chain deliberately. Without it the next reader sees
+"the decode is just a local read, inline it again" and reinstates the bug — the two forms are
+identical in intent and differ only in statement order.
+
+`javap -p -c` on the class inside `neoforge/build/libs/parcool.jar` shows `decode` at offset 2 and
+`queue` at offset 22 of one synthetic method, plus a second synthetic method whose whole body is a
+single `BiConsumer.accept` — the queued runnable no longer touches the buffer.
+
+### Why this port's Fabric side was already correct and was left alone
+
+`fabric/src/main/java/com/alrex/parcool/platform/FabricParCoolNetwork.java` goes through
+`NetworkChannel` rather than the raw `NetworkManager`, and `NetworkChannel` already has the right
+order. In architectury 14.0.4, `dev.architectury.networking.NetworkChannel#register`:
+
+```java
+info.messageConsumer.accept(info.decoder.apply(buf), () -> context);   // decode, then invoke
+```
+
+with `info.decoder` being the `buffer -> typed.decode((FriendlyByteBuf) buffer)` lambda this port
+passes in. Architectury calls the decoder **synchronously**, on the network thread, and hands the
+already-decoded payload to `messageConsumer` — which in this port is
+`(payload, context) -> context.get().queue(() -> handler.accept(payload, context.get()))`. So on
+Fabric: decode on the network thread, then queue only the handler. Exactly the shape the NeoForge
+side now has.
+
+No change was made to that file. Note that `context` there is a `Supplier<PacketContext>` and
+`context.get()` is called twice — the second call happens later, on the main thread, but the
+`PacketContext` is a stable object built once per packet, so this is not a lifetime hazard. It was
+left as-is deliberately rather than "improved", since it is not the defect.
+
+### This class of defect is invisible to the compiler and only a live client catches it
+
+**`./gradlew build` is green on the broken code and stays green on the fixed code.** Nothing is wrong
+to compile: `buf` is a live `RegistryFriendlyByteBuf` parameter, `decode` accepts it, and capturing
+it in a nested lambda is legal Java. The refcount is a *runtime* netty property; the window in
+which the buffer is valid is a *lifetime* property of Architectury's `registerReceiver` contract.
+Neither is expressible in the type system, so javac has nothing to complain about.
+
+It is equally invisible to a test: without a client that has **joined a world**, no ParCool packet is
+ever sent, the receiver lambda is never invoked, and the released-buffer read never happens. This
+port's entire verification story — `checkCommonLoaderIndependence`, `:common:build`, `./gradlew
+build`, mixin-target checks against the real jars, unzipping the distributables — passes just as
+happily on code that dies on the first packet.
+
+The only oracle that finds this class of defect is a client a human launched, entering a world, with
+a server at the other end. Compilation, build output, jar contents and mixin validation are all
+necessary and none is sufficient.
+
+### What was NOT verified
+
+**The game was not launched for this fix** — no `:fabric:runClient`, no `:neoforge:runClient`, no
+server. The evidence is Architectury's own source for the buffer contract, `javap` on the built
+class, and a green build. "The exception is gone" and "actions can now start" are *expected* from
+that evidence, not observed. The 1.21.3 Fabric jar is byte-for-byte the one published before this
+change (`fd1bc39e815fbe1aedc9462b123cbe1469c50246e242fc68aa71f7c3c693574e`) — nothing in it was
+touched, which is the point.
