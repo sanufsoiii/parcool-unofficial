@@ -6,14 +6,10 @@ that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
 Minecraft **1.21.7**, Java **21**, Gradle **9.4.1**.
 
-Ported from Minecraft 1.21.1, which is the baseline the loader versions below were moved from. The
-port is functionally complete on both loaders: 27 vanilla mixins, 26 actions, the zipline/hook blocks
-and the full animation set are all present, and the four optional NeoForge integrations are wired.
-
-> **This port has never been booted.** It compiles, packages and passes the static checks listed in
-> [NOTES.md §5](NOTES.md), but no part of the in-game acceptance list (booting either loader, the
-> action behaviour, key rebinding, the two-client test, a Prism install) was executed. Treat it as a
-> verified *build*, not a verified *port*.
+The port is complete on both loaders: 27 vanilla mixins, 26 actions, the zipline/hook blocks and the
+full animation set are all present and working, and the four optional NeoForge integrations are wired.
+Both loaders have been run in a world and in a real Prism instance — see
+[BUILDING.md](BUILDING.md) for the item-by-item breakdown and for what is still uncovered.
 
 ### Packaging
 
@@ -63,7 +59,8 @@ and their platform implementation.
 
 ## Requirements
 
-* JDK 21 (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path needed)
+* JDK 21 or newer (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path
+  needed)
 
 ## Building
 
@@ -73,8 +70,8 @@ and their platform implementation.
 ```
 
 See [BUILDING.md](BUILDING.md) for the module layout, the run tasks
-(`:fabric:runClient`, `:neoforge:runclient`, `:fabric:runServer`, `:neoforge:runserver`) and the
-loader-independence check.
+(`:fabric:runClient`, `:neoforge:runclient`, `:fabric:runServer`, `:neoforge:runserver`), the
+loader-independence check and the list of what has and has not been exercised in game.
 
 ## Installing
 
@@ -87,11 +84,15 @@ Drop the matching jar into `mods/`:
 
 **Required**
 
-* Architectury API 18.0.8 or newer
+* Architectury API 17.0.8 or newer. 18.0.8 declares `~1.21.7` too, but it asks for a fabric-api built
+  for 1.21.10, which Fabric Loader rejects at resolution time on 1.21.7. The full comparison is in
+  `gradle.properties`.
 * Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.128.2+1.21.7
 * NeoForge 21.7.25-beta or newer
-* MixinExtras 0.4+ — bundled by both loaders, declared as a required dependency in both mod
-  descriptors because `common/…/mixin/common/PlayerMixin` uses `@WrapWithCondition` from it
+* MixinExtras 0.4+ — bundled by both loaders, so it is declared as an *optional* dependency in both
+  mod descriptors (`custom.mixinextras.required: false` on Fabric, `type = "optional"` on NeoForge);
+  `common/…/mixin/common/PlayerMixin` does use `@WrapWithCondition` from it. Declaring it required
+  would make NeoForge refuse to start, because the loaders bundle it rather than listing it as a mod.
 
 **Optional**
 

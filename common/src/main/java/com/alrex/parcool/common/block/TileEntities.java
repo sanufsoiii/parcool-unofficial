@@ -21,7 +21,7 @@ public class TileEntities {
      * <p>It is called directly here. {@code BlockEntityType} and its nested
      * {@code BlockEntitySupplier} are not accessible from this package, so both are widened through
      * {@code parcool.accesswidener} (Fabric) and {@code accesstransformer.cfg} (NeoForge) - the same
-     * per-loader split the rest of the mod uses, and the reason this port needs no platform seam for
+     * per-loader split the rest of the mod uses, and the reason this tree needs no platform seam for
      * the block entity type at all.
      *
      * <p>The set of valid blocks is what {@code BlockEntityType.Builder.of(factory, blocks...)} used

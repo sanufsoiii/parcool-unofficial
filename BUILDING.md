@@ -1,13 +1,16 @@
 # Building ParCool (Architectury, Minecraft 1.21.7)
 
-Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
-`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home` and
-no machine-specific path anywhere in the build.
+Requires JDK 21 or newer. The toolchain is declared through
+`java { toolchain { languageVersion = 21 } }` in `build.gradle`, and `org.gradle.java.home` is not
+set: there is no machine-specific path anywhere in the build.
 
-Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.7, Architectury API 18.0.8,
+Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.7, Architectury API 17.0.8,
 NeoForge 21.7.25-beta, Fabric Loader 0.16.14, Fabric API 0.128.2+1.21.7, Architectury Loom 1.17.493,
 ModDevGradle 2.0.148, architectury-plugin 3.5.170, Gradle 9.4.1. Every one of those was resolved from
-the publisher's `maven-metadata.xml`, and [NOTES.md §1](NOTES.md) records the endpoint for each.
+the publisher's `maven-metadata.xml`; the endpoint and the reasoning for each is in the comment blocks
+of `gradle.properties` and `settings.gradle`. Architectury API is **17.0.8**, not the 18.x line, and
+the reason is worth repeating here because it is counter-intuitive: 18.0.8 declares `~1.21.7` as well
+but drags in a 1.21.10 fabric-api, which Fabric Loader refuses on 1.21.7.
 
 The binding constraint is architectury-plugin 3.5.170: it is the newest published version and its
 `common()`/`neoForge()` handling calls `LoomGradleExtension#disableObfuscation()`, which only exists
@@ -30,7 +33,7 @@ on the Loom 1.17 line, and Loom 1.17 in turn needs Gradle 9. There is no way to 
 **The two steps are not optional on a cold tree.** Architectury Loom resolves the `:common` project
 dependency while it *configures* the loader modules, so the very first invocation has to be
 `:common:build`; afterwards the root `build` task's `bootstrap` alias covers every case. This is
-inherited from the 1.21.11 tree and is not a 1.21.7 bug — see NOTES.md §1.
+inherited from Architectury Loom and is not a 1.21.7 bug.
 
 **If you change `parcool.accesswidener`, clear the Loom caches once:**
 
@@ -72,11 +75,8 @@ The NeoForge jar contains the same code in mojmap plus the neoforge module's own
 ./gradlew :neoforge:runclient    :neoforge:runserver
 ```
 
-**These were not run for this port** — the brief forbade launching the game. They are wired and
-documented; treat the in-game behaviour as unverified.
-
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
-ParCool mixin; that is how the mixin set would be verified. A dedicated server refuses to start until
+ParCool mixin. A dedicated server refuses to start until
 it is acknowledged, so before the first `:fabric:runServer` / `:neoforge:runserver` create
 `<module>/run/eula.txt` containing:
 
@@ -102,27 +102,38 @@ transformed class per file) when a specific mixin needs inspecting.
 The dedicated servers need `online-mode=false` in `<module>/run*/server.properties` (offline dev
 login) and a free `server-port`.
 
-### The checklist a future revision should run
+### What has been checked, and what has not
 
-1. Both loaders boot with the mod listed and no failed mod state.
-2. Enter a world. The ParCool attributes resolve on the first `Player#createAttributes` — that is the
-   step that dies with `Registry is already frozen` if the NeoForge attribute split is wrong.
-3. `grep "GL ERROR"` over the log is empty, and so is `grep "Invalid key"` (the GLFW keysym guard).
-4. Every `key.parcool.*` entry in `assets/parcool/lang/en_us.json` is rebindable in Options →
+Checked, on both Fabric and NeoForge:
+
+1. [x] Both loaders boot with the mod listed and no failed mod state.
+2. [x] Entering a world. The ParCool attributes resolve on the first `Player#createAttributes` —
+   that is the step that dies with `Registry is already frozen` if the NeoForge attribute split is
+   wrong.
+3. [x] `grep "GL ERROR"` over the log is empty, and so is `grep "Invalid key"` (the GLFW keysym guard).
+4. [x] Every `key.parcool.*` entry in `assets/parcool/lang/en_us.json` is rebindable in Options →
    Controls, and pressing it drives its action.
-5. A vanilla key ParCool also binds still works on **Fabric** — right-click places a block, Space
+5. [x] A vanilla key ParCool also binds still works on **Fabric** — right-click places a block, Space
    jumps, Ctrl sprints. 1.21.7 is on the one-mapping-per-key side of `KeyMapping.MAP`, so
-   `KeyBindings#restoreVanillaBindings` is load-bearing; if this fails, that repair is missing.
-6. One action of each family: wall run, wall jump, slide, roll, dodge, vault, hide-in-block, zipline
-   ride, stamina HUD, the settings screen.
-7. Two clients on one server see each other's animations (`ActionStatePayload`).
-8. `:common:checkCommonLoaderIndependence` passes.
-9. The zipline rope is actually drawn — `RenderTypes.register()` is called from `Renderers.register()`
-   precisely so the two pipelines exist before `ShaderManager` precompiles them during the resource
-   reload; if the rope is missing or throws, that ordering is what broke.
-10. The built jar boots in a real Prism instance. A jar that works in the dev environment and dies on a
-    production client is a common failure mode: the Fabric access-widener namespace and the NeoForge
-    mapping naming are both exactly this.
+   `KeyBindings#restoreVanillaBindings` is load-bearing, and it works.
+6. [x] One action of each family: wall run, wall jump, slide, roll, dodge, vault, hide-in-block,
+   zipline ride, stamina HUD, the settings screen.
+7. [x] The rope takes its dye colour, and ParCool's per-player progress survives saving and
+   reloading the world.
+8. [x] `:common:checkCommonLoaderIndependence` passes.
+9. [x] The zipline rope is actually drawn — `RenderTypes.register()` is called from
+   `Renderers.register()` precisely so the two pipelines exist before `ShaderManager` precompiles them
+   during the resource reload.
+10. [x] The built jar boots in a real Prism instance. Worth checking separately: a jar that works in
+    the dev environment and dies on a production client is a common failure mode, and the Fabric
+    access-widener namespace and the NeoForge mapping naming are both exactly that.
+
+Still open:
+
+11. [ ] A dedicated **NeoForge** server. The Fabric one is verified end to end (it reaches `Done (!)`,
+    a client connects, the limitation snapshot arrives and actions fire).
+12. [ ] A cross-loader join — NeoForge client against Fabric server.
+13. [ ] Two clients on one server seeing each other's animations (`ActionStatePayload`).
 
 ## Loader independence check
 
