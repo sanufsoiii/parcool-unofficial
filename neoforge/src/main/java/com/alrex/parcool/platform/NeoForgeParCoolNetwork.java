@@ -55,7 +55,15 @@ public class NeoForgeParCoolNetwork implements ParCoolNetwork {
         NetworkManager.registerReceiver(
                 clientbound ? NetworkManager.Side.S2C : NetworkManager.Side.C2S,
                 wireId,
-                (buf, context) -> context.queue(() -> handler.accept(erased.decode((RegistryFriendlyByteBuf) buf), context))
+                (buf, context) -> {
+                    // Декод обязан происходить здесь, на сетевом потоке, пока буфер жив: registerReceiver
+                    // отдаёт сырой буфер и освобождает его, как только лямбда вернулась. Внутри
+                    // context.queue(...) буфер уже refCnt 0, и любой VarLong.read() роняет поток
+                    // IllegalReferenceCountException. В очередь уходит только обработчик — ради
+                    // потокобезопасности, а не ради декодирования.
+                    T payload = erased.decode((RegistryFriendlyByteBuf) buf);
+                    context.queue(() -> handler.accept(payload, context));
+                }
         );
     }
 
