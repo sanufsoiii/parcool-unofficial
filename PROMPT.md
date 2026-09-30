@@ -160,7 +160,8 @@ still old-side, in which case copy the 1.21.1 side.
 | Entity rendering | `EntityRenderer#render(...)` draws directly | `extractRenderState` / `submit(...)` with a `SubmitNodeCollector`; renderers are stateless; `AvatarRenderer` + `IAvatarRenderStateEntity` |
 | Key mappings | category is a `String`; `KeyMapping.MAP` is `Map<Key, KeyMapping>` — **one mapping per physical key** | `KeyMapping.Category` record; `KeyMapping.MAP` is `Map<Key, List<KeyMapping>>` |
 | The one-mapping-per-key conflict | 1.21.1 needs `KeyBindings#restoreVanillaBindings()` (reflection into `KeyMapping.MAP`/`ALL`) because ParCool binds 16 keys that vanilla also owns, and the last registration evicts vanilla's mapping | the table allows several mappings per key, so the repair is dead code and 1.21.11 deleted it |
-| Recipe ingredients (changed in 1.21.5) | string form, e.g. `"minecraft:chain"` | object form, e.g. `{"item": "minecraft:iron_chain"}` |
+| Recipe ingredients | **object form**, e.g. `{"item": "minecraft:chain"}` / `{"tag": "minecraft:logs"}` — both branches are `RecordCodecBuilder`s over a `Holder`/`TagKey`, i.e. objects wrapping a string | **string form**, e.g. `"minecraft:chain"` / `"#minecraft:logs"` |
+| Registry key on `Item`/`Block` properties | `Item$Properties#setId` / `BlockBehaviour$Properties#setId` do not exist; no key is needed | `setId(ResourceKey)` exists; the item/block **constructor** resolves the description id / model / drops through `requireNonNull(this.id, "Item id not set")` / `"Block id not set"` ⇒ **mandatory from 1.21.2**, and Architectury's `DeferredRegister` does not call it, so `Items.java`/`Blocks.java` set the key by hand |
 | `pack.mcmeta` | `pack_format: 34` | `pack_format: 81` plus `min_format`/`max_format`/`supported_formats`. **Neither works for 1.21.2**: 1.21.2's `PackMetadataSection` only knows `description`, `pack_format` and a `supported_formats` range (and discards the range unless `pack_format` is inside it). 1.21.2's `DetectedVersion` says `resourcePackVersion = 42`, `dataPackVersion = 57`, so the port ships `pack_format: 34` with `supported_formats: [34, 57]`, which covers both checks. |
 | `Entity#isInWaterOrBubble` | present | removed; the 1.21.11 port reimplements it in `utilities/EntityUtil` (**still present in 1.21.2, so the reimplementation is dead weight there - use the vanilla accessor**) |
 | `Player#canInteractWithEntity` | present | removed; the port targets `LivingEntity#getVisibilityPercent` instead |
@@ -168,6 +169,26 @@ still old-side, in which case copy the 1.21.1 side.
 | `Item` description id | `BlockItem#getDescriptionId` delegates to the block | stored field set at construction ⇒ item models moved to `assets/parcool/items/*.json` |
 | Translation keys | `key.categories.parcool` | `key.category.parcool` |
 | NeoForge mapping naming | **mojmap**, despite the `client-…-srg.jar` filename | mojmap as well (verified against a shipped NeoForge mod) — re-verify for your NeoForge version, do not assume |
+
+**The recipe-ingredient row used to claim the change happened in 1.21.5. That was wrong.** The
+boundary is **1.21.1 → 1.21.2**, and it was measured, not inferred: running the real
+`Ingredient.CODEC` of each version's mojmap jar against a bootstrapped vanilla registry, 1.21.1
+accepts `{"item":"minecraft:chain"}` and rejects `"minecraft:chain"`, while 1.21.2 does exactly the
+opposite. On 1.21.2 through 1.21.11 the codec is the same
+`Codec.xmap(ExtraCodecs.nonEmptyHolderSet(HolderSetCodec.create(Registries.ITEM, Item.CODEC,
+false)), …)` — two string branches, no object branch — and all 1337 vanilla 1.21.2 recipes in the
+jar contain zero occurrences of `"item":`. So **use the string form on every 1.21.2+ target**, and
+when importing the 1.21.1 tree, rewrite the object form you inherited from it. The object form only
+works on 1.21.1 and older.
+
+**The two `setId` / description-prefix rows are mandatory on the whole 1.21.2+ branch.** They are
+easy to read as "a 1.21.4 nicety" and drop, but the 1.21.2 `Item` and `BlockBehaviour`
+*constructors* already call `effectiveDescriptionId()` / `effectiveModel()` / `effectiveDrops()`,
+so a missing key is a `NullPointerException` while the registry is still being filled — a crash on
+startup, not a cosmetic issue. And `BlockItem#getDescriptionId()` is gone as of 1.21.2
+(`Item#getDescriptionId()` is `final`), so without
+`Item.Properties#useBlockDescriptionPrefix()` the two hooks would be named `item.parcool.*` while
+every lang file in the mod carries `block.parcool.*` — silent, untranslated names in all languages.
 
 **Do not skip the one-mapping-per-key row.** It is Fabric-only and it is the single most
 player-visible difference between the two reference ports: on a loader where `KeyMapping.MAP` holds

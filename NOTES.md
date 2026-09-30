@@ -275,10 +275,18 @@ TYPE_VAR = re.compile(r"^(L)?[A-Z](\$.*)?$")     # javap prints T, S, M where a 
 
 ```
 0.1-mc1.21.2fabric-3.4.3.3.jar     <- fabric/build/libs/parcool-1.21.2-3.4.3.3-fabric.jar
-0.1-mc1.21.2neoforge-3.4.3.3.jar   <- neoforge/build/libs/parcool-neoforge.jar
+0.1-mc1.21.2neoforge-3.4.3.3.jar   <- neoforge/build/libs/parcool.jar
 ```
 
 both copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
+
+Note on the NeoForge name: `neoforge/build/libs/` also holds `parcool-neoforge.jar`, produced by the
+hand-rolled `distJar` task. The two were compared entry by entry and are **identical except for
+`META-INF/MANIFEST.MF`** (`distJar` adds `Implementation-Title/Version/Vendor`; the plain `jar`
+task leaves the default manifest). Both carry all 361 classes, `neoforge.mods.toml`,
+`parcool.accesswidener`, the mixin config and the `ServiceLoader` binding, because
+`sourceSets.main.output` already includes `explodedCommon`. `parcool.jar` is what gets published,
+matching what this port shipped before §10.
 
 Verified in the shipped jars, not only in the build tree: 350 classes in the Fabric jar, all
 intermediary (`net/minecraft/class_*`), `parcool.accesswidener` in `v2 intermediary`, 28 mixins listed
@@ -366,3 +374,300 @@ them:
 - The object form `{"item": ...}` for recipe ingredients does **not** parse on any of these
   versions: `Ingredient.CODEC` is a holder-set codec whose string branch is what
   `"minecraft:chain"` goes through. The string form is the correct one throughout.
+
+---
+
+## 10. Three defects fixed after the port was built (orchestrator handoff, verified here)
+
+All three were invisible to the build. `./gradlew build` was green before and after every one of
+them, and none of them would have been caught by a compile. They are recorded here in the form the
+next port needs them: what breaks in game, and the `javap` / real-codec line that proves it.
+
+All `javap` evidence below is from the **mojmap** jar
+`~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.21.2-loom.mappings.1_21_2.layered+hash.40545-v2/…jar`
+— not from `minecraft-merged-…-sources.jar`, whose access widener has already been applied and which
+therefore lies about member visibility.
+
+### 10.1 Defect 1 — the four vanilla recipes did not parse at all (object-form ingredients)
+
+**What was wrong.** `iron_zipline_hook.json`, `wooden_zipline_hook.json`, `zipline_rope.json` and
+`reset_zipline_rope.json` all wrote their ingredients as JSON *objects*, `"C": {"item":
+"minecraft:chain"}` / `"L": {"tag": "minecraft:logs"}` / `{"item": "parcool:zipline_rope"}`. On
+1.21.2 that form does not exist.
+
+**Why.** `javap -p -c net.minecraft.world.item.crafting.Ingredient`, `static {}` (offsets):
+
+```
+ 48: getstatic     #376  // Field net/minecraft/core/registries/Registries.ITEM:Lnet/minecraft/resources/ResourceKey;
+ 51: invokestatic  #409  // Method net/minecraft/world/item/Item.CODEC:()Lcom/mojang/serialization/Codec;
+ 54: iconst_0
+ 55: invokestatic  #415  // Method net/minecraft/resources/HolderSetCodec.create:(…)Lcom/mojang/serialization/Codec;
+ 58: putstatic     #417  // Field NON_AIR_HOLDER_SET_CODEC
+ 61: getstatic     #417  // Field NON_AIR_HOLDER_SET_CODEC
+ 64: invokestatic  #423  // Method net/minecraft/util/ExtraCodecs.nonEmptyHolderSet:(…)Lcom/mojang/serialization/Codec;
+ 77: invokeinterface #433 // InterfaceMethod com/mojang/serialization/Codec.xmap:(…)
+ 82: putstatic     #434  // Field CODEC
+```
+
+and `Item.CODEC` itself (`javap -p -c net.minecraft.world.item.Item`, `static {}`):
+
+```
+  0: getstatic     #83   // Field net/minecraft/core/registries/BuiltInRegistries.ITEM:Lnet/minecraft/core/DefaultedRegistry;
+  3: invokeinterface #590 // InterfaceMethod net/minecraft/core/DefaultedRegistry.holderByNameCodec:()Lcom/mojang/serialization/Codec;
+ 13: invokeinterface #606 // InterfaceMethod com/mojang/serialization/Codec.validate:(…)Lcom/mojang/serialization/Codec;
+ 18: putstatic     #608  // Field CODEC
+```
+
+Both branches are **strings**: `Item.CODEC` is `holderByNameCodec`, and `HolderSetCodec` reads a
+`#`-prefixed string for a tag. No branch in the whole chain takes a JSON object.
+
+**Measured, not inferred.** The real 1.21.2 `Ingredient.CODEC` was run against a bootstrapped
+vanilla registry (`Bootstrap.bootStrap()` + `RegistryOps.create(JsonOps.INSTANCE,
+RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY))`):
+
+```
+"minecraft:chain"            -> OK -> [Reference{ResourceKey[minecraft:item / minecraft:chain]}]
+["minecraft:chain"]          -> OK
+"#minecraft:logs"            -> (tag branch taken; "Missing tag" only because the harness loads no tags — see below)
+{"item":"minecraft:chain"}   -> FAIL 'Failed to parse either. First: Not a string: {"item":…};
+                                       Second: Failed to parse either. First: Not a json array: …; Second: Not a string: …'
+{"tag":"minecraft:logs"}     -> FAIL (same shape)
+{"0":"minecraft:chain"}      -> FAIL (same shape)
+```
+
+And with the shipped files as they were:
+
+```
+-- iron_zipline_hook.json   DataResult.Error['… Map entry 'n' : Failed to parse either. First: Not a string: {"item":"minecraft:iron_nugget"}; …']
+-- zipline_rope.json        DataResult.Error['… Map entry 'n' : Failed to parse either. …']
+-- reset_zipline_rope.json  DataResult.Error['List is too short: 0, expected range [1-9]; …']
+```
+
+(`Unknown registry key … parcool:…` in those same messages is expected and is not a defect — the mod's
+own items are not registered in a bare vanilla harness. Substituting a real item id leaves only the
+ingredient error, which is why the shape above is unambiguous.)
+
+**Control for the harness's tag limitation.** Decoding *all 1337* vanilla 1.21.2 recipes with the same
+harness: **850 OK, 433 skipped (other recipe types), 0 failures of the `Not a string` /
+`Not a JSON object` kind**, and every single failure is `Missing tag: <tag> in 'minecraft:item'` or
+the empty-tag variant `List is too short: 0, expected range [1-9]`. One of them is
+`data/minecraft/recipe/smoker.json`, which is structurally identical to this port's
+`wooden_zipline_hook.json` (shaped, `"L": "#minecraft:logs"`) and produces the *same* single
+`Missing tag: 'minecraft:logs'` message. So "Missing tag" is an artefact of a harness that never
+loads tag files, not a property of our document. `data/minecraft/tags/item/logs.json` is present in
+the 1.21.2 jar, so in game it resolves.
+
+**Second, independent control.** All 1337 vanilla 1.21.2 recipes contain **zero** occurrences of
+`"item":`. Vanilla's own tag usage is written `"L": "#minecraft:logs"`.
+
+**Fix.** The four files now use the string form (`"minecraft:chain"`, `"#minecraft:logs"`,
+`"parcool:zipline_rope"`). Re-running the harness after the fix:
+
+```
+-- iron_zipline_hook.json    OK -> DataResult.Error['Unknown registry key …: parcool:iron_zipline_hook']   (and with ids substituted: Success[ShapedRecipe])
+-- zipline_rope.json         OK -> DataResult.Error['Unknown registry key …: parcool:zipline_rope']        (and with ids substituted: Success[ShapedRecipe])
+-- reset_zipline_rope.json   OK -> DataResult.Error['… ']                                                (and with ids substituted: Success[ShapelessRecipe])
+-- zipline_rope_dye.json     OK -> DataResult.Success      (unchanged; CustomRecipe.Serializer, no ingredients)
+```
+
+Only the harness's own missing-registry complaint is left.
+
+**How it would have shown up in game.** No crash, green build, and the datapack loader writing
+`Parsing error loading recipe parcool:iron_zipline_hook: …` and then silently dropping the recipe.
+**Nothing in ParCool could have been crafted.** Exactly the class of defect a static build cannot
+see, and the reason every one of these was re-checked against a live codec rather than by eye.
+
+`zipline_rope_dye.json` was deliberately left alone: its `type` is the mod's own
+`parcool:zipline_rope_dye`, and it declares no ingredients at all.
+
+**Correction to PROMPT.md.** The break table there claimed the ingredients became object-form in
+**1.21.5**. That is wrong; the seam is **1.21.1 → 1.21.2**. The same harness against the 1.21.1 jar
+inverts completely:
+
+```
+== Ingredient.CODEC, isolated (1.21.1) ==
+   "minecraft:chain"              -> FAIL 'Failed to parse either. First: Not a json array: "minecraft:chain"; Second: Not a JSON object: …'
+   "#minecraft:logs"              -> FAIL (same shape)
+   ["minecraft:chain"]            -> FAIL
+   {"item":"minecraft:chain"}     -> OK
+   {"tag":"minecraft:logs"}       -> OK
+```
+
+and `javap` agrees — on 1.21.1 `Ingredient$Value.CODEC` is
+`Codec.xor(Ingredient$ItemValue.CODEC, Ingredient$TagValue.CODEC)`, where both branches are
+`RecordCodecBuilder.create(…)` records, i.e. **objects wrapping a string**, not strings. So the
+string form is correct on the whole 1.21.2 … 1.21.11 range, and the object form only ever worked on
+1.21.1 and older. PROMPT.md's row and the closing paragraph were corrected accordingly.
+
+### 10.2 Defect 2 — no `Properties#setId`, so registration would have thrown
+
+**What was wrong.** All three items were built on a bare `new Item.Properties()` and both blocks on
+`BlockBehaviour.Properties.of()…`, with no registry key.
+
+**Why.** From 1.21.2 both properties classes can set the key, and both constructors consume it
+immediately. `javap -p -c 'net.minecraft.world.item.Item$Properties'`:
+
+```
+234:  public Item$Properties setId(ResourceKey<Item>);
+267:  protected String effectiveDescriptionId();
+273:       8: ldc_w  #328  // String Item id not set
+      11: invokestatic #334 // Method java/util/Objects.requireNonNull:(…)Ljava/lang/Object;
+289:  public ResourceLocation effectiveModel();
+295:       8: ldc_w  #328  // String Item id not set
+```
+
+`javap -p -c net.minecraft.world.item.Item`, constructor `Item(Item$Properties)`:
+
+```
+ 19: invokevirtual #128  // Method Item$Properties.effectiveDescriptionId:()Ljava/lang/String;
+ 35: invokevirtual #140  // Method Item$Properties.effectiveModel:()Lnet/minecraft/resources/ResourceLocation;
+```
+
+`javap -p -c 'net.minecraft.world.level.block.state.BlockBehaviour$Properties'`:
+
+```
+441:  protected Optional<ResourceKey<LootTable>> effectiveDrops();
+447:       8: ldc_w  #345  // String Block id not set
+636:  public BlockBehaviour$Properties setId(ResourceKey<Block>);
+653:  protected String effectiveDescriptionId();
+659:       8: ldc_w  #345  // String Block id not set
+```
+
+`javap -p -c net.minecraft.world.level.block.state.BlockBehaviour`, constructor
+`BlockBehaviour(BlockBehaviour$Properties)`:
+
+```
+ 14: invokevirtual #102  // Method BlockBehaviour$Properties.effectiveDrops:()Ljava/util/Optional;
+ 22: invokevirtual #108  // Method BlockBehaviour$Properties.effectiveDescriptionId:()Ljava/lang/String;
+```
+
+So the failure is **inside the constructor**, not on first use: the handoff said the `BlockBehaviour`
+constructor calls them, and it turns out `Item`'s does too. That makes the crash earlier and harder
+than "sometime later when something asks for a name".
+
+**Architectury does not compensate.** In `architectury-fabric-14.0.4.jar` there is not a single
+occurrence of the string `setId` in any class file (checked by unpacking the jar and grepping
+every `.class`), and `RegistrarImpl#register(ResourceLocation, Supplier)` is:
+
+```
+  0: aload_0
+  1: getfield     #38  // Field delegate:Lnet/minecraft/class_2378;
+  6: invokeinterface #84 // InterfaceMethod java/util/function/Supplier.get:()Ljava/lang/Object;
+ 11: invokestatic #90  // InterfaceMethod net/minecraft/class_2378.method_10230:(Registry;ResourceLocation;Object;)Object;
+ 17: invokevirtual #92 // Method delegate:(Lnet/minecraft/class_2960;)Ldev/architectury/…/RegistrySupplier;
+```
+
+It calls `Supplier.get()` (i.e. constructs the item) and then `Registry#register`, and never touches
+the properties. Note this also means the item is constructed *inside* `DeferredRegister.register`,
+so the `NullPointerException` lands during registry fill, as claimed. The same is true of
+`architectury-fabric-16.1.4`.
+
+**Fix**, in `Items#properties(String)` and `Blocks#key(String)`:
+
+```java
+ResourceKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, name))
+```
+
+The name is the item's/block's own id: `wooden_zipline_hook`, `iron_zipline_hook`, `zipline_rope`.
+Both sides carry it in the shipped artifact — the NeoForge jar shows
+`Item$Properties.setId:(Lnet/minecraft/resources/ResourceKey;)` and
+`BlockBehaviour$Properties.setId:(Lnet/minecraft/resources/ResourceKey;)`; the Fabric jar shows the
+intermediary forms `class_1792$class_1793.method_63686(Lnet/minecraft/class_5321;)` and
+`class_4970$class_2251.method_63500(Lnet/minecraft/class_5321;)`.
+
+**How it would have shown up in game.** `NullPointerException: Item id not set` (and `Block id not
+set`) thrown out of `ParCool`'s registry callback on both loaders — the mod fails to load, every
+world, every time. Not a soft failure.
+
+**Correction to PROMPT.md.** PROMPT.md said nothing about `setId` anywhere. It now has a row for it
+marked *mandatory from 1.21.2*. Worth repeating because it reads like a 1.21.4 nicety: the 1.21.2
+jar already has `setId`, `Item`'s constructor already consumes it, and 1.21.1's
+`Item$Properties` has neither (checked: `javap -p 'net.minecraft.world.item.Item$Properties'` on
+the 1.21.1 jar contains no `setId` and no `effectiveDescriptionId`, and 1.21.1's
+`BlockBehaviour` constructor calls neither `effectiveDrops` nor `effectiveDescriptionId`). The trap
+is the 1.21.1 tree, which is both correct-for-its-version *and* the base this port was imported from.
+
+### 10.3 Defect 3 — no `useBlockDescriptionPrefix()`, so the two hook names lost their translations
+
+**What was wrong.** The two `BlockItem`s used plain `new Item.Properties()`. On 1.21.2 the
+block-vs-item description prefix is a *property*, and it was left at its default.
+
+**Why.** `javap -p 'net.minecraft.world.item.Item$Properties'`:
+
+```
+  private static final DependantName<Item, String> BLOCK_DESCRIPTION_ID;
+  private static final DependantName<Item, String> ITEM_DESCRIPTION_ID;
+```
+
+`Item$Properties()` puts `ITEM_DESCRIPTION_ID` into the `descriptionId` field, and
+`useBlockDescriptionPrefix()` replaces it with `BLOCK_DESCRIPTION_ID`:
+
+```
+  public Item$Properties useBlockDescriptionPrefix();
+      0: getstatic  #323  // Field BLOCK_DESCRIPTION_ID:Lnet/minecraft/resources/DependantName;
+      4: putfield        // Field descriptionId
+```
+
+`Item#getDescriptionId()` is now `final` (`public final java.lang.String getDescriptionId();`, field
+`protected final java.lang.String descriptionId;`), and `javap -p net.minecraft.world.item.BlockItem`
+shows **no** `getDescriptionId` override — the 1.21.1 delegate is gone. So without the flag the
+description id resolves as `item.parcool.<id>`, while the shipped lang files only ever define
+`block.parcool.wooden_zipline_hook` / `block.parcool.iron_zipline_hook` — and only 4 of the 11 lang
+files do (`en_us`, `ja_jp`, `zh_cn`, `zh_tw`); the other 7 fall back to English anyway. No lang file
+in the mod defines an `item.parcool.*` key for either hook.
+
+**Fix.** `Items#blockItemProperties(String)` = `properties(name).useBlockDescriptionPrefix()`, used
+for both `BlockItem`s.
+
+**How it would have shown up in game.** No crash, no log line: the two hooks would simply show up
+untranslated — `item.parcool.wooden_zipline_hook` instead of "Wooden Zipline Hook" — in the
+inventory, the creative tab, tooltips and the recipe book, in every language. The kind of defect that
+survives review because nothing looks broken.
+
+### 10.4 Warnings for the next port
+
+* **`setId` and `useBlockDescriptionPrefix()` are mandatory on the whole 1.21.2+ branch**, not a
+  1.21.4 nicety. On 1.21.2 the item/block *constructors* already consume the key. Both are invisible
+  to the compiler and, in the `useBlockDescriptionPrefix` case, to the log.
+* **Comment every one of the three calls.** `setId(ResourceKey.create(Registries.ITEM,
+  ResourceLocation.fromNamespaceAndPath(MOD_ID, name)))` sits two lines below a `register("name", …)`
+  that appears to know the same string, and the next reader will delete it as redundant. The javadoc
+  on `Items#properties` / `Items#blockItemProperties` / `Blocks#key` explains why; keep it in sync if
+  you re-derive these.
+* **The string ingredient form is correct from 1.21.2 all the way to 1.21.11.** The object form is
+  1.21.1-and-older only. If you import from the 1.21.1 tree you will inherit four broken recipes and
+  have to rewrite them; that tree is a known source of this defect.
+* **The 1.21.1 tree (`parcool-Architectury-API-1.21.1`) has a latent bug that this port inherited
+  and then fixed, and which is still present there.** Its `Ingredient$Value.CODEC` is
+  `Codec.xor(ItemValue.CODEC, TagValue.CODEC)` — both branches `RecordCodecBuilder` records over a
+  string, i.e. object form — and its `data/parcool/recipe/*.json` write exactly that object form, which
+  is correct for 1.21.1 and wrong for anything newer. It also has no `setId` anywhere, correct for
+  1.21.1 and fatal from 1.21.2 on. That tree is read-only for this work, so it was not fixed; anyone
+  publishing it should know the bug is a property of the version, not a mistake in the port.
+* **`"category": "misc"` stays.** `CraftingBookCategory.CODEC.fieldOf("category")
+  .orElse(CraftingBookCategory.MISC)` — optional, and the explicit field is exactly the codec's own
+  default (see the section above). The harness also decodes all five files with the field present.
+* **`assets/parcool/models/item/*.json` is the right folder here.** The 1.21.2 jar has **1833**
+  files under `assets/minecraft/models/item/` and **0** under `assets/minecraft/items/`; the `items/`
+  folder arrives in 1.21.4. Do not "modernise" this one.
+* **`minecraft:chain` is the right id here.** `assets/minecraft/models/item/chain.json` and
+  `assets/minecraft/models/block/chain.json` exist in the 1.21.2 jar and there is no `iron_chain`
+  anywhere in it.
+* **`pack.mcmeta` was re-verified and left alone**, as the table predicted.
+  `SharedConstants.getCurrentVersion().getPackVersion(PackType.CLIENT_RESOURCES)` reports **42** and
+  `getPackVersion(PackType.SERVER_DATA)` reports **57** on this build, and
+  `PackMetadataSection.CODEC` (which has a
+  `Codec.lenientOptionalFieldOf("supported_formats")` branch, so the field *is* supported on 1.21.2)
+  decodes the shipped file to `packFormat=34 supportedFormats=Optional[[34, 57]]`. 34..57 covers
+  both checks. No change.
+* **`KeyBindings#restoreVanillaBindings` was not touched** — still called from
+  `KeyBindings#register` (line 290) and driven by `KeyRecorder#onClientTick` (line 35), and still
+  needed on 1.21.2 because `KeyMapping.MAP` is `Map<Key, KeyMapping>` there.
+
+### 10.5 Still not verified
+
+The fixes above are proven at the bytecode and codec level and by the contents of both
+distributables. **The game was not launched** — no `:fabric:runClient`, no `:neoforge:runClient`, no
+server — because the brief for this port forbids it. In particular, "the recipes now appear in the
+recipe book and craft" and "the hooks show a translated name" are *expected* from the evidence, not
+observed.
