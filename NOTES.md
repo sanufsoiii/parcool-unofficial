@@ -277,3 +277,136 @@ Recorded separately on purpose, because it is the general lesson and not just th
   client connected proves nothing here either.
 * The only detector is a real client on a real server, and then reading the log. `refCnt: 0` in a
   stack trace is the signature.
+
+## 1x. The dedicated Fabric server did not start: `Adaptor#registerS2C` is stripped on a server
+
+*(The last defect in this port's history, and the first one that only a dedicated server could see.
+It was found from the live 1.21.4 log, not by anything in the build.)*
+
+### The stack, from a live `runServer` before the fix
+
+```
+[main/ERROR] (Minecraft) Failed to load eula.txt
+...
+Caused by: java.lang.AbstractMethodError: Receiver class
+  dev.architectury.networking.fabric.NetworkManagerImpl$1 does not define or inherit an
+  implementation of the resolved method 'abstract void registerS2C(
+  net.minecraft.network.protocol.common.custom.CustomPacketPayload$Type,
+  net.minecraft.network.codec.StreamCodec,
+  dev.architectury.networking.NetworkManager$NetworkReceiver)'
+  of interface dev.architectury.impl.NetworkAggregator$Adaptor
+  at dev.architectury.impl.NetworkAggregator.registerS2CReceiver(NetworkAggregator.java:119)
+  at dev.architectury.impl.NetworkAggregator.registerReceiver(NetworkAggregator.java:76)
+  at dev.architectury.networking.NetworkManager.registerReceiver(NetworkManager.java:93)
+  at com.alrex.parcool.platform.FabricParCoolNetwork.register(FabricParCoolNetwork.java:45)
+  at com.alrex.parcool.common.network.NetworkRegistries.registerS2C(NetworkRegistries.java:93)
+  at com.alrex.parcool.ParCool.init(ParCool.java:78)
+  at com.alrex.parcool.ParCoolFabric.onInitialize(ParCoolFabric.java:10)
+```
+
+The counters on that same run read `Registering S2C receiver: 0` and `Registering C2S receiver: 1`
+before the throw, and the `Done` count 0 - the **first** S2C receiver kills the JVM, so nothing after
+it ever registers.
+
+### Root cause
+
+`NetworkAggregator.registerReceiver(Side.S2C, ...)` delegates to `Adaptor#registerS2C`. `javap -v` on
+`dev/architectury/networking/fabric/NetworkManagerImpl$1.class` inside `architectury-fabric-17.0.6.jar` shows that
+`registerS2C` **is** declared, with exactly the descriptor the interface declares - so this is neither
+a version skew nor a stale jar - and that it is the only member of `NetworkAggregator.Adaptor`
+carrying
+
+```
+RuntimeInvisibleAnnotations:
+  net.fabricmc.api.Environment(value = EnvType.CLIENT)
+```
+
+which is exactly what the Architectury source says it is: the body of `registerS2C` calls
+`ClientPlayNetworking.registerGlobalReceiver`, a client-only API. Fabric Loader's `EnvironmentStripper`
+deletes `@Environment(CLIENT)` members when the game runs on a dedicated server, so
+`NetworkManagerImpl$1` reaches the aggregator without `registerS2C` and the first `registerS2CReceiver`
+call throws `AbstractMethodError`. `registerC2S`, `registerS2CType` and both `toXxxPacket` methods
+carry no such annotation and are present on both sides - which is why the C2S counter reaches 1 while
+S2C registers 0 times.
+
+### The fix
+
+`fabric/src/main/java/com/alrex/parcool/platform/FabricParCoolNetwork.java`, at the top of `register`:
+
+```java
+if (clientbound && Platform.getEnvironment() == Env.SERVER) {
+    NetworkManager.registerS2CPayloadType(wireId);
+    return;
+}
+```
+
+`NetworkManager.registerS2CPayloadType(ResourceLocation)` is precisely what Architectury's own javadoc
+on that method prescribes ("For S2C types, `registerReceiver` should be called on the client side,
+while `registerS2CPayloadType` should be called on the server side"). It fills
+`NetworkAggregator.S2C_TYPE` / `S2C_CODECS` / `S2C_TRANSFORMERS` and reaches the loader through
+`Adaptor.registerS2CType`, the unstripped sibling of `registerS2C`, minus the client-only
+`ClientPlayNetworking.registerGlobalReceiver` call. A server never *receives* a server-to-client
+packet, so the receiver is dead weight there; its only required job is making the payload type
+sendable.
+
+The wire format does not change. Both shapes put `BufCustomPacketPayload.streamCodec(type)` under the
+same id in the aggregator, and the real ParCool codec only ever runs locally - on send inside
+`NetworkAggregator.collectPackets`, on receive inside the receiver lambda - so a packet travels as
+`BufCustomPacketPayload(id, <the bytes ParCool encoded>)` either way. The NeoForge module and the
+common `ParCoolNetwork` interface are untouched: the branch lives entirely inside the Fabric
+implementation.
+
+`NetworkChannel` would have been **worse**, not better: its `register` wraps the S2C half in
+`if (Platform.getEnvironment() == Env.CLIENT)`, so on a server only the C2S half of the aggregator is
+populated and `NetworkChannel#sendToPlayer` -> `NetworkManager.toPacket(s2c(), ...)` then does
+`new BufCustomPacketPayload(S2C_TYPE.get(id), bytes)` with a `null` type - a `NullPointerException` on
+every single server-to-client packet. A green `Done` would have hidden that. This port stays on the
+id-based path with a side split, so one set of wire ids serves both loaders.
+
+The released-buffer decode order from the earlier fix was **not** touched: the decode is still before
+`context.queue(...)`, so `IllegalReferenceCountException: refCnt: 0` cannot come back.
+
+### Evidence that the fix works - a real dedicated server
+
+`./gradlew :fabric:runServer` on this port, from a wiped loom cache:
+
+```
+[13:01:07] [Server thread/INFO] (Minecraft) Starting Minecraft server on *:25565
+[13:01:11] [Server thread/INFO] (Minecraft) Done (3.624s)! For help, type "help"
+```
+
+`grep AbstractMethodError` on that log is empty, and the registration lines now show only the four
+C2S receivers (`parcool:payload.custom_stamina.c2s`, `.action_state.c2s`, `.client_info.c2s`,
+`.stamina.c2s`) - the S2C half is registered by type instead, which is what a server needs.
+
+### This class of defect is invisible to the compiler, to the client and to singleplayer
+
+Recorded separately on purpose, because it is the general lesson:
+
+* `javac` is happy. `registerS2C` is present in the jar being compiled against, `@Override` resolves
+  and the call type checks. No annotation, no null check and no assertion would flag it.
+* **Singleplayer cannot see it.** The integrated server lives inside the *client* JVM, where
+  `@Environment(CLIENT)` members survive stripping, so the identical call succeeds. So does a
+  dedicated *client*. Only a dedicated server JVM strips the member.
+* Nothing in the build exercises it: `checkCommonLoaderIndependence` is a source-level loader-leak
+  check, the mixin checker is a static target check, and there is no networking integration test.
+* **A green client and a green singleplayer session prove nothing here.** A dedicated server run is
+  mandatory before a port may be called done. Same lesson as the released-buffer decode defect, one
+  step further out: that one needed packets to actually flow, this one only needs the server to boot.
+
+### Published artifacts after the dedicated-server fix
+
+```
+0.1-mc1.21.6fabric-3.4.3.3.jar     sha256 ea55ad100bdb523f07c3298412f612ec84db7e5ce2779761cbd287996702f170
+0.1-mc1.21.6neoforge-3.4.3.3.jar   sha256 394b119c505072d0c24b9c7b4740acf76d8652861055119c4dc5ae423a881ab9
+```
+
+copied to `/home/sanufsoii/ports/готовые порты/parcool/`.
+
+* Fabric jar: **changed, as it must be** against the previously published `e7dc3aac97acf2a9436cfb7fa01e90ef6cad8ff913bed96c33b26fcf83903e1b`. the branch above is Fabric-only code and it is in the jar.
+* NeoForge jar: **byte-for-byte unchanged, correctly** against the previously published `394b119c505072d0c24b9c7b4740acf76d8652861055119c4dc5ae423a881ab9`. no `common` or `neoforge` source changed on this port and `./gradlew build` reported `:neoforge:jar UP-TO-DATE`.
+* `:common:checkCommonLoaderIndependence`, `:common:build` and `build` are all green.
+* Verified inside the published Fabric jar: `FabricParCoolNetwork` calls `registerS2CPayloadType`.
+* **Not verified:** no client was launched (the orchestrator holds the single GPU), and the server was
+  booted with no players, so a real server -> client packet write has not been observed end to end.
+  What is proven is that the server starts and registers the S2C payload *types*.
