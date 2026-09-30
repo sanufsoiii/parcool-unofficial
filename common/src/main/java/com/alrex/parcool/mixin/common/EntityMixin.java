@@ -78,13 +78,23 @@ public abstract class EntityMixin {
             ci.cancel();
             var dMove = enforcedPos.subtract(player.position());
             noPhysics = true;
+            // Claim the flag, so the cleanup below knows it is ours to give back and does not touch a
+            // noPhysics that vanilla set for its own reasons.
+            parkourability.getBehaviorEnforcer().setNoPhysicsRaisedByParCool(true);
             setBoundingBox(getBoundingBox().move(dMove));
             setPos(player.getX() + dMove.x, player.getY() + dMove.y, player.getZ() + dMove.z);
-        } else if (player.noPhysics) {
+        } else if (player.noPhysics && parkourability.getBehaviorEnforcer().isNoPhysicsRaisedByParCool()) {
             // Upstream set noPhysics for an enforced move and never cleared it, so after a HideInBlock the
             // player kept falling through the world until death. The enforcer marker outlives the action's
             // own onStop by a tick or two, so the flag is given back here - as soon as there is nothing
             // left to enforce, which is the moment no action can still be relying on it.
+            //
+            // Only ever ParCool's own flag. The old version of this branch was an unconditional
+            // `else if (player.noPhysics) { player.noPhysics = false; }`, and that broke spectator noclip on
+            // every version: Player#tick assigns `noPhysics = isSpectator()` each tick, which is the only
+            // reason a spectator can fly through blocks, so this branch cleared vanilla's flag on the very
+            // first move of the tick. No action has to be running for it to fire, so Ctrl+P did not help.
+            parkourability.getBehaviorEnforcer().setNoPhysicsRaisedByParCool(false);
             player.noPhysics = false;
         }
     }
