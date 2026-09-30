@@ -88,7 +88,7 @@ Known-good reference values, for calibration only:
 | `neo_version` | `21.1.217` | `21.11.45` |
 | `loader_version` (Fabric) | `0.16.5` | `0.19.5` |
 | `fabric_api_version` | `0.116.15+1.21.1` | `0.141.6+1.21.11` |
-| `architectury_api_version` | `13.0.11` | `19.0.1` |
+| `architectury_api_version` | `13.0.11` | `19.0.1` — **but 1.21.10 needs `18.0.8`**, see below |
 | `dev.architectury.loom` | `1.7.435` | `1.17.493` |
 | `net.neoforged.moddev` | `1.0.9` | `2.0.147` |
 | Gradle wrapper | `8.10.2` | `9.4.1` |
@@ -97,6 +97,13 @@ Known-good reference values, for calibration only:
 Write the resolved values into `gradle.properties` and `settings.gradle`, and record in `NOTES.md`
 where each came from. If Loom 1.7 warns that it is unsupported, that is expected for old MC targets;
 a newer Loom is usually fine and preferred if it still configures the older Minecraft.
+
+**The `architectury_api_version` row above is wrong for 1.21.10.** `architectury-fabric` 19.0.1
+declares `depends.minecraft = "~1.21.11"` in its `fabric.mod.json`, and semver `~1.21.11` is
+`>=1.21.11 <1.22.0`, so Fabric Loader refuses to load it on 1.21.10. 18.0.8 declares `~1.21.7`
+(= `>=1.21.7 <1.22.0`), which does cover 1.21.10, and everything ParCool uses out of Architectury is
+shape-identical between the two (verified with `javap`). Use **18.0.8**. CurseForge/Modrinth publish no
+Architectury line between them.
 
 Then confirm the project configures before writing any Java:
 
@@ -144,12 +151,12 @@ still old-side, in which case copy the 1.21.1 side.
 | Render types | `RenderStateShard` in `RenderType` | `RenderSetup` around a `RenderPipeline`; `RenderPipelines#PIPELINES_BY_LOCATION` |
 | Entity rendering | `EntityRenderer#render(...)` draws directly | `extractRenderState` / `submit(...)` with a `SubmitNodeCollector`; renderers are stateless; `AvatarRenderer` + `IAvatarRenderStateEntity` |
 | Key mappings | category is a `String`; `KeyMapping.MAP` is `Map<Key, KeyMapping>` — **one mapping per physical key** | `KeyMapping.Category` record; `KeyMapping.MAP` is `Map<Key, List<KeyMapping>>` |
-| The one-mapping-per-key conflict | 1.21.1 needs `KeyBindings#restoreVanillaBindings()` (reflection into `KeyMapping.MAP`/`ALL`) because ParCool binds 16 keys that vanilla also owns, and the last registration evicts vanilla's mapping | the table allows several mappings per key, so the repair is dead code and 1.21.11 deleted it |
-| Recipe ingredients (changed in 1.21.5) | string form, e.g. `"minecraft:chain"` | object form, e.g. `{"item": "minecraft:iron_chain"}` |
-| `pack.mcmeta` | `pack_format: 34` | `pack_format: 81` plus `min_format`/`max_format`/`supported_formats` |
-| `Entity#isInWaterOrBubble` | present | removed; the 1.21.11 port reimplements it in `utilities/EntityUtil` |
-| `Player#canInteractWithEntity` | present | removed; the port targets `LivingEntity#getVisibilityPercent` instead |
-| `jumpFromGround` | on `Player` | moved to `LivingEntity`; the port's hooks moved to a new `mixin.common.LivingEntityJumpMixin` |
+| The one-mapping-per-key conflict | 1.21.1 needs `KeyBindings#restoreVanillaBindings()` (reflection into `KeyMapping.MAP`/`ALL`) because ParCool binds 16 keys that vanilla also owns, and the last registration evicts vanilla's mapping | the table allows several mappings per key, so the repair is dead code and 1.21.11 deleted it. **1.21.9 is where the multi-mapping table arrives** (`Map<Key, List<KeyMapping>>`), and 1.21.10 has it — so the 1.21.11 shape is correct here and `restoreVanillaBindings` must **not** be ported |
+| Recipe ingredients | string form | string form — the object form `{"item": …}` does **not** parse on 1.21.10: `Ingredient.CODEC` is a holder-set codec. **This row is wrong.** |
+| `pack.mcmeta` | `pack_format: 34` plus `supported_formats` | `min_format`/`max_format` (≥ 82), **no** `supported_formats` — that key is a hard parse error from resource format 65 / data format 82 |
+| `Entity#isInWaterOrBubble` | present | removed in **1.21.5** (not 1.21.11); both the 1.21.7 and 1.21.11 ports reimplement it in `utilities/EntityUtil`, and so must this one |
+| `Player#canInteractWithEntity` | present | **still present on 1.21.10**; only the 1.21.11 tree drops it |
+| `jumpFromGround` | on `Player` | moved to `LivingEntity` in **1.21.2** (not 1.21.11); the port's hooks live in `mixin.common.LivingEntityJumpMixin`, which both the 1.21.7 and 1.21.11 trees already have |
 | `Item` description id | `BlockItem#getDescriptionId` delegates to the block | stored field set at construction ⇒ item models moved to `assets/parcool/items/*.json` |
 | Translation keys | `key.categories.parcool` | `key.category.parcool` |
 | NeoForge mapping naming | **mojmap**, despite the `client-…-srg.jar` filename | mojmap as well (verified against a shipped NeoForge mod) — re-verify for your NeoForge version, do not assume |
@@ -160,6 +167,24 @@ one mapping per physical key, ParCool silently steals right-click / Space / Left
 unless the table is repaired. If your target version has the single-mapping table, port
 `restoreVanillaBindings` (from the 1.21.1 tree) and the `KeyRecorder#onClientTick` call that drives
 it, and comment why. If it has the multi-mapping table, do not port the reflection at all.
+
+**Two claims in this table are wrong for 1.21.10; both were checked by running the real codecs, and
+NOTES.md §2.1–2.2 has the output.**
+
+* *"Recipe ingredients (changed in 1.21.5) — object form `{"item": "minecraft:iron_chain"}`."* On
+  1.21.10 the object form does **not** parse. `Ingredient.CODEC` is
+  `Item.CODEC → HolderSetCodec.create(…, allowEmpty=false) → ExtraCodecs.nonEmptyHolderSet`, i.e. a
+  holder-set codec, and `{"item": …}` is not a holder set. Use the string form — which is what the
+  1.21.11 tree already has.
+* *"Recipe `category` is mandatory (`Codec.fieldOf`, not `optionalFieldOf`)."* On 1.21.10 the codec is
+  `CraftingBookCategory.CODEC.fieldOf("category").orElse(CraftingBookCategory.MISC)`, and
+  `MapCodec#orElse` supplies the default, so a recipe without `category` parses fine — verified by
+  running the serializer's `MapCodec` over the exact JSON. Add `"category": "misc"` anyway, because
+  upstream ParCool ships it and every sibling port has it, but do not describe it as a fix.
+* *"`minecraft:iron_chain` may not exist on 1.21.10."* It does. `BuiltInRegistries.ITEM.containsKey`
+  returns true for `iron_chain` and false for `chain`, and the 1.21.10 client jar ships
+  `data/minecraft/recipe/iron_chain.json` with no `chain.*` anywhere. The 1.21.11 tree's
+  `minecraft:iron_chain` is correct; the 1.21.2/1.21.4 trees' `minecraft:chain` is not.
 
 Also check the two fixes below, which are the same on every version and easy to lose when copying:
 
@@ -211,21 +236,25 @@ record why in `NOTES.md`.
 silently behaves like the old code, that cache is stale:
 
 ```bash
-./gradlew --stop
 rm -rf .gradle/loom-cache/remapped_mods common/build/devlibs common/build/loom-cache fabric/build/loom-cache
 ```
+
+Do **not** use `./gradlew --stop` for this. It kills every Gradle daemon on the machine, including
+ones other projects are using; deleting the directories above is enough, and the stale remap is what
+actually has to go.
 
 Do this whenever you add a class to `:common`. It will otherwise make you debug a build that is not
 the one you are looking at.
 
 ## 9. Phase 6 — actually run both loaders
 
-A port that only compiles is not a port.
+A port that only compiles is not a port — but on this machine launching the game is not available,
+so acceptance is `./gradlew build` plus inspection of the two artifacts, and the in-game checklist
+below is handed to whoever can run it. **Do not claim the boxed items are done.**
 
 ```bash
-./gradlew build
-./gradlew :fabric:runClient
-./gradlew :neoforge:runclient
+./gradlew :common:build && ./gradlew build   # one invocation does not work, see BUILDING.md
+# NOT RUN HERE: ./gradlew :fabric:runClient   ./gradlew :neoforge:runclient
 ```
 
 Before you start, decide how you will get into a world without a mouse, and put it in the run config
@@ -296,8 +325,8 @@ did not create.
 
 ## 12. Definition of done
 
-- [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry).
-- [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev.
+- [ ] `./gradlew build` succeeds from a clean checkout (delete `build/`, `.gradle/`, retry) — as `./gradlew :common:build && ./gradlew build`; a single invocation cannot work, see BUILDING.md.
+- [ ] Both loaders boot into a world, tested in a real Prism instance, not only in dev. **Not attempted in this environment — see NOTES.md §6.**
 - [ ] `checkCommonLoaderIndependence` passes.
 - [ ] No leftover debug code: no `System.out`, no `printStackTrace`, no `*-probe` log lines, no
       commented-out blocks, no absolute local paths, no machine-specific paths in the build.
