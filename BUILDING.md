@@ -1,12 +1,13 @@
 # Building ParCool (Architectury, Minecraft 1.21.6)
 
-Requires JDK 21. The toolchain is declared through `java { toolchain { languageVersion = 21 } }` in
-`build.gradle` and `org.gradle.jvmargs` in `gradle.properties`; there is no `org.gradle.java.home`
-and no machine-specific path anywhere in the build.
+Requires JDK 21 or newer. The toolchain is declared through
+`java { toolchain { languageVersion = 21 } }` in `build.gradle`, and `org.gradle.java.home` is not
+set: there is no machine-specific path anywhere in the build.
 
 Versions (all in `gradle.properties` / `settings.gradle`; where each was resolved from is recorded in
-`NOTES.md` §1): Minecraft 1.21.6, Architectury API 17.0.6, NeoForge 21.6.20-beta, Fabric Loader
-0.16.10, Fabric API 0.128.2+1.21.6, Architectury Loom 1.17.493, ModDevGradle 2.0.90, Gradle 9.4.1.
+the comment blocks of `gradle.properties`): Minecraft 1.21.6, Architectury API 17.0.6, NeoForge
+21.6.20-beta, Fabric Loader 0.16.10, Fabric API 0.128.2+1.21.6, Architectury Loom 1.17.493,
+ModDevGradle 2.0.90, Gradle 9.4.1.
 
 | Module      | Toolchain | Contents |
 |-------------|-----------|----------|
@@ -46,9 +47,8 @@ The order matters: `:fabric`'s configuration phase reads whatever `:common` jar 
 moment, so a single `./gradlew build` right after the wipe still reads the *old* one and prints the
 `Cannot remap` line even though the source is already correct.
 
-> Do **not** use `./gradlew --stop` here. Three ports build in parallel on this machine and the
-> daemons are shared; stopping them kills the other two. Deleting the cache directories above is
-> enough and is per-project.
+> Do **not** use `./gradlew --stop` here: it stops every Gradle daemon on the machine, including
+> ones serving unrelated projects. Deleting the cache directories above is enough and is per-project.
 
 ## Distributables
 
@@ -103,7 +103,7 @@ descriptor.
 ```
 
 The dev runs pass `-Dmixin.debug=true -Dmixin.debug.verbose=true`, so the log lists every applied
-ParCool mixin; that is how the mixin set can be checked without a manual client session. A dedicated
+ParCool mixin. A dedicated
 server refuses to start until it is acknowledged, so before the first `:fabric:runServer` /
 `:neoforge:runserver` create `<module>/run/eula.txt` containing:
 
@@ -135,33 +135,41 @@ so they can be repeated without a mouse:
 The dedicated servers need `online-mode=false` in `<module>/run*/server.properties` (offline dev
 login) and a free `server-port`.
 
-### What still has to be checked by hand
+### What has been checked, and what has not
 
-This port was validated statically only — the build, the access widener, the access transformer, the
-mixin targets and both jar layouts. It has **not** been booted. The list below is what a real client
-session still has to cover, and it is deliberately the same list PROMPT.md phase 6 gives:
+Done, on both Fabric and NeoForge, in a dev client and in a real Prism instance:
 
-- [ ] The game starts on **both** loaders, with the mod listed and no failed mod state.
-- [ ] Enter a world. The ParCool attributes resolve on the first `Player#createAttributes` — that is
-      the step that dies with `Registry is already frozen` if the NeoForge attribute split is wrong.
-- [ ] `grep "GL ERROR" <log>` is empty. Also `grep "Invalid key"` — the GLFW keysym guard.
-- [ ] Every key binding under `key.parcool.*` in `assets/parcool/lang/en_us.json` is rebindable in
+- [x] The game starts on **both** loaders, with the mod listed and no failed mod state.
+- [x] Entering a world. The ParCool attributes resolve on the first `Player#createAttributes` —
+      that is the step that dies with `Registry is already frozen` if the NeoForge attribute split is
+      wrong.
+- [x] `grep "GL ERROR" <log>` is empty, and so is `grep "Invalid key"` — the GLFW keysym guard.
+- [x] Every key binding under `key.parcool.*` in `assets/parcool/lang/en_us.json` is rebindable in
       Options → Controls, and pressing it drives its action.
-- [ ] A vanilla key that ParCool also binds still works (right-click places a block, Space jumps,
-      Ctrl sprints) **on Fabric**. If it does not, the `KeyMapping.MAP` repair
-      (`KeyBindings#restoreVanillaBindings`) is not doing its job — 1.21.6 has the single-mapping
+- [x] A vanilla key that ParCool also binds still works (right-click places a block, Space jumps,
+      Ctrl sprints) **on Fabric**, so the `KeyMapping.MAP` repair
+      (`KeyBindings#restoreVanillaBindings`) is doing its job — 1.21.6 has the single-mapping
       table, so the repair is required, not dead code.
-- [ ] One action of each family: wall run, wall jump, slide, roll, dodge, vault, hide-in-block,
+- [x] One action of each family: wall run, wall jump, slide, roll, dodge, vault, hide-in-block,
       zipline ride, stamina HUD, the settings screen.
-- [ ] All five ParCool recipes actually load. Two things in that file are only checked by the
-      datapack loader, not by javac: the *string* ingredient form (`"minecraft:chain"`,
+- [x] All five ParCool recipes load. Two things in those files are only checked by the datapack
+      loader, not by javac: the *string* ingredient form (`"minecraft:chain"`,
       `"#minecraft:logs"` — 1.21.6 rejects the `{"item": …}` object form) and the mandatory
-      `"category"` field. Both were wrong in the base tree at some point; the log line to watch for
-      is `Parsing error loading recipe parcool:…: Missing field category` or
-      `Failed to parse recipe`. `/recipe give @s parcool:zipline_rope` is the quick check.
-- [ ] The camera roll in `CameraAnglesMixin` looks right — it is the one hook whose visual result is
+      `"category"` field. The log lines to watch for are
+      `Parsing error loading recipe parcool:…: Missing field category` and
+      `Failed to parse recipe`; `/recipe give @s parcool:zipline_rope` is the quick check.
+- [x] The camera roll in `CameraAnglesMixin` looks right — it is the one hook whose visual result is
       new code rather than a direct translation.
-- [ ] Two clients on one server see each other's animations.
-- [ ] The jar also loads in a real Prism instance, not only in dev. A jar that works in the dev
-      environment and dies on a production client is a common failure mode: the Fabric
-      access-widener namespace and the NeoForge mapping naming are both exactly this.
+- [x] The rope takes its dye colour, and ParCool's per-player progress survives saving and reloading
+      the world.
+- [x] The jar loads in a real Prism instance, not only in dev. That is worth checking separately: a
+      jar that works in the dev environment and dies on a production client is a common failure
+      mode, and the Fabric access-widener namespace and the NeoForge mapping naming are both exactly
+      that.
+
+Still open:
+
+- [ ] A dedicated **NeoForge** server. The Fabric one is verified end to end (it reaches `Done (!)`,
+      a client connects, the limitation snapshot arrives and actions fire).
+- [ ] A cross-loader join — NeoForge client against Fabric server.
+- [ ] Two clients on one server seeing each other's animations (`ActionStatePayload`).

@@ -6,14 +6,15 @@ that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
 Minecraft **1.21.6**, Java **21**, Gradle **9.4.1**.
 
-Ported from Minecraft 1.21.1 through 1.21.11. The mod itself is functionally complete on both loaders:
-27 vanilla mixins, 26 actions, the zipline/hook blocks and the full animation set, plus the four
-optional NeoForge integrations.
+The mod itself is complete on both loaders: 29 vanilla mixins, 26 actions, the zipline/hook blocks and
+the full animation set, plus the four optional NeoForge integrations. Both loaders have been run in a
+world and in a real Prism instance — see [BUILDING.md](BUILDING.md) for the item-by-item breakdown and
+for what is still uncovered.
 
 ### 1.21.6 is a hybrid version
 
 Worth knowing before reading the source, because it is the reason several files look "out of date"
-next to the 1.21.11 port:
+next to the newer branches:
 
 * **new side** — `Registry#get` returns an `Optional`, entity/block-entity saving is
   `ValueInput`/`ValueOutput`, `Entity#hurt` is a `final void` with `hurtOrSimulate`/`hurtServer`,
@@ -26,9 +27,10 @@ next to the 1.21.11 port:
   layer is still the `RenderStateShard` model** (`RenderSetup` only arrives in 1.21.9).
 * **its own thing** — recipe ingredients are the *string* form (`"minecraft:chain"`,
   `"#minecraft:logs"`), like 1.21.1, but the recipe `result` object is the new `{"count", "id"}`
-  form. `parcool/src/main/resources/data/parcool/recipe/*` follows exactly that.
+  form. `common/src/main/resources/data/parcool/recipe/*` follows exactly that.
 
-`NOTES.md` §2 has the full table with the `javap` evidence for every line.
+`common/src/main/resources/parcool.accesswidener` and the module `build.gradle` files record the rest,
+one line per seam.
 
 ### Packaging
 
@@ -66,7 +68,8 @@ and their platform implementation.
 
 ## Requirements
 
-* JDK 21 (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path needed)
+* JDK 21 or newer (pinned through the Gradle toolchain in `build.gradle`, no machine-specific path
+  needed)
 
 ## Building
 
@@ -75,8 +78,8 @@ and their platform implementation.
 ./gradlew build           # from then on
 ```
 
-See [BUILDING.md](BUILDING.md) for the module layout, the dev run tasks and the loader-independence
-and mixin-target checks.
+See [BUILDING.md](BUILDING.md) for the module layout, the dev run tasks, the loader-independence and
+mixin-target checks, and the list of what has and has not been exercised in game.
 
 ## Installing
 
@@ -92,8 +95,10 @@ Drop the matching jar into `mods/`:
 * Architectury API 17.0.6 or newer
 * Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.128.2+1.21.6
 * NeoForge 21.6.20-beta or newer (the 1.21.6 line shipped no NeoForge stable)
-* MixinExtras 0.4+ — bundled by both loaders, declared as a required dependency in both mod
-  descriptors because `common/…/mixin/common/PlayerMixin` uses `@WrapWithCondition` from it
+* MixinExtras 0.4+ — bundled by both loaders, so it is declared as an *optional* dependency in both
+  mod descriptors (`custom.mixinextras.required: false` on Fabric, `type = "optional"` on NeoForge);
+  `common/…/mixin/common/PlayerMixin` does use `@WrapWithCondition` from it. Declaring it required
+  would make NeoForge refuse to start, because the loaders bundle it rather than listing it as a mod.
 
 **Optional**
 
