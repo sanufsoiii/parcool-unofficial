@@ -730,3 +730,14 @@ Published to `/home/sanufsoii/ports/готовые порты/parcool/` as
   exercised. Real sending means a player joining (limitation snapshot, stamina broadcast, action
   state, breakfall event). A green `Done (` does not prove sending works.
 * NeoForge's dedicated server was not launched either.
+
+## Live-client result (human player, not an orchestrator)
+
+Fabric client, human in a world: **all actions, zipline, HUD, settings and inventory textures work.
+Approved.** Fabric dedicated server reaches `Done (` with `AbstractMethodError` 0.
+
+Run under three clients at once (1.21.5, 1.21.6, 1.21.8). At boot on this build:
+`Mixin apply failed` 0, `IllegalReferenceCount` 0, `GL ERROR` 0, `Invalid key` 0.
+
+Still not exercised on this port: NeoForge (never launched on any port), and the cross-loader
+join (a NeoForge client against this Fabric server).
