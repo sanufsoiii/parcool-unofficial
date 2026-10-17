@@ -8,12 +8,13 @@ plugins {
 evaluationDependsOn(':common')
 
 // NOTE: architectury-plugin's `neoForge()` transform is intentionally not declared yet. It requires
-// a Loom extension in this project, and `dev.architectury.loom` 1.7.x cannot set up NeoForge 21.1
-// (`RuntimeException: Unfixable conflicts` while merging the Mojang and NeoForge mappings).
-// ModDevGradle is the correct toolchain here - it is what upstream ParCool 3.4.3.3 uses - and
-// architectury-plugin still produces the `transformProductionNeoForge` SRG artifact that this module
-// consumes below. Re-enabling `neoForge()` (and the refmap/AT packaging it performs) is tracked as
-// the remaining NeoForge build item.
+// a Loom extension in this project, and `dev.architectury.loom` 1.7.x cannot merge the Mojang and
+// NeoForge mappings (the base tree records the merge aborting with `RuntimeException: Unfixable
+// conflicts`), so the split is kept. ModDevGradle is the correct toolchain here - it is what
+// upstream ParCool 3.4.3.3 uses - and architectury-plugin still produces the
+// `transformProductionNeoForge` SRG artifact that this module consumes below. Re-enabling
+// `neoForge()` (and the refmap/AT packaging it performs) is tracked as the remaining NeoForge build
+// item.
 
 repositories {
 	maven { url = 'https://www.cursemaven.com' }
@@ -87,10 +88,11 @@ dependencies {
 	implementation "dev.architectury:architectury-neoforge:${project.architectury_api_version}"
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
-	// Optional integrations. EpicFight publishes nothing past its 1.21.1 line, so that is the API
-	// extern/epicfight compiles against; every entry point guards itself with
-	// EpicFightManager#isEpicFightUsable, which reports EpicFight absent when its classes are not
-	// loadable, and ParCool then falls back to its own stamina system. Paraglider,
+	// Optional integrations. None of these mods published a 1.20.5/1.20.6 build - their release
+	// lines jump from the 1.20.x era to 1.21 - so the 1.21.1 builds remain the API that
+	// extern/* compiles against. Every entry point guards itself with
+	// EpicFightManager#isEpicFightUsable, which reports the other mod absent when its classes are
+	// not loadable, and ParCool then falls back to its own stamina system. Paraglider,
 	// ShoulderSurfing and BetterThirdPerson are guarded the same way.
 	// Patchouli is only an optional book dependency and is never referenced from source.
 	parcoolIntegrationsCompile "curse.maven:paraglider-289240:6739615"
@@ -114,8 +116,8 @@ tasks.named('neoForgeIdeSync') {
  * classes, the loader metadata and the ServiceLoader registration.
  *
  * architectury-plugin's `neoForge()` transform normally does this, but it requires a Loom extension
- * in this project and `dev.architectury.loom` 1.7.x cannot set up NeoForge 21.1 (it aborts with
- * `RuntimeException: Unfixable conflicts` while merging the Mojang and NeoForge mappings), so the
+ * in this project and `dev.architectury.loom` 1.7.x cannot merge the Mojang and NeoForge mappings
+ * (the base tree records the merge aborting with `RuntimeException: Unfixable conflicts`), so the
  * assembly is done explicitly here, mirroring :fabric.
  */
 // The access widener and the mixin config live in :common so both loaders ship the same copy. The

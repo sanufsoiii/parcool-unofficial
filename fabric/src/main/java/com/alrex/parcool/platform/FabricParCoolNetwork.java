@@ -23,7 +23,7 @@ import java.util.Set;
 public class FabricParCoolNetwork implements ParCoolNetwork {
 
     private static final NetworkChannel CHANNEL =
-            NetworkChannel.create(ResourceLocation.fromNamespaceAndPath("parcool", "main"));
+            NetworkChannel.create(new ResourceLocation("parcool", "main"));
 
     /**
      * {@code common} asks for a registration per direction, but a Fabric payload type is registered

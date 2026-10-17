@@ -71,7 +71,7 @@ public class ParCoolPlayerStates {
         private static Entry constant(Class<? extends Action> clazz) {
             return new Entry(
                     clazz,
-                    ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
+                    new ResourceLocation(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
                     Arrays.asList(
                             ParagliderPlayerStates.IDLE,
                             ParagliderPlayerStates.RUNNING,
@@ -91,7 +91,7 @@ public class ParCoolPlayerStates {
         private static Entry instant(Class<? extends Action> clazz) {
             return new Entry(
                     clazz,
-                    ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
+                    new ResourceLocation(ParCool.MOD_ID, clazz.getSimpleName().toLowerCase()),
                     Arrays.asList(
                             ParagliderPlayerStates.IDLE,
                             ParagliderPlayerStates.RUNNING,
