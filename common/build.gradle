@@ -1,0 +1,117 @@
+plugins {
+	id 'architectury-plugin'
+	id 'dev.architectury.loom'
+}
+
+architectury {
+	minecraft = project.minecraft_version
+	// Declares :common as the shared module and the platforms it is consumed from. architectury-plugin
+	// creates the `transformProductionFabric` / `transformProductionForge` artifacts from this.
+	common('fabric', 'neoforge')
+}
+
+group = project.maven_group
+version = "${project.minecraft_version}-${project.mod_version}"
+
+repositories {
+	maven { url = 'https://www.cursemaven.com' }
+	maven { url = 'https://maven.blamejared.com' }
+	maven { url = 'https://maven.architectury.dev/' }
+	mavenCentral()
+}
+
+loom {
+	// NOTE: source-set split is intentionally OFF. ParCool is client-authoritative by design:
+	// `common/src/main` keeps a single tree holding Action/KeyRecorder/Animation, exactly like the
+	// upstream NeoForge mod. NeoForge ships a merged jar so those classes resolve; on a dedicated
+	// Fabric server they stay on the classpath unresolvable and are never loaded, because every
+	// entry point is guarded by `Platform.getEnvironment() == Env.CLIENT`.
+	//
+	// The same reasoning applies to the mixin config: one `parcool-common.mixins.json` is shipped in
+	// the common jar and referenced by both platform mod metadata files.
+	accessWidenerPath = file('src/main/resources/parcool.accesswidener')
+
+	mixin {
+		defaultRefmapName = 'parcool-common-refmap.json'
+		// Static remapping, requested explicitly.
+		//
+		// Loom 1.7 (this tree) defaults to `useLegacyMixinAp = true`, the refmap-based flow. In that mode
+		// Loom deliberately leaves the @Mixin target classes in mojmap inside the constant pool and
+		// expects the shipped refmap to translate them at runtime.
+		//
+		// For ParCool that flow cannot work: the generated refmap has no class-level entries
+		// (`data.named:intermediary.classes` is empty) because the mixin targets are Class literals in
+		// bytecode rather than annotation strings, and parcool-common.mixins.json declares no "refmap"
+		// key either - so nothing would read the file. The jar ends up with
+		// `@Mixin(net.minecraft.world.entity.player.Player)` against an intermediary production client,
+		// where that class does not exist. Mixin fails to resolve the target and the JVM dies during
+		// mixin application - a boot that stops right after the mod list, with no error line at all.
+		// That is precisely the crash this setting fixes.
+		//
+		// With the legacy AP off, Loom rewrites the annotation strings, the @Shadow descriptors and the
+		// @Mixin targets straight into the bytecode, so the jar is self-contained: no refmap, and
+		// nothing for the loader to look up. Loom >= 1.9 made this the default, fabric-api ships it, and
+		// the 1.21.11 branch of this port relies on it.
+		useLegacyMixinAp = false
+	}
+
+	mods {
+		"${project.mod_id}" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+
+	// Architectury common API: events, registries, networking, platform helpers.
+	modImplementation "dev.architectury:architectury:${project.architectury_api_version}"
+
+	// Upstream uses javax.annotation.Nullable/Nonnull throughout; NeoForge puts JSR-305 on the
+	// compile classpath for free, Loom/ModDevGradle do not.
+	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+	// The config layer is backed by Gson, which the game ships at runtime.
+	compileOnly "com.google.code.gson:gson:2.10.1"
+
+	// ShoulderSurfing is genuinely multiloader, so its plugin API stays in :common.
+	// runtimeOnly in the loader modules so an absent ShoulderSurfing is not a hard dependency.
+	compileOnly "curse.maven:ShoulderSurfing-243190:6496668"
+}
+
+def LOADER_IMPORT_PATTERNS = [
+		~/^net\.fabricmc\./,
+		~/^net\.neoforged\./,
+		~/^net\.minecraftforge\./,
+]
+
+/**
+ * Guard rail for the multiloader split: `common` must not reference loader specific packages.
+ * Everything platform specific has to live in the `fabric` / `neoforge` subprojects.
+ */
+tasks.register('checkCommonLoaderIndependence') {
+	description = 'Fails if common/src/main imports net.fabricmc.* or net.neoforged.*'
+	group = 'verification'
+	def srcDirs = sourceSets.main.allJava
+	doLast {
+		def report = []
+		srcDirs.files.each { f ->
+			f.readLines('UTF-8').eachWithIndex { line, idx ->
+				def m = line =~ /^\s*import\s+(?:static\s+)?([\w.$]+)\s*;/
+				if (m.find()) {
+					def imp = m.group(1)
+					if (LOADER_IMPORT_PATTERNS.any { imp =~ it }) {
+						report << "${f.name}:${idx + 1}: ${imp}"
+					}
+				}
+			}
+		}
+		if (!report.isEmpty()) {
+			throw new GradleException(
+					"common/src/main must stay loader-agnostic. Loader specific imports found:\n  " + report.join('\n  '))
+		}
+	}
+}
+
+tasks.named('check').configure { dependsOn 'checkCommonLoaderIndependence' }
