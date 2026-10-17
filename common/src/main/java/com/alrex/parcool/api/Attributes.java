@@ -57,7 +57,7 @@ public class Attributes {
 
     private static Holder<Attribute> resolve(
             String id, String descriptionId, double defaultValue, double min, double max) {
-        ResourceLocation key = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, id);
+        ResourceLocation key = new ResourceLocation(ParCool.MOD_ID, id);
         if (Platform.isNeoForge()) {
             // Registered by :neoforge, so read the holder back instead of creating a second entry.
             // 1.21.1's Registry#get returns the value directly; the holder comes from getHolder.

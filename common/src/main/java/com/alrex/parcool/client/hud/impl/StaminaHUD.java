@@ -15,7 +15,7 @@ import net.minecraft.util.Tuple;
 import net.minecraft.client.player.LocalPlayer;
 
 public class StaminaHUD {
-	public static final ResourceLocation STAMINA = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "textures/gui/stamina_bar.png");
+	public static final ResourceLocation STAMINA = new ResourceLocation(ParCool.MOD_ID, "textures/gui/stamina_bar.png");
 
 	public StaminaHUD() {
 	}

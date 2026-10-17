@@ -1,7 +1,6 @@
 package com.alrex.parcool.common.event;
 
 import net.minecraft.client.Camera;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.KeyMapping;
 
 import net.minecraft.world.damagesource.DamageSource;
@@ -29,19 +28,21 @@ public final class CompatEvents {
      */
     public static class RenderFrameEvent {
 
-        private final DeltaTracker partialTick;
+        // 1.20.6 has no DeltaTracker: the render partial tick is still a plain float, handed to
+        // GameRenderer#renderLevel as its first argument.
+        private final float partialTick;
 
-        public RenderFrameEvent(DeltaTracker partialTick) {
+        public RenderFrameEvent(float partialTick) {
             this.partialTick = partialTick;
         }
 
-        public DeltaTracker getPartialTick() {
+        public float getPartialTick() {
             return this.partialTick;
         }
 
         /** Fired once per frame before the world is rendered. */
         public static class Pre extends RenderFrameEvent {
-            public Pre(DeltaTracker partialTick) {
+            public Pre(float partialTick) {
                 super(partialTick);
             }
         }

@@ -22,7 +22,7 @@ import java.util.UUID;
 public record ClientInformationPayload(UUID playerID, boolean requestLimitation,
                                        ClientSetting information) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<ClientInformationPayload> TYPE
-            = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.client_info"));
+            = new CustomPacketPayload.Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.client_info"));
     public static final StreamCodec<ByteBuf, ClientInformationPayload> CODEC = StreamCodec.composite(
             ByteBufCodecs.VAR_LONG,
             (p) -> p.playerID().getMostSignificantBits(),

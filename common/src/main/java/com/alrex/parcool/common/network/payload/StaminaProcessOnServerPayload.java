@@ -15,7 +15,7 @@ import net.minecraft.network.codec.StreamCodec;
 
 public record StaminaProcessOnServerPayload(StaminaType stamina, int value) implements CustomPacketPayload {
     public static final Type<StaminaProcessOnServerPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.custom_stamina"));
+            = new Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.custom_stamina"));
     public static final StreamCodec<ByteBuf, StaminaProcessOnServerPayload> CODEC = StreamCodec.composite(
             StaminaType.STREAM_CODEC,
             StaminaProcessOnServerPayload::stamina,

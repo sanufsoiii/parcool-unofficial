@@ -1,6 +1,5 @@
 package com.alrex.parcool.api.client.gui;
 
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 import com.alrex.parcool.api.event.CancellableEvent;
 
@@ -19,9 +18,11 @@ public class ParCoolHUDEvent {
 
     public static class RenderEvent extends ParCoolHUDEvent implements CancellableEvent {
         private final GuiGraphics graphics;
-        private final DeltaTracker partialTick;
+        // 1.20.6's ClientGuiEvent.RENDER_HUD passes a plain float partial tick (DeltaTracker only
+        // exists from 1.21), so the event carries that float.
+        private final float partialTick;
 
-        public RenderEvent(GuiGraphics s, DeltaTracker partialTick) {
+        public RenderEvent(GuiGraphics s, float partialTick) {
             this.graphics = s;
             this.partialTick = partialTick;
         }
@@ -30,7 +31,7 @@ public class ParCoolHUDEvent {
             return graphics;
         }
 
-        public DeltaTracker getDeltaTracker() {
+        public float getPartialTick() {
             return partialTick;
         }
 

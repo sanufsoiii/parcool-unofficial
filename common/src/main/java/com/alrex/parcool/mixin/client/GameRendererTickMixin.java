@@ -2,7 +2,6 @@ package com.alrex.parcool.mixin.client;
 
 import com.alrex.parcool.common.event.CompatEvents;
 import com.alrex.parcool.client.action.ClientActionProcessor;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.GameRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -21,8 +20,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public abstract class GameRendererTickMixin {
 
+    // 1.20.6's renderLevel takes the render partial tick as a plain float (no DeltaTracker); the
+    // handler's parameter list has to mirror the target's, or the injection does not apply.
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void parcool$onRenderFrame(DeltaTracker partialTick, CallbackInfo ci) {
+    private void parcool$onRenderFrame(float partialTick, long finishTimeNano, CallbackInfo ci) {
         ClientActionProcessor.onRenderFrame(new CompatEvents.RenderFrameEvent.Pre(partialTick));
     }
 }

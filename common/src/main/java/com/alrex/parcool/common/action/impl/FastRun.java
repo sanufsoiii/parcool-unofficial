@@ -12,10 +12,11 @@ import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ActionInfo;
 import com.alrex.parcool.config.ParCoolConfig;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public class FastRun extends Action {
@@ -23,7 +24,12 @@ public class FastRun extends Action {
 		PressKey, Toggle, Auto
 	}
 
-	private static final ResourceLocation FAST_RUNNING_MODIFIER = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastrun");
+	// 1.20.6 keys attribute modifiers by UUID + name; the ResourceLocation-keyed form is 1.21+.
+	// The UUID is derived from the same string the 1.21.1 tree uses as the id, so the identity of the
+	// modifier is stable across restarts instead of being a fresh random UUID per session.
+	private static final UUID FAST_RUNNING_MODIFIER_ID =
+			UUID.nameUUIDFromBytes("parcool:modifier.speed.fastrun".getBytes(StandardCharsets.UTF_8));
+	private static final String FAST_RUNNING_MODIFIER_NAME = ParCool.MOD_ID + ":modifier.speed.fastrun";
 	private double speedModifier = 0;
 	private boolean toggleStatus = false;
 	private int lastDashTick = 0;
@@ -39,10 +45,11 @@ public class FastRun extends Action {
 	public void onServerTick(Player player, Parkourability parkourability) {
 		var attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (attr == null) return;
-		if (attr.getModifier(FAST_RUNNING_MODIFIER) != null) attr.removeModifier(FAST_RUNNING_MODIFIER);
+		if (attr.getModifier(FAST_RUNNING_MODIFIER_ID) != null) attr.removeModifier(FAST_RUNNING_MODIFIER_ID);
 		if (isDoing()) {
 			attr.addTransientModifier(new AttributeModifier(
-					FAST_RUNNING_MODIFIER,
+					FAST_RUNNING_MODIFIER_ID,
+					FAST_RUNNING_MODIFIER_NAME,
 					speedModifier / 100d,
 					AttributeModifier.Operation.ADD_VALUE
 			));

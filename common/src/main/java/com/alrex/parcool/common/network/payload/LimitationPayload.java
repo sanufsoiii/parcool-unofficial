@@ -16,7 +16,7 @@ import net.minecraft.network.codec.StreamCodec;
 
 public record LimitationPayload(ServerLimitation limitation) implements CustomPacketPayload {
     public static final Type<LimitationPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.limitation"));
+            = new Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.limitation"));
     public static final StreamCodec<ByteBuf, LimitationPayload> CODEC = StreamCodec.composite(
             ServerLimitation.STREAM_CODEC,
             LimitationPayload::limitation,

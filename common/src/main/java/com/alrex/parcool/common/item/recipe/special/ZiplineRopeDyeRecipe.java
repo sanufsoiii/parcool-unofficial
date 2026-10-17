@@ -3,6 +3,7 @@ package com.alrex.parcool.common.item.recipe.special;
 import com.alrex.parcool.common.item.Items;
 import com.alrex.parcool.common.item.recipe.Recipes;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
+import com.alrex.parcool.utilities.ColorUtil;
 import javax.annotation.Nonnull;
 import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.Item;
@@ -14,7 +15,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.FastColor;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.inventory.CraftingContainer;
 import java.util.LinkedList;
 
 public class ZiplineRopeDyeRecipe extends CustomRecipe {
@@ -23,11 +24,13 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
         super(p_252125_);
     }
 
+    // 1.20.6's crafting input is CraftingContainer (with Container#getContainerSize); CraftingInput
+    // is the 1.21 name for the same thing.
     @Override
-    public boolean matches(@Nonnull CraftingInput input, @Nonnull Level level) {
+    public boolean matches(@Nonnull CraftingContainer input, @Nonnull Level level) {
         boolean ziplineRopeFound = false;
         boolean dyeItemFound = false;
-        for (int i = 0; i < input.size(); i++) {
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack stack = input.getItem(i);
             if (stack.getItem().equals(Items.ZIPLINE_ROPE.get())) {
                 if (ziplineRopeFound) return false;
@@ -43,10 +46,10 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public ItemStack assemble(@Nonnull CraftingInput input, @Nonnull HolderLookup.Provider provider) {
+    public ItemStack assemble(@Nonnull CraftingContainer input, @Nonnull HolderLookup.Provider provider) {
         ItemStack ziplineRope = null;
         LinkedList<DyeItem> dyeItems = new LinkedList<>();
-        for (int i = 0; i < input.size(); i++) {
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack stack = input.getItem(i);
             Item item = stack.getItem();
             if (item instanceof ZiplineRopeItem) {
@@ -58,12 +61,12 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
             }
         }
         if (ziplineRope == null || dyeItems.isEmpty()) return ItemStack.EMPTY;
-        ItemStack resultZiplineRope = new ItemStack(Items.ZIPLINE_ROPE::get);
+        ItemStack resultZiplineRope = new ItemStack(Items.ZIPLINE_ROPE.get());
         resultZiplineRope.applyComponents(resultZiplineRope.getComponents());
         int r = 0, g = 0, b = 0;
         int dyeSize = dyeItems.size();
         for (DyeItem dyeItem : dyeItems) {
-            int color = dyeItem.getDyeColor().getTextureDiffuseColor();
+            int color = ColorUtil.getTextureColor(dyeItem.getDyeColor());
             r += FastColor.ARGB32.red(color);
             g += FastColor.ARGB32.green(color);
             b += FastColor.ARGB32.blue(color);

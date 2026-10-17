@@ -25,7 +25,7 @@ import java.util.UUID;
 
 public record ActionStatePayload(UUID playerID, List<Entry> states) implements CustomPacketPayload {
     public static final Type<ActionStatePayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state"));
+            = new Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.action_state"));
     public static final StreamCodec<ByteBuf, ActionStatePayload> CODEC = StreamCodec.of(
             ActionStatePayload::encode,
             ActionStatePayload::decode

@@ -15,7 +15,7 @@ import net.minecraft.network.codec.StreamCodec;
 
 public record StartBreakfallEventPayload(boolean justTimed) implements CustomPacketPayload {
     public static final Type<StartBreakfallEventPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.start_breakfall_event"));
+            = new Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.start_breakfall_event"));
     public static final StreamCodec<ByteBuf, StartBreakfallEventPayload> CODEC = StreamCodec.composite(
             ByteBufCodecs.BOOL,
             StartBreakfallEventPayload::justTimed,

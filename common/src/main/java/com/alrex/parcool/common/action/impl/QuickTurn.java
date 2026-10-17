@@ -49,7 +49,9 @@ public class QuickTurn extends Action {
 	@Override
     public void onRenderTick(CompatEvents.RenderFrameEvent event, Player player, Parkourability parkourability) {
 		if (isDoing() && startAngle != null) {
-            float renderTick = getDoingTick() + event.getPartialTick().getGameTimeDeltaPartialTick(true);
+            // 1.20.6 has no DeltaTracker: the render event already carries Timer.partialTick, the same
+            // residual that 1.21.1's getGameTimeDeltaPartialTick(true) returns while the game is running.
+            float renderTick = getDoingTick() + event.getPartialTick();
 			float animationPhase = renderTick / AnimationTickLength;
 			Vec3 rotatedAngle = startAngle.yRot((float) (Math.PI * animationPhase * (turnRightward ? -1 : 1)));
 			player.setYRot((float) VectorUtil.toYawDegree(rotatedAngle));

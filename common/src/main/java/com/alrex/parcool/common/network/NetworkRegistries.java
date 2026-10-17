@@ -66,11 +66,11 @@ public final class NetworkRegistries {
     // ------------------------------------------------------------------
 
     private static <T extends CustomPacketPayload> ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, path);
+        return new ResourceLocation(ParCool.MOD_ID, path);
     }
 
     private static ResourceLocation serverbound(String path) {
-        return ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, path + ".c2s");
+        return new ResourceLocation(ParCool.MOD_ID, path + ".c2s");
     }
 
     /** Client -&gt; server message. */

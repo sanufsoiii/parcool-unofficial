@@ -2,6 +2,7 @@ package com.alrex.parcool.common.item;
 
 import com.alrex.parcool.ParCool;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
+import com.alrex.parcool.utilities.ColorUtil;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -25,7 +26,7 @@ public class CreativeTabs {
                 Arrays.stream(DyeColor.values())
                         .map(color -> {
                             var coloredRope = new ItemStack(Items.ZIPLINE_ROPE.get());
-                            ZiplineRopeItem.setColor(coloredRope, color.getTextureDiffuseColor());
+                            ZiplineRopeItem.setColor(coloredRope, ColorUtil.getTextureColor(color));
                             return coloredRope;
                         })
                         .forEach(output::accept);

@@ -14,7 +14,7 @@ import net.minecraft.network.codec.StreamCodec;
 
 public record ActionStateBroadcastPayload(List<ActionStatePayload> payloads) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<ActionStateBroadcastPayload> TYPE
-            = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state.broadcast"));
+            = new CustomPacketPayload.Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.action_state.broadcast"));
 
     public static final StreamCodec<ByteBuf, ActionStateBroadcastPayload> CODEC = StreamCodec.composite(
             new ListStreamCodec<>(ActionStatePayload.CODEC),

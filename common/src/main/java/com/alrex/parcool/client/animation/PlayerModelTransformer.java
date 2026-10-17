@@ -24,10 +24,10 @@ public class PlayerModelTransformer {
     private AnimationOption option = new AnimationOption();
 
 	public float getPartialTick() {
-		// The `false` overload, the same one PlayerRendererMixin uses: two different partial ticks in one
-		// frame made the limbs (transformer) and the body rotation (rotator) interpolate against
-		// different clocks, and the model visibly came apart on lag spikes and while the game is paused.
-		return Minecraft.getInstance().getTimer().getGameTimeDeltaPartialTick(false);
+		// 1.20.6's Timer has no getGameTimeDeltaPartialTick; Minecraft#getFrameTime() returns exactly
+		// Timer.partialTick, the render partial tick that PlayerRendererMixin receives, so the limbs
+		// (transformer) and the body rotation (rotator) keep interpolating against the same clock.
+		return Minecraft.getInstance().getFrameTime();
 	}
 
 	public float getHeadPitch() {

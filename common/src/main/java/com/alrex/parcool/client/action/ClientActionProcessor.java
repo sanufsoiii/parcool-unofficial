@@ -8,11 +8,12 @@ import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.client.LocalStamina;
 import com.alrex.parcool.common.event.CompatEvents;
 import com.alrex.parcool.config.ParCoolConfig;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -60,7 +61,7 @@ public final class ClientActionProcessor {
         if (penalise) {
             player.setSprinting(false);
             AttributeInstance attribute = localPlayer.getAttribute(Attributes.MOVEMENT_SPEED);
-            if (!attribute.hasModifier(STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID)) {
+            if (!attribute.hasModifier(STAMINA_DEPLETED_SLOWNESS_MODIFIER)) {
                 attribute.addTransientModifier(STAMINA_DEPLETED_SLOWNESS_MODIFIER);
             }
         } else {
@@ -131,11 +132,17 @@ public final class ClientActionProcessor {
         animation.cameraSetup(event, player, parkourability);
     }
 
-    private static final ResourceLocation STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
-            ResourceLocation.fromNamespaceAndPath(com.alrex.parcool.ParCool.MOD_ID, "exhausted.speed");
+    // 1.20.6 keys attribute modifiers by UUID + name; the ResourceLocation-keyed form is 1.21+. The
+    // UUID is derived from the same string the 1.21.1 tree uses as the id, so the modifier's identity
+    // is stable across restarts.
+    private static final UUID STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
+            UUID.nameUUIDFromBytes("parcool:exhausted.speed".getBytes(StandardCharsets.UTF_8));
+    private static final String STAMINA_DEPLETED_SLOWNESS_MODIFIER_NAME =
+            com.alrex.parcool.ParCool.MOD_ID + ":exhausted.speed";
 
     private static final AttributeModifier STAMINA_DEPLETED_SLOWNESS_MODIFIER = new AttributeModifier(
             STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID,
+            STAMINA_DEPLETED_SLOWNESS_MODIFIER_NAME,
             -0.05,
             AttributeModifier.Operation.ADD_VALUE
     );

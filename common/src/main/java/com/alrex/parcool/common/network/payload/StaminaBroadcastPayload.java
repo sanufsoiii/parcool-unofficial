@@ -12,7 +12,7 @@ import net.minecraft.network.codec.StreamCodec;
 
 public record StaminaBroadcastPayload(List<StaminaPayload> staminaList) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<StaminaBroadcastPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina.broadcast"));
+            = new Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.stamina.broadcast"));
 
     private static final StreamCodec<ByteBuf, List<StaminaPayload>> STAMINA_CODEC = new ListStreamCodec<>(StaminaPayload.CODEC);
     public static final StreamCodec<ByteBuf, StaminaBroadcastPayload> CODEC = StreamCodec.composite(

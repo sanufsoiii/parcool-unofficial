@@ -19,7 +19,7 @@ import java.util.UUID;
 
 public record StaminaPayload(UUID playerID, ReadonlyStamina stamina) implements CustomPacketPayload {
     public static final Type<StaminaPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina"));
+            = new Type<>(new ResourceLocation(ParCool.MOD_ID, "payload.stamina"));
     public static final StreamCodec<ByteBuf, StaminaPayload> CODEC = StreamCodec.composite(
             UUIDUtil.STREAM_CODEC,
             StaminaPayload::playerID,
