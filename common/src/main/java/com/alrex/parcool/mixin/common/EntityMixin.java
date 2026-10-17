@@ -80,12 +80,18 @@ public abstract class EntityMixin {
             noPhysics = true;
             setBoundingBox(getBoundingBox().move(dMove));
             setPos(player.getX() + dMove.x, player.getY() + dMove.y, player.getZ() + dMove.z);
-        } else if (player.noPhysics) {
+        } else if (player.noPhysics != player.isSpectator()) {
             // Upstream set noPhysics for an enforced move and never cleared it, so after a HideInBlock the
             // player kept falling through the world until death. The enforcer marker outlives the action's
             // own onStop by a tick or two, so the flag is given back here - as soon as there is nothing
             // left to enforce, which is the moment no action can still be relying on it.
-            player.noPhysics = false;
+            //
+            // It is given back as Player#tick aims it: for players noPhysics *is* the spectator flag
+            // (Player#tick starts with "noPhysics = isSpectator()"). Clearing it to a bare false here made
+            // a spectator collide with every block, so flying through walls - the point of the mode - no
+            // longer worked: both sides of the integrated/dedicated server run this mixin, and the cleared
+            // flag survives exactly until the next Player#tick, i.e. across every movement of the tick.
+            player.noPhysics = player.isSpectator();
         }
     }
 
