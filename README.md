@@ -1,10 +1,10 @@
-# ParCool — Architectury API port
+# ParCool — Architectury API port (Minecraft 1.20.6)
 
 A multiloader port of the Minecraft mod **ParCool** by **alRex_U** (LGPL-3.0), originally built for
 NeoForge, reworked onto the [Architectury API](https://github.com/architectury/architectury-api) so
 that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
-Minecraft **1.21.1**, Java **21**.
+Minecraft **1.20.6**, Java **21**.
 
 > This repository contains a *port*, not alRex_U's original sources. The original project lives at
 > <https://github.com/alRex-U/ParCool> and on CurseForge at
@@ -13,11 +13,11 @@ Minecraft **1.21.1**, Java **21**.
 
 ## Modules
 
-| Module     | Contents                                                                                                                                                        |
-|------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Module     | Contents |
+|------------|----------|
 | `common`   | The whole mod: registries, `ParCoolData` (replacement for NeoForge's attachment API), the network layer, the JSON config backend, the vanilla mixins, and the platform seam. |
-| `fabric`   | Fabric entrypoints, `FabricParCoolPlatform` / `FabricParCoolNetwork`, and the ServiceLoader binding.                                                                |
-| `neoforge` | NeoForge entrypoints, `NeoForgeParCoolPlatform` / `NeoForgeParCoolNetwork`, plus the optional Paraglider, EpicFight and BetterThirdPerson integrations.           |
+| `fabric`   | Fabric entrypoints, `FabricParCoolPlatform` / `FabricParCoolNetwork`, and the ServiceLoader binding. |
+| `neoforge` | NeoForge entrypoints, `NeoForgeParCoolPlatform` / `NeoForgeParCoolNetwork`, plus the optional Paraglider, EpicFight and BetterThirdPerson integrations. |
 
 There is intentionally **no source-set split**: ParCool is client-authoritative, and NeoForge ships a
 merged jar, so `common` stays a single tree. The two loader modules differ only in their entrypoints
@@ -34,23 +34,25 @@ and their platform implementation.
 ./gradlew build           # from then on
 ```
 
-See [BUILDING.md](BUILDING.md) for the module layout, the dev run tasks
-(`:fabric:runClient`, `:neoforge:runclient`, `:fabric:runServer`, `:neoforge:runserver`) and the
+See [BUILDING.md](BUILDING.md) for the module layout, the 1.21.1 → 1.20.6 port notes (the
+`ResourceLocation` constructors, `DeltaTracker`, the attribute-modifier keys, the pre-1.21 data
+directories), the dev run tasks (`:fabric:runClient`, `:neoforge:runClient`, `:fabric:runServer`,
+`:neoforge:runServer`), the mixin target verifier (`tools/verify_mixins.py`) and the
 loader-independence check.
 
 ## Installing
 
 Drop the matching jar into `mods/`:
 
-* Fabric — `fabric/build/libs/parcool-1.21.1-3.4.3.3-fabric.jar`
-* NeoForge — `neoforge/build/libs/parcool-1.21.1-3.4.3.3-neoforge.jar`
+* Fabric — `fabric/build/libs/parcool-1.20.6-3.4.3.3-fabric.jar`
+* NeoForge — `neoforge/build/libs/parcool-neoforge.jar`
 
 ## Dependencies
 
 **Required**
 
-* Architectury API 13.0.11 or newer
-* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.116.15+1.21.1
+* Architectury API 12.1.4 or newer
+* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.100.8+1.20.6
 
 **Optional**
 
@@ -59,6 +61,11 @@ Drop the matching jar into `mods/`:
 * [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — NeoForge only
 * [EpicFight](https://www.curseforge.com/minecraft/mc-mods/epicfight) — NeoForge only
 * BetterThirdPerson — NeoForge only
+
+None of the optional integration mods published a 1.20.5/1.20.6 build (their release lines jump from
+the 1.20.x era to 1.21), so their integration code is compiled against the 1.21.1-era API and every
+entry point reports the mod absent at runtime when its classes are not loadable — see
+[BUILDING.md](BUILDING.md).
 
 ## Attribution and license
 
