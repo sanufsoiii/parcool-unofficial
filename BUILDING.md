@@ -193,6 +193,15 @@ silent) and refuses to report anything if that fails — see `tools/README.md`.
   `PlayerMixin`, `PotionBrewingBuilderMixin`) — the `client.*` half of the mixin set only exists on
   a client, which was not booted for this port. Both servers were stopped after the boot.
 
-Not verified for this port: a client session and an in-world frame (the render path), and the
-optional Paraglider/EpicFight/BetterThirdPerson integrations. They compile against the pinned
-integration jars, and every entry point guards itself at runtime, but none of them was loaded.
+* The Fabric **client** was booted straight into the same world
+  (`./gradlew :fabric:runClient -PparcoolQuickPlayWorld=parcool-dev`, the save copied out of the
+  dedicated server's `run/`): it reaches `Loaded 1399 advancements` / `Time elapsed: 218 ms` and then
+  the mod's own `Loaded 2 advancements`, with all twelve `client.*` ParCool mixins applied and
+  `0` `GL ERROR` lines — the render path (player model, camera, HUD) is exercised.
+  On a brand-new `run/` directory the client first shows the vanilla accessibility onboarding
+  screen, which quick-play does not dismiss; click *Continue* once.
+
+Not verified for this port: a NeoForge client session (the NeoForge server boot and the Fabric
+client boot cover both loaders and both sides between them), and the optional
+Paraglider/EpicFight/BetterThirdPerson integrations. They compile against the pinned integration
+jars, and every entry point guards itself at runtime, but none of them was loaded.
