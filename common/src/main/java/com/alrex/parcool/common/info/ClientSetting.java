@@ -4,18 +4,12 @@ import com.alrex.parcool.common.action.Action;
 import com.alrex.parcool.common.action.Actions;
 import com.alrex.parcool.common.stamina.StaminaType;
 import com.alrex.parcool.config.ParCoolConfig;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.Arrays;
 import java.util.EnumMap;
 
 public abstract class ClientSetting {
-    public static final StreamCodec<ByteBuf, ClientSetting> STREAM_CODEC = StreamCodec.of(
-            (buffer, value) -> value.writeTo(buffer),
-            ClientSetting::readFrom
-    );
-
     private static class Default extends ClientSetting {
         @Override
         public boolean getPossibilityOf(Class<? extends Action> action) {
@@ -136,7 +130,7 @@ public abstract class ClientSetting {
         return instance;
     }
 
-    public void writeTo(ByteBuf buffer) {
+    public void writeTo(FriendlyByteBuf buffer) {
         for (Class<? extends Action> action : Actions.LIST) {
             buffer.writeByte((byte) (getPossibilityOf(action) ? 1 : 0));
             buffer.writeInt(getStaminaConsumptionOf(action));
@@ -153,7 +147,7 @@ public abstract class ClientSetting {
         buffer.writeByte(getRequestedStamina().ordinal());
     }
 
-    public static ClientSetting readFrom(ByteBuf buffer) {
+    public static ClientSetting readFrom(FriendlyByteBuf buffer) {
         Remote instance = new Remote();
         for (int i = 0; i < instance.actionPossibilities.length; i++) {
             instance.actionPossibilities[i] = buffer.readByte() != 0;

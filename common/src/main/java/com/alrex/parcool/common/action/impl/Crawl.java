@@ -14,6 +14,19 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.Pose;
 
 public class Crawl extends Action {
+	/**
+	 * "Would the player fit standing up again". 1.20.1 has no
+	 * {@code Player#canPlayerFitWithinBlocksAndEntitiesWhen}; its body lives in
+	 * {@code Entity#canEnterPose}, which is protected, so the check is spelled out here:
+	 * {@code level.noCollision(entity, dimensions(STANDING).makeBoundingBox(position).deflate(1e-7))}.
+	 */
+	private static boolean parcool$canFitStanding(Player player) {
+		return player.level().noCollision(
+				player,
+				player.getDimensions(Pose.STANDING).makeBoundingBox(player.position()).deflate(1.0E-7)
+		);
+	}
+
 	public enum ControlType {
 		PressKey, Toggle
 	}
@@ -61,7 +74,7 @@ public class Crawl extends Action {
 
 	@Override
 	public boolean canContinue(Player player, Parkourability parkourability) {
-		if (player.canPlayerFitWithinBlocksAndEntitiesWhen(Pose.STANDING)) {
+		if (parcool$canFitStanding(player)) {
 			switch (ParCoolConfig.Client.getInstance().CrawlControl.get()) {
 				case Toggle:
 					if (!toggleStatus) return false;

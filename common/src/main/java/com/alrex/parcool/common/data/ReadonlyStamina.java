@@ -1,10 +1,6 @@
 package com.alrex.parcool.common.data;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 
 
 public record ReadonlyStamina(boolean isExhausted, int value, int max) {
@@ -36,20 +32,17 @@ public record ReadonlyStamina(boolean isExhausted, int value, int max) {
         return new ReadonlyStamina(exhausted, newValue, max());
     }
 
-    public static final Codec<ReadonlyStamina> CODEC = RecordCodecBuilder.create(staminaInstance ->
-            staminaInstance.group(
-                    Codec.BOOL.fieldOf("exhausted").forGetter(ReadonlyStamina::isExhausted),
-                    Codec.INT.fieldOf("value").forGetter(ReadonlyStamina::value),
-                    Codec.INT.fieldOf("max").forGetter(ReadonlyStamina::max)
-            ).apply(staminaInstance, ReadonlyStamina::new)
-    );
-    public static final StreamCodec<ByteBuf, ReadonlyStamina> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.BOOL,
-            ReadonlyStamina::isExhausted,
-            ByteBufCodecs.VAR_INT,
-            ReadonlyStamina::value,
-            ByteBufCodecs.INT,
-            ReadonlyStamina::max,
-            ReadonlyStamina::new
-    );
+    /**
+     * Replaces the 1.21.1 {@code Codec}/{@code StreamCodec} pair: 1.20.1 has neither and the stamina
+     * only ever travels inside a packet, so the NBT codec had no consumer here anyway.
+     */
+    public void writeTo(FriendlyByteBuf buffer) {
+        buffer.writeBoolean(isExhausted);
+        buffer.writeVarInt(value);
+        buffer.writeInt(max);
+    }
+
+    public static ReadonlyStamina readFrom(FriendlyByteBuf buffer) {
+        return new ReadonlyStamina(buffer.readBoolean(), buffer.readVarInt(), buffer.readInt());
+    }
 }

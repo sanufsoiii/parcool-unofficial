@@ -22,10 +22,17 @@ public class CreativeTabs {
                 output.accept(Items.IRON_ZIPLINE_HOOK.get());
                 output.accept(Items.WOODEN_ZIPLINE_HOOK.get());
                 output.accept(Items.ZIPLINE_ROPE.get());
+                // DyeColor only exposes float rgb components on 1.20.1 (getTextureDiffuseColor, the
+                // packed-int accessor, arrives in 1.21.x), so they are packed here. The alpha is
+                // forced opaque: a rope colour without alpha renders transparent through ItemColor.
                 Arrays.stream(DyeColor.values())
                         .map(color -> {
+                            float[] rgb = color.getTextureDiffuseColors();
                             var coloredRope = new ItemStack(Items.ZIPLINE_ROPE.get());
-                            ZiplineRopeItem.setColor(coloredRope, color.getTextureDiffuseColor());
+                            ZiplineRopeItem.setColor(coloredRope, 0xFF000000
+                                    | ((int) (rgb[0] * 255f) << 16)
+                                    | ((int) (rgb[1] * 255f) << 8)
+                                    | (int) (rgb[2] * 255f));
                             return coloredRope;
                         })
                         .forEach(output::accept);

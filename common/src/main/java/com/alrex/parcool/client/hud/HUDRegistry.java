@@ -1,6 +1,5 @@
 package com.alrex.parcool.client.hud;
 
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.GuiGraphics;
 
 /**
@@ -10,7 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
  * {@code RegisterGuiLayersEvent}; the layering itself now happens in {@code ParCoolEvents}.
  */
 public class HUDRegistry {
-    public static void renderHud(GuiGraphics graphics, DeltaTracker partialTick) {
+    public static void renderHud(GuiGraphics graphics, float partialTick) {
         HUDManager.getInstance().renderHud(graphics, partialTick);
     }
 }

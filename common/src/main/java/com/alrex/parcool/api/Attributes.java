@@ -1,94 +1,42 @@
 package com.alrex.parcool.api;
 
 import com.alrex.parcool.ParCool;
-import dev.architectury.platform.Platform;
+import dev.architectury.registry.registries.DeferredRegister;
+import dev.architectury.registry.registries.RegistrySupplier;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
-
-import java.util.Objects;
 
 /**
- * ParCool's two player attributes, resolved as {@link Holder}s out of the built-in attribute
- * registry.
+ * ParCool's two player attributes.
  *
  * <p>They are attached to the player by {@code mixin.common.PlayerAttributesMixin}, which extends the
- * builder {@code Player#createAttributes} assembles - what {@code EntityAttributeRegistry} would have
- * done, except that on NeoForge it rejects a second supplier for {@code EntityType.PLAYER} and on
- * Fabric it <i>replaces</i> the player's whole supplier, which costs the player
- * {@code minecraft:generic.max_health} and makes joining a world fail.
+ * builder {@code Player#createAttributes} assembles. That is additive on both loaders, whereas the
+ * cross-loader {@code EntityAttributeRegistry} calls {@code DefaultAttributeRegistry.register}, which
+ * <i>replaces</i> the player's whole supplier - costing the player {@code minecraft:generic.max_health}
+ * and failing the world join.
  *
- * <p><b>Why the two loaders register them differently.</b> {@code BuiltInRegistries.ATTRIBUTE} is
- * writable only while {@code Bootstrap#bootStrap} is running, and that pass is the one thing that
- * reaches {@code DefaultAttributes}' static initialiser, i.e. {@code Player#createAttributes}, on
- * Fabric. NeoForge closes the built-in registries before the mod constructors run, so a direct
- * {@code Registry.registerForHolder} there dies with "Registry is already frozen (trying to add key
- * parcool:max_stamina)" and NeoForge cannot start at all. There is no vanilla hook that sits inside
- * the writable window on both loaders - {@code Bootstrap#validate} runs before the freeze on Fabric
- * and after it on NeoForge - so this is a real platform split:
- * <ul>
- *     <li><b>Fabric</b>: the static initialiser below registers the two entries, and it is reached
- *     from {@code Bootstrap#bootStrap} through the mixin.</li>
- *     <li><b>NeoForge</b>: {@code :neoforge}'s {@code NeoForgeAttributes} registers them through
- *     NeoForge's own {@code DeferredRegister} (which fires on {@code RegisterEvent}, while the
- *     registry is still open) - exactly what upstream ParCool's NeoForge build does. Architectury's
- *     {@code DeferredRegister} is not an option: it rejects
- *     {@link net.minecraft.core.registries.Registries#ATTRIBUTE} outright
- *     ({@code RegistrarManager._get} asserts on it).</li>
- * </ul>
- * On NeoForge the holders are therefore read back from the registry instead of being written to it;
- * they are consumed as {@link Holder}s by {@code AttributeSupplier.Builder#add} and
- * {@code Player#getAttribute(Holder)}, so a plain read is enough.
+ * <p>On 1.21.1 the two entries had to be registered by hand from the loader entry point, because
+ * NeoForge's {@code Registry} refuses any write from the shared entry point and Architectury's
+ * {@code DeferredRegister} rejected {@code Registries.ATTRIBUTE} outright. Neither is true on 1.20.1:
+ * {@code minecraft:attribute} is backed by a Forge registry ({@code ForgeRegistries.ATTRIBUTES}) and
+ * Architectury 9.2.14 registers into it through {@code RegisterEvent} on Forge and through
+ * {@code Registry.register} on Fabric, which is exactly what the mod's other registries do. The
+ * attributes are therefore an ordinary {@link DeferredRegister} here.
+ *
+ * <p>{@code EntityAttributeModificationEvent} (what upstream ParCool uses on 1.20.1) is Forge-only, so
+ * the attachment stays in the mixin, which behaves identically on both loaders.
  */
 public class Attributes {
+    private static final DeferredRegister<Attribute> ATTRIBUTES = DeferredRegister.create(ParCool.MOD_ID, Registries.ATTRIBUTE);
 
-    public static final Holder<Attribute> MAX_STAMINA =
-            resolve("max_stamina", "parcool.max_stamina", 2000, 10, 10000);
+    public static final RegistrySupplier<Attribute> MAX_STAMINA =
+            ATTRIBUTES.register("max_stamina", () -> new RangedAttribute("parcool.max_stamina", 2000, 10, 10000).setSyncable(true));
 
-    public static final Holder<Attribute> STAMINA_RECOVERY =
-            resolve("stamina_recovery", "parcool.stamina_recovery", 20, 0, 10000);
+    public static final RegistrySupplier<Attribute> STAMINA_RECOVERY =
+            ATTRIBUTES.register("stamina_recovery", () -> new RangedAttribute("parcool.stamina_recovery", 20, 0, 10000).setSyncable(true));
 
-    private Attributes() {
-    }
-
-    private static Holder<Attribute> resolve(
-            String id, String descriptionId, double defaultValue, double min, double max) {
-        ResourceLocation key = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, id);
-        if (Platform.isNeoForge()) {
-            // Registered by :neoforge, so read the holder back instead of creating a second entry.
-            // 1.21.1's Registry#get returns the value directly; the holder comes from getHolder.
-            ResourceKey<Attribute> registryKey =
-                    ResourceKey.create(BuiltInRegistries.ATTRIBUTE.key(), key);
-            var holder = BuiltInRegistries.ATTRIBUTE.getHolder(registryKey);
-            if (holder.isPresent()) return holder.get();
-            // A registry entry registered without an intrusive holder is not in byKey; wrapAsHolder then
-            // returns the existing Reference or a Holder.direct over the same value, and both are what
-            // AttributeSupplier.Builder#add and Player#getAttribute(Holder) consume.
-            Attribute registered = BuiltInRegistries.ATTRIBUTE.get(registryKey);
-            if (registered != null) return BuiltInRegistries.ATTRIBUTE.wrapAsHolder(registered);
-            throw new IllegalStateException("ParCool attribute " + key + " is not registered");
-        }
-        return Registry.registerForHolder(
-                BuiltInRegistries.ATTRIBUTE,
-                key,
-                new RangedAttribute(descriptionId, defaultValue, min, max).setSyncable(true));
-    }
-
-    /**
-     * Forces this class to load, which on Fabric is what runs the two registrations above.
-     *
-     * <p>Only the Fabric entry point may call this: a static method call initializes the class, and
-     * that runs {@code <clinit>}, which on NeoForge would resolve the holders before
-     * {@code :neoforge}'s {@code DeferredRegister} has fired (it only registers on the registry event
-     * that comes after the mod constructors). ParCool's shared entry point therefore does not touch
-     * this class at all - see {@code ParCool#init} and {@code ParCoolFabric}.
-     */
     public static void registerAll() {
-        Objects.requireNonNull(MAX_STAMINA);
-        Objects.requireNonNull(STAMINA_RECOVERY);
+        ATTRIBUTES.register();
     }
 }

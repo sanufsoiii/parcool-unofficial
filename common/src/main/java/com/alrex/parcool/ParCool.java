@@ -11,7 +11,6 @@ import com.alrex.parcool.common.block.TileEntities;
 import com.alrex.parcool.common.entity.EntityTypes;
 import com.alrex.parcool.common.event.ParCoolEvents;
 import com.alrex.parcool.common.item.CreativeTabs;
-import com.alrex.parcool.common.item.DataComponents;
 import com.alrex.parcool.client.registry.ItemColors;
 import com.alrex.parcool.common.item.Items;
 import com.alrex.parcool.common.item.recipe.Recipes;
@@ -29,9 +28,9 @@ import org.apache.logging.log4j.Logger;
 /**
  * Loader-agnostic mod entry point.
  *
- * <p>Upstream this class carried the NeoForge {@code @Mod} annotation and drove everything from the
- * FML mod/game buses. Here it only performs the shared registration; the two loader modules
- * ({@code fabric}, {@code neoforge}) call {@link #init()} / {@link #initClient()} from their own
+ * <p>Upstream this class carried the {@code @Mod} annotation and drove everything from the FML
+ * mod/game buses. Here it only performs the shared registration; the two loader modules
+ * ({@code fabric}, {@code forge}) call {@link #init()} / {@link #initClient()} from their own
  * entry points.
  */
 public class ParCool {
@@ -52,23 +51,19 @@ public class ParCool {
      * resolve.
      */
     public static void init() {
-        // Idempotent: NeoForge constructs every @Mod class of the mod id, and a duplicated
-        // registration is a hard failure (e.g. "Duplicate DefaultAttributes entry:
-        // entity.minecraft.player" from EntityAttributeRegistry).
+        // Idempotent: Forge constructs the @Mod class and Architectury's common setup can reach the
+        // same code path, and a duplicated DeferredRegister#register is a hard failure.
         if (initialized) {
             LOGGER.debug("ParCool.init() already ran, skipping");
             return;
         }
         initialized = true;
 
+        // Attributes first: Player#createAttributes is what binds them to the player, and Vanilla 1.20.1
+        // rebuilds DefaultAttributes during its own bootstrap.
+        Attributes.registerAll();
         Effects.registerAll();
         Potions.registerAll();
-        // NOTE: com.alrex.parcool.api.Attributes is deliberately *not* touched here. NeoForge freezes the
-        // built-in registries before the mod constructors run, so the two entries are registered by
-        // :neoforge's NeoForgeAttributes (a NeoForge DeferredRegister) and only *resolved* by Attributes
-        // - and a class whose static initialiser resolves a Holder cannot be loaded this early on
-        // NeoForge. On Fabric the loader's own entry point still calls Attributes.registerAll() inside the
-        // writable window; see ParCoolFabric.
         SoundEvents.registerAll();
         Blocks.registerAll();
         Items.registerAll();
@@ -76,7 +71,6 @@ public class ParCool {
         Recipes.registerAll();
         EntityTypes.registerAll();
         TileEntities.registerAll();
-        DataComponents.registerAll();
 
         NetworkRegistries.registerPayloads();
 

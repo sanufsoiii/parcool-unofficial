@@ -12,12 +12,12 @@ public class ActionSynchronizationBroadcaster {
 
     /// This have to be called from same thread as game ticking in logical server
     public static void add(ActionStatePayload payload) {
-        pendingPayloads.addLast(payload);
+        pendingPayloads.add(payload);
     }
 
     private static void send() {
         if (pendingPayloads.isEmpty()) return;
-        NetworkRegistries.sendToAllPlayers(ActionStateBroadcastPayload.CODEC, new ActionStateBroadcastPayload(pendingPayloads));
+        NetworkRegistries.sendToAllPlayers(ActionStateBroadcastPayload.S2C, new ActionStateBroadcastPayload(pendingPayloads));
         pendingPayloads = new ArrayList<>();
     }
 

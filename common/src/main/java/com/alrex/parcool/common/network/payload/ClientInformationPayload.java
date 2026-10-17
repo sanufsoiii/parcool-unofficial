@@ -1,44 +1,38 @@
 package com.alrex.parcool.common.network.payload;
 
 import com.alrex.parcool.ParCool;
-import com.alrex.parcool.common.network.ServerPayloadGuard;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.info.ClientSetting;
-import com.alrex.parcool.server.limitation.Limitations;
-import io.netty.buffer.ByteBuf;
+import com.alrex.parcool.common.network.MessageType;
+import com.alrex.parcool.common.network.ParCoolMessage;
 import com.alrex.parcool.common.network.NetworkRegistries;
+import com.alrex.parcool.common.network.ServerPayloadGuard;
+import com.alrex.parcool.server.limitation.Limitations;
 import dev.architectury.networking.NetworkManager;
-
-import javax.annotation.Nonnull;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
+
 import java.util.UUID;
 
 public record ClientInformationPayload(UUID playerID, boolean requestLimitation,
-                                       ClientSetting information) implements CustomPacketPayload {
-    public static final CustomPacketPayload.Type<ClientInformationPayload> TYPE
-            = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.client_info"));
-    public static final StreamCodec<ByteBuf, ClientInformationPayload> CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_LONG,
-            (p) -> p.playerID().getMostSignificantBits(),
-            ByteBufCodecs.VAR_LONG,
-            (p) -> p.playerID().getLeastSignificantBits(),
-            ByteBufCodecs.BOOL,
-            ClientInformationPayload::requestLimitation,
-            ClientSetting.STREAM_CODEC,
-            ClientInformationPayload::information,
-            (ms, ls, r, i) -> new ClientInformationPayload(new UUID(ms, ls), r, i)
-    );
+                                       ClientSetting information) implements ParCoolMessage {
+    public static final MessageType<ClientInformationPayload> S2C
+            = NetworkRegistries.s2c("payload.client_info", ClientInformationPayload::read);
+    public static final MessageType<ClientInformationPayload> C2S
+            = NetworkRegistries.c2s("payload.client_info", ClientInformationPayload::read);
 
-    @Nonnull
-    @Override
-    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+    public void write(FriendlyByteBuf buf) {
+        buf.writeUUID(playerID());
+        buf.writeBoolean(requestLimitation());
+        information().writeTo(buf);
+    }
+
+    public static ClientInformationPayload read(FriendlyByteBuf buf) {
+        UUID playerID = buf.readUUID();
+        boolean requestLimitation = buf.readBoolean();
+        return new ClientInformationPayload(playerID, requestLimitation, ClientSetting.readFrom(buf));
     }
 
     public static void handleClient(ClientInformationPayload payload, NetworkManager.PacketContext context) {
@@ -62,7 +56,7 @@ public record ClientInformationPayload(UUID playerID, boolean requestLimitation,
                 ParCool.LOGGER.debug("Rejected client info for foreign player {}", payload.playerID());
                 return;
             }
-            NetworkRegistries.sendToAllPlayers(ClientInformationPayload.CODEC, payload);
+            NetworkRegistries.sendToAllPlayers(ClientInformationPayload.S2C, payload);
 
             Parkourability parkourability = Parkourability.get(player);
             if (parkourability == null) return;

@@ -5,6 +5,7 @@ import com.alrex.parcool.client.animation.PlayerModelRotator;
 import com.alrex.parcool.client.animation.PlayerModelTransformer;
 import com.alrex.parcool.common.action.impl.RideZipline;
 import com.alrex.parcool.common.data.Parkourability;
+import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.utilities.VectorUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -28,7 +29,7 @@ public class RideZiplineAnimator extends Animator {
         oldAngleRadian = currentAngleRadian;
         double acceleration = action.getAcceleration();
         double slope = action.getSlope();
-        double gravity = player.getAttributeValue(Attributes.GRAVITY);
+        double gravity = PlatformServices.get().getGravity(player);
         double invSqrt = Mth.invSqrt(slope * slope + 1);
         double xz = -acceleration * invSqrt;
         double y = gravity + acceleration * slope * invSqrt;

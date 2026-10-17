@@ -21,20 +21,20 @@ import javax.annotation.Nullable;
  *
  * <h2>Why this exists</h2>
  * <ul>
- *     <li>{@code net.neoforged.neoforge.common.NeoForgeMod#SWIM_SPEED} is a NeoForge-added entity
- *     attribute ({@code neoforgeswim_speed}); vanilla Fabric has no equivalent, so FastSwim's
+ *     <li>{@code net.minecraftforge.common.ForgeMod#SWIM_SPEED} is a Forge-added entity
+ *     attribute ({@code forge:swim_speed}); vanilla Fabric has no equivalent, so FastSwim's
  *     server-side speed bonus has nothing to modify there.</li>
- *     <li>{@code Level#damageSources()} is a NeoForge-added accessor, so resolving a
+ *     <li>{@code Level#damageSources()} is a Forge-added accessor, so resolving a
  *     {@link DamageSource} from a {@link DamageType} key needs a loader specific call.</li>
- *     <li><b>Paraglider</b>, <b>EpicFight</b> and <b>BetterThirdPerson</b> ship NeoForge-only jars
- *     for 1.21.1, so their code lives in the {@code neoforge} module and is reached through this
- *     interface. Fabric ships no-op implementations below. Fabric ships no-op implementations.</li>
+ *     <li><b>Paraglider</b>, <b>EpicFight</b> and <b>BetterThirdPerson</b> ship Forge-only jars
+ *     for 1.20.1, so their code lives in the {@code forge} module and is reached through this
+ *     interface. Fabric ships no-op implementations below.</li>
  * </ul>
  *
  * <p>Implementations are discovered with {@link java.util.ServiceLoader}, so {@code common} stays
- * free of {@code net.fabricmc.*} and {@code net.neoforged.*} imports. See
+ * free of {@code net.fabricmc.*} and {@code net.minecraftforge.*} imports. See
  * {@code fabric/.../platform/FabricParCoolPlatform} and
- * {@code neoforge/.../platform/NeoForgeParCoolPlatform}.
+ * {@code forge/.../platform/ForgeParCoolPlatform}.
  */
 public interface ParCoolPlatform {
 
@@ -44,6 +44,26 @@ public interface ParCoolPlatform {
      */
     @Nullable
     AttributeInstance getSwimSpeedAttribute(Player player);
+
+    /**
+     * 1.20.1 vanilla has no gravity attribute at all ({@code Attributes.GRAVITY} only appears in
+     * 1.21): gravity is the hard-coded {@code LivingEntity.DEFAULT_BASE_GRAVITY}, and Forge turns it
+     * into {@code forge:entity_gravity}. RideZipline needs the *effective* value, so the loader
+     * supplies the attribute where one exists.
+     *
+     * @return the player's gravity attribute, or {@code null} if the loader has none.
+     */
+    @Nullable
+    AttributeInstance getGravityAttribute(Player player);
+
+    /**
+     * The gravity actually pulling the player down: the loader's gravity attribute where there is
+     * one, vanilla's fixed constant otherwise.
+     */
+    default double getGravity(Player player) {
+        AttributeInstance attribute = getGravityAttribute(player);
+        return attribute != null ? attribute.getValue() : net.minecraft.world.entity.LivingEntity.DEFAULT_BASE_GRAVITY;
+    }
 
     /**
      * @return a damage source for the given damage type key, or {@code null} if it cannot be built.
@@ -90,9 +110,6 @@ public interface ParCoolPlatform {
     IParCoolStaminaHandler newEpicFightStaminaHandler(Player player);
 
     boolean isUsingEpicFightStamina(Parkourability parkourability);
-
-    /** The loader's network plumbing; see {@link ParCoolNetwork} for why this is a seam. */
-    ParCoolNetwork getNetwork();
 
     // ------------------------------------------------------------------
     // shared

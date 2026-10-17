@@ -2,7 +2,7 @@ package com.alrex.parcool.mixin.client;
 
 import com.alrex.parcool.common.event.CompatEvents;
 import com.alrex.parcool.client.action.ClientActionProcessor;
-import net.minecraft.client.DeltaTracker;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.GameRenderer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GameRendererTickMixin {
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
-    private void parcool$onRenderFrame(DeltaTracker partialTick, CallbackInfo ci) {
+    private void parcool$onRenderFrame(float partialTick, long finishTimeNano, PoseStack poseStack, CallbackInfo ci) {
         ClientActionProcessor.onRenderFrame(new CompatEvents.RenderFrameEvent.Pre(partialTick));
     }
 }

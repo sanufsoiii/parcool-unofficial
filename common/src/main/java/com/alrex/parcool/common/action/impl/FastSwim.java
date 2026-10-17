@@ -16,10 +16,11 @@ import java.nio.ByteBuffer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceLocation;
 
 public class FastSwim extends Action {
-    private static final ResourceLocation FAST_SWIM_MODIFIER = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastswim");
+    // 1.20.1 identifies modifiers by UUID; a ResourceLocation-keyed modifier is 1.21 API.
+    private static final java.util.UUID FAST_SWIM_MODIFIER_ID = java.util.UUID.fromString("2c2f6cab-7a5f-4d22-8b3f-4c3d0f1b6b02");
+    private static final String FAST_SWIM_MODIFIER_NAME = ParCool.MOD_ID + ".modifier.speed.fastswim";
     private double speedModifier = 0;
     private boolean toggleStatus;
 
@@ -83,13 +84,14 @@ public class FastSwim extends Action {
         // null on loaders without the NeoForge swim-speed attribute -> FastSwim speed bonus is a no-op there
         AttributeInstance attr = PlatformServices.get().getSwimSpeedAttribute(player);
         if (attr == null) return;
-        if (attr.getModifier(FAST_SWIM_MODIFIER) != null) attr.removeModifier(FAST_SWIM_MODIFIER);
+        if (attr.getModifier(FAST_SWIM_MODIFIER_ID) != null) attr.removeModifier(FAST_SWIM_MODIFIER_ID);
         if (isDoing()) {
             player.setSprinting(true);
             attr.addTransientModifier(new AttributeModifier(
-                    FAST_SWIM_MODIFIER,
+                    FAST_SWIM_MODIFIER_ID,
+                    FAST_SWIM_MODIFIER_NAME,
                     speedModifier / 8d,
-                    AttributeModifier.Operation.ADD_VALUE
+                    AttributeModifier.Operation.ADDITION
             ));
         }
     }

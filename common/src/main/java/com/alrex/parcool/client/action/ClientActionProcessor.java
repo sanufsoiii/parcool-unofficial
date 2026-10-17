@@ -12,7 +12,6 @@ import java.util.List;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -60,7 +59,7 @@ public final class ClientActionProcessor {
         if (penalise) {
             player.setSprinting(false);
             AttributeInstance attribute = localPlayer.getAttribute(Attributes.MOVEMENT_SPEED);
-            if (!attribute.hasModifier(STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID)) {
+            if (!attribute.hasModifier(STAMINA_DEPLETED_SLOWNESS_MODIFIER)) {
                 attribute.addTransientModifier(STAMINA_DEPLETED_SLOWNESS_MODIFIER);
             }
         } else {
@@ -131,12 +130,15 @@ public final class ClientActionProcessor {
         animation.cameraSetup(event, player, parkourability);
     }
 
-    private static final ResourceLocation STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
-            ResourceLocation.fromNamespaceAndPath(com.alrex.parcool.ParCool.MOD_ID, "exhausted.speed");
+    // 1.20.1 keys attribute modifiers by UUID (ResourceLocation-keyed modifiers are 1.21 API), and
+    // AttributeModifier#getOperation only offers ADDITION/MULTIPLY_BASE/MULTIPLY_TOTAL there.
+    private static final java.util.UUID STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID =
+            java.util.UUID.fromString("3d3a7dbc-8b6a-4e33-9c40-5d4e1a2c7c03");
 
     private static final AttributeModifier STAMINA_DEPLETED_SLOWNESS_MODIFIER = new AttributeModifier(
             STAMINA_DEPLETED_SLOWNESS_MODIFIER_ID,
+            com.alrex.parcool.ParCool.MOD_ID + ".exhausted.speed",
             -0.05,
-            AttributeModifier.Operation.ADD_VALUE
+            AttributeModifier.Operation.ADDITION
     );
 }

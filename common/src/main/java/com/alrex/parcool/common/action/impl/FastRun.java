@@ -15,7 +15,6 @@ import java.nio.ByteBuffer;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
 public class FastRun extends Action {
@@ -23,7 +22,10 @@ public class FastRun extends Action {
 		PressKey, Toggle, Auto
 	}
 
-	private static final ResourceLocation FAST_RUNNING_MODIFIER = ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "modifier.speed.fastrun");
+	// 1.20.1 identifies modifiers by their UUID (ResourceLocation-keyed modifiers only arrive in
+	// 1.21), so the id is fixed here and reused for both the lookup and the removal.
+	private static final java.util.UUID FAST_RUNNING_MODIFIER_ID = java.util.UUID.fromString("1b1f5b9a-6f4e-4c11-9a2e-3b2c9e0a5a01");
+	private static final String FAST_RUNNING_MODIFIER_NAME = ParCool.MOD_ID + ".modifier.speed.fastrun";
 	private double speedModifier = 0;
 	private boolean toggleStatus = false;
 	private int lastDashTick = 0;
@@ -39,12 +41,13 @@ public class FastRun extends Action {
 	public void onServerTick(Player player, Parkourability parkourability) {
 		var attr = player.getAttribute(Attributes.MOVEMENT_SPEED);
 		if (attr == null) return;
-		if (attr.getModifier(FAST_RUNNING_MODIFIER) != null) attr.removeModifier(FAST_RUNNING_MODIFIER);
+		if (attr.getModifier(FAST_RUNNING_MODIFIER_ID) != null) attr.removeModifier(FAST_RUNNING_MODIFIER_ID);
 		if (isDoing()) {
 			attr.addTransientModifier(new AttributeModifier(
-					FAST_RUNNING_MODIFIER,
+					FAST_RUNNING_MODIFIER_ID,
+					FAST_RUNNING_MODIFIER_NAME,
 					speedModifier / 100d,
-					AttributeModifier.Operation.ADD_VALUE
+					AttributeModifier.Operation.ADDITION
 			));
 		}
 	}

@@ -79,7 +79,7 @@ public class LightStaminaHUD {
 	public void render(GuiGraphics graphics, Parkourability parkourability, ReadonlyStamina stamina, float partialTick) {
 		var player = Minecraft.getInstance().player;
 		if (player == null) return;
-		final boolean inexhaustible = player.hasEffect(Effects.INEXHAUSTIBLE);
+		final boolean inexhaustible = player.hasEffect(Effects.INEXHAUSTIBLE.get());
 		final boolean exhausted = stamina.isExhausted();
 
 		if (!showStatus) {

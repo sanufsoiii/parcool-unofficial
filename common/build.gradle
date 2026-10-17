@@ -7,7 +7,7 @@ architectury {
 	minecraft = project.minecraft_version
 	// Declares :common as the shared module and the platforms it is consumed from. architectury-plugin
 	// creates the `transformProductionFabric` / `transformProductionForge` artifacts from this.
-	common('fabric', 'neoforge')
+	common('fabric', 'forge')
 }
 
 group = project.maven_group
@@ -77,7 +77,7 @@ dependencies {
 
 	// ShoulderSurfing is genuinely multiloader, so its plugin API stays in :common.
 	// runtimeOnly in the loader modules so an absent ShoulderSurfing is not a hard dependency.
-	compileOnly "curse.maven:ShoulderSurfing-243190:6496668"
+	compileOnly "curse.maven:ShoulderSurfing-243190:6496631"
 }
 
 def LOADER_IMPORT_PATTERNS = [

@@ -18,6 +18,7 @@ repositories {
 	maven { url = 'https://maven.blamejared.com' }
 	maven { url = 'https://www.cursemaven.com' }
 	maven { url = 'https://maven.architectury.dev/' }
+	maven { url = 'https://maven.minecraftforge.net/' }
 	mavenCentral()
 }
 
@@ -34,14 +35,15 @@ subprojects {
 
 	java {
 		toolchain {
-			languageVersion = JavaLanguageVersion.of(21)
+			// Minecraft 1.20.x is a Java 17 game: class files above 61 are rejected by the runtime.
+			languageVersion = JavaLanguageVersion.of(17)
 		}
 		withSourcesJar()
 	}
 
 	tasks.withType(JavaCompile).configureEach {
 		it.options.encoding = 'UTF-8'
-		it.options.release = 21
+		it.options.release = 17
 		it.options.compilerArgs << '-Xmaxerrs' << '5000'
 	}
 }

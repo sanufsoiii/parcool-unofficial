@@ -1,29 +1,24 @@
 package com.alrex.parcool.common.network.payload;
 
-import com.alrex.parcool.ParCool;
-import com.alrex.parcool.common.network.ListStreamCodec;
-import io.netty.buffer.ByteBuf;
+import com.alrex.parcool.common.network.MessageType;
+import com.alrex.parcool.common.network.ParCoolMessage;
+import com.alrex.parcool.common.network.NetworkRegistries;
+import com.alrex.parcool.common.network.PayloadBuffers;
 import dev.architectury.networking.NetworkManager;
+import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.List;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.codec.StreamCodec;
 
-public record StaminaBroadcastPayload(List<StaminaPayload> staminaList) implements CustomPacketPayload {
-    public static final CustomPacketPayload.Type<StaminaBroadcastPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina.broadcast"));
+public record StaminaBroadcastPayload(List<StaminaPayload> staminaList) implements ParCoolMessage {
+    public static final MessageType<StaminaBroadcastPayload> S2C
+            = NetworkRegistries.s2c("payload.stamina.broadcast", StaminaBroadcastPayload::read);
 
-    private static final StreamCodec<ByteBuf, List<StaminaPayload>> STAMINA_CODEC = new ListStreamCodec<>(StaminaPayload.CODEC);
-    public static final StreamCodec<ByteBuf, StaminaBroadcastPayload> CODEC = StreamCodec.composite(
-            STAMINA_CODEC,
-            StaminaBroadcastPayload::staminaList,
-            StaminaBroadcastPayload::new
-    );
+    public void write(FriendlyByteBuf buf) {
+        PayloadBuffers.writeList(buf, staminaList());
+    }
 
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+    public static StaminaBroadcastPayload read(FriendlyByteBuf buf) {
+        return new StaminaBroadcastPayload(PayloadBuffers.readList(buf, StaminaPayload::read));
     }
 
     public static void handleClient(StaminaBroadcastPayload payload, NetworkManager.PacketContext context) {

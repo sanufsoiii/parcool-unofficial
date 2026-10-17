@@ -7,11 +7,12 @@ import javax.annotation.Nullable;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ShearsItem;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -29,14 +30,15 @@ import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.ItemInteractionResult;
 import java.util.List;
 
 public abstract class ZiplineHookBlock extends DirectionalBlock implements EntityBlock {
 
     public ZiplineHookBlock(Properties p_i48440_1_) {
-        // Was `getPistonPushReaction(BlockState) -> DESTROY`, a NeoForge-only override. Vanilla
-        // reads the push reaction from the block properties, so it is declared here instead.
+        // Was `getPistonPushReaction(BlockState) -> DESTROY`, a Forge-only override on 1.20.1
+        // (`BlockBehaviour#getPistonPushReaction` is added by Forge's patch to the class).
+        // `BlockState#getPistonPushReaction` falls back to the property declared here, which is
+        // exactly what the override returned, so the vanilla path needs no loader-specific hook.
         super(p_i48440_1_.pushReaction(PushReaction.DESTROY));
         registerDefaultState(defaultBlockState().setValue(FACING, Direction.UP));
     }
@@ -84,37 +86,43 @@ public abstract class ZiplineHookBlock extends DirectionalBlock implements Entit
     }
 
     @Override
-    protected boolean isPathfindable(BlockState state, PathComputationType pathComputationType) {
+    public boolean isPathfindable(BlockState state, BlockGetter level, BlockPos pos, PathComputationType pathComputationType) {
         return false;
     }
 
+    // Was `useItemOn(ItemStack, BlockState, Level, BlockPos, Player, InteractionHand, BlockHitResult)
+    // -> ItemInteractionResult`: 1.20.1 has neither `ItemInteractionResult` nor the item-first
+    // signature. On 1.20.1 the held stack comes off the hand the player used, and `PASS` is the
+    // "fall through to the default block interaction" outcome.
     @Override
-    protected ItemInteractionResult useItemOn(ItemStack stack, @Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, @Nonnull BlockHitResult hitResult) {
+    public InteractionResult use(@Nonnull BlockState state, @Nonnull Level level, @Nonnull BlockPos pos, @Nonnull Player player, @Nonnull InteractionHand hand, @Nonnull BlockHitResult hitResult) {
+        ItemStack stack = player.getItemInHand(hand);
         if (stack.getItem() instanceof ShearsItem) {
             var tileEntity = player.level().getBlockEntity(pos);
             if (tileEntity instanceof ZiplineHookTileEntity ziplineHookTileEntity) {
                 if (ziplineHookTileEntity.getConnectionPoints().isEmpty())
-                    return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                    return InteractionResult.PASS;
 
                 List<ItemStack> itemStacks = ziplineHookTileEntity.removeAllConnection();
                 if (!itemStacks.isEmpty()) {
                     player.playSound(SoundEvents.ZIPLINE_REMOVE.get(), 1, 1);
                 }
                 if (player.level().isClientSide()) {
-                    return ItemInteractionResult.SUCCESS;
+                    return InteractionResult.SUCCESS;
                 } else {
                     itemStacks.forEach((it) -> Containers.dropItemStack(player.level(), pos.getX(), pos.getY(), pos.getZ(), it));
                     if (!itemStacks.isEmpty()) {
                         if (stack.isDamageableItem()) {
-                            stack.hurtAndBreak(1, player, hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+                            stack.hurtAndBreak(1, player, (it) -> {
+                            });
                         }
                     }
-                    return ItemInteractionResult.CONSUME;
+                    return InteractionResult.CONSUME;
                 }
             }
         }
 
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        return InteractionResult.PASS;
     }
 
     @Nullable

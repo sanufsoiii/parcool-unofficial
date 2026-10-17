@@ -1,30 +1,26 @@
 package com.alrex.parcool.common.network.payload;
 
-import com.alrex.parcool.ParCool;
-import com.alrex.parcool.common.network.ListStreamCodec;
-import io.netty.buffer.ByteBuf;
+import com.alrex.parcool.common.network.MessageType;
+import com.alrex.parcool.common.network.ParCoolMessage;
+import com.alrex.parcool.common.network.NetworkRegistries;
+import com.alrex.parcool.common.network.PayloadBuffers;
 import dev.architectury.networking.NetworkManager;
-
-import java.util.List;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.codec.StreamCodec;
 
-public record ActionStateBroadcastPayload(List<ActionStatePayload> payloads) implements CustomPacketPayload {
-    public static final CustomPacketPayload.Type<ActionStateBroadcastPayload> TYPE
-            = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state.broadcast"));
+import java.util.List;
 
-    public static final StreamCodec<ByteBuf, ActionStateBroadcastPayload> CODEC = StreamCodec.composite(
-            new ListStreamCodec<>(ActionStatePayload.CODEC),
-            ActionStateBroadcastPayload::payloads,
-            ActionStateBroadcastPayload::new
-    );
+public record ActionStateBroadcastPayload(List<ActionStatePayload> payloads) implements ParCoolMessage {
+    public static final MessageType<ActionStateBroadcastPayload> S2C
+            = NetworkRegistries.s2c("payload.action_state.broadcast", ActionStateBroadcastPayload::read);
 
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+    public void write(FriendlyByteBuf buf) {
+        PayloadBuffers.writeList(buf, payloads());
+    }
+
+    public static ActionStateBroadcastPayload read(FriendlyByteBuf buf) {
+        return new ActionStateBroadcastPayload(PayloadBuffers.readList(buf, ActionStatePayload::read));
     }
 
     public static void handleClient(ActionStateBroadcastPayload payload, NetworkManager.PacketContext context) {

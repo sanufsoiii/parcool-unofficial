@@ -57,7 +57,7 @@ public class LocalStamina {
         if (player.isCreative() || player.isSpectator()) return;
         if (handler == null) return;
         if (isInfinite(player)) return;
-        if (player.hasEffect(Effects.INEXHAUSTIBLE)) return;
+        if (player.hasEffect(Effects.INEXHAUSTIBLE.get())) return;
         ParCoolDataKeys.setStamina(player,
                 handler.consume(player, ParCoolDataKeys.getStamina(player), value)
         );

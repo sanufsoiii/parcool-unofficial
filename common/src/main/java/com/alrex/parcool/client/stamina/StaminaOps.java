@@ -25,7 +25,7 @@ public final class StaminaOps {
 
     /** Re-clamps the stamina maximum against the player's attribute and the server limitation. */
     public static ReadonlyStamina updateMax(LocalPlayer player, ReadonlyStamina current) {
-        var attr = player.getAttribute(Attributes.MAX_STAMINA);
+        var attr = player.getAttribute(Attributes.MAX_STAMINA.get());
         if (attr == null) return current;
         var parkourability = Parkourability.get(player);
         if (parkourability == null) return current;
@@ -52,7 +52,7 @@ public final class StaminaOps {
         }
         var parkourability = Parkourability.get(player);
         if (parkourability == null) return current;
-        var attr = player.getAttribute(Attributes.STAMINA_RECOVERY);
+        var attr = player.getAttribute(Attributes.STAMINA_RECOVERY.get());
         if (attr == null) return current;
         int recoverValue = (int) Math.min(parkourability.getActionInfo().getStaminaRecoveryLimit(), attr.getValue());
         return player.onGround()
@@ -64,6 +64,6 @@ public final class StaminaOps {
 
     /** Reports the local stamina value to the server. */
     public static void sync(LocalPlayer player, ReadonlyStamina stamina) {
-        NetworkRegistries.sendToServer(StaminaPayload.CODEC, new StaminaPayload(player.getUUID(), stamina));
+        NetworkRegistries.sendToServer(StaminaPayload.C2S, new StaminaPayload(player.getUUID(), stamina));
     }
 }

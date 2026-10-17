@@ -1,0 +1,172 @@
+plugins {
+	id 'architectury-plugin'
+	id 'dev.architectury.loom'
+}
+
+// architectury-plugin registers :common's `transformProduction*` tasks while evaluating :common, and
+// this module references them below, so :common has to be evaluated first.
+evaluationDependsOn(':common')
+
+version = "${project.minecraft_version}-${project.mod_version}"
+group = project.maven_group
+
+architectury {
+	platformSetupLoomIde()
+	forge()
+}
+
+repositories {
+	maven { url = 'https://maven.blamejared.com' }
+	maven { url = 'https://www.cursemaven.com' }
+	maven { url = 'https://maven.architectury.dev/' }
+	maven { url = 'https://maven.minecraftforge.net/' }
+	mavenCentral()
+}
+
+loom {
+	// The access widener lives in :common resources; Loom needs a concrete file to apply it.
+	accessWidenerPath = project(':common').file('src/main/resources/parcool.accesswidener')
+
+	forge {
+		// Forge has no access widener concept. Loom converts the shared AW into an access transformer
+		// (`META-INF/accesstransformer.cfg`) and embeds it in this module's remapJar; FML applies every
+		// such file it finds inside a mod jar, so the widened members exist in production too.
+		convertAccessWideners = true
+		// Loom only auto-converts the AW given through `accessWidenerPath`; listing it again keeps
+		// `extraAccessWideners` non-empty, which is what the conversion task keys on for the
+		// production jar.
+		extraAccessWideners.add loom.accessWidenerPath.get().asFile.name
+	}
+
+	mixin {
+		defaultRefmapName = 'parcool-forge-refmap.json'
+		// Static remapping, same reasoning as :common/build.gradle. On Forge the target namespace is
+		// SRG, so this is what rewrites the module's few @Mixin references (there are none today) and
+		// -- more importantly -- leaves the already-SRG :common transform artifact alone.
+		useLegacyMixinAp = false
+	}
+
+	mods {
+		"${project.mod_id}" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+configurations {
+	common
+	// Don't use the shadow plugin: it *excludes* files instead of merging them, and the explicit
+	// distJar below already spells out exactly which artifact contributes what.
+	compileClasspath.extendsFrom common
+	runtimeClasspath.extendsFrom common
+	developmentForge.extendsFrom common
+}
+
+dependencies {
+	forge "net.minecraftforge:forge:${project.forge_version}"
+	modImplementation "dev.architectury:architectury-forge:${project.architectury_api_version}"
+
+	// javac reads ParCool's own classes from the plain named jar (always in sync with :common, and
+	// immune to Loom's stale remap cache). `developmentForge` puts the same classes on the dev-run
+	// classpath; Forge's userdev runtime is named, so no remap is involved there.
+	common(project(path: ':common', configuration: 'namedElements')) { transitive false }
+	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+	compileOnly "com.google.code.gson:gson:2.10.1"
+}
+
+// The access widener and the mixin config live in :common so both loaders ship the same copy; the
+// Forge module only needs them present in its own jar, because mods.toml references them.
+processResources {
+	// mods.toml points LicenseFile at the LGPL text, so it has to be inside the jar.
+	from(rootProject.file('LICENSE'))
+}
+
+tasks.named('processResources') {
+	def props = [
+			version          : project.version,
+			mod_id           : project.mod_id,
+			mod_name         : project.mod_name,
+			mod_license      : project.mod_license,
+			mod_authors      : project.mod_authors,
+			minecraft_version: project.minecraft_version,
+			forge_version    : project.forge_version,
+	]
+	inputs.properties props
+	filesMatching('META-INF/mods.toml') { expand props }
+}
+
+// mixin.debug makes the dev log list every applied ParCool mixin (see :fabric/build.gradle).
+['runClient', 'runServer'].each { runTask ->
+	tasks.named(runTask) {
+		it.jvmArgs '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
+		if (runTask == 'runClient') {
+			if (project.hasProperty('parcoolQuickPlay')) {
+				it.args '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
+			}
+			if (project.hasProperty('parcoolQuickPlayWorld')) {
+				it.args '--quickPlaySingleplayer', project.property('parcoolQuickPlayWorld').toString()
+			}
+		}
+	}
+}
+
+tasks.withType(Jar).configureEach {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+/**
+ * The distributable Forge jar.
+ *
+ * <p>Forge's production runtime is SRG-named, so unlike the 1.21.1 tree's NeoForge jar this one must
+ * ship SRG bytecode:
+ * <ul>
+ *     <li>the common code comes from architectury-plugin's `transformProductionForge`, which is already
+ *     remapped named -&gt; SRG (classes, members and mixin annotations);</li>
+ *     <li>this module's own classes come from `:forge:remapJar`, which Loom remaps the same way and
+ *     which also carries the Forge-converted access transformer, `META-INF/mods.toml` and the
+ *     ServiceLoader registration.</li>
+ * </ul>
+ * Neither artifact is unpacked through the other's remap step, so nothing is remapped twice.
+ */
+tasks.register('distJar', Jar) {
+	group = 'build'
+	description = 'Assembles the distributable Forge jar (common + forge module, both SRG-named).'
+
+	archiveClassifier = 'forge'
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+	dependsOn ':common:transformProductionForge'
+	dependsOn ':forge:remapJar'
+
+	// This module first: with duplicatesStrategy EXCLUDE the first contributor of an entry wins, and
+	// this jar carries the authoritative SRG access transformer, the expanded mods.toml and the
+	// Loom-remapped loader classes.
+	from({
+		zipTree(tasks.named('remapJar').get().archiveFile.get().asFile)
+	})
+
+	// The transformed common code and assets. The access widener is dropped: Forge does not read one,
+	// and the AT above is its converted equivalent.
+	from({
+		zipTree(project(':common').tasks.named('transformProductionForge').get().archiveFile.get().asFile)
+	}) {
+		exclude 'parcool.accesswidener'
+		exclude 'META-INF/accesstransformer.cfg'
+	}
+
+	manifest {
+		attributes(
+				'Implementation-Title': project.mod_name,
+				'Implementation-Version': project.mod_version,
+				'Implementation-Vendor': project.mod_authors,
+				// Forge reads this attribute to find the mixin config. mods.toml declares the same
+				// config; this is the path that also works for the dev run, where the jar manifest is
+				// the one Loom generated.
+				'MixinConfigs': 'parcool-common.mixins.json'
+		)
+	}
+}
+
+tasks.named('assemble') {
+	dependsOn 'distJar'
+}

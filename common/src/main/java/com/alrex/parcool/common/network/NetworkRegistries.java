@@ -9,37 +9,35 @@ import com.alrex.parcool.common.network.payload.StaminaBroadcastPayload;
 import com.alrex.parcool.common.network.payload.StaminaPayload;
 import com.alrex.parcool.common.network.payload.StaminaProcessOnServerPayload;
 import com.alrex.parcool.common.network.payload.StartBreakfallEventPayload;
-import com.alrex.parcool.platform.ParCoolNetwork;
-import com.alrex.parcool.platform.PlatformServices;
 import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+
 import javax.annotation.Nullable;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 /**
  * Loader-agnostic replacement for the NeoForge {@code PayloadRegistrar} /
  * {@code PacketDistributor} pair, built on Architectury's {@link NetworkManager}.
  *
- * <h2>Why not {@code NetworkChannel}</h2>
- * {@code NetworkChannel#register} derives the wire id from a hash of the message <i>class</i> and then
- * registers a C2S <i>and</i> an S2C receiver for it. Architectury's NeoForge backend maps each of
- * those to a separate {@code PayloadRegistrar.playTo…} call, and NeoForge 21.1 refuses to register
- * the same payload id twice ("Cannot register payload parcool:main/… as it is already registered").
- * A message that travels in both directions therefore needs <b>one id per direction</b>, which is
- * what this class does.
+ * <h2>Why there is no platform seam here any more</h2>
+ * On 1.21.1 the two loaders needed different plumbing (NeoForge payloads are registered by id and
+ * refuse a second registration, while the Architectury Fabric backend could not register a receiver
+ * at all), so the 1.21.1 tree routed every send through a {@code ParCoolNetwork} interface implemented
+ * per loader. Architectury 9.x - the version this Minecraft version uses - exposes the channel-name
+ * API, which is exactly what 1.20.1 Fabric and Forge both want: {@code registerReceiver(id)} per
+ * direction and {@code sendToServer/sendToPlayer/sendToPlayers(id, buffer)} for the sends. Both 9.2.14
+ * backends keep one receiver per (id, direction) in a map, so a bidirectional message under one id
+ * works on both loaders.
  *
  * <h2>Compatibility</h2>
- * The payloads are plain 1.21.1 {@link CustomPacketPayload} records and their codecs are untouched,
- * so the encoded bytes are identical to upstream's. The ids keep the upstream
- * {@code parcool:payload.*} names for the server-&gt;client direction; the client-&gt;server direction
- * of the three bidirectional messages uses the same name with a {@code .c2s} suffix. NeoForge's
- * channel version negotiation ({@code "3.3.0.0"}) has no Architectury equivalent, so compatibility is
- * enforced by the ids: a mismatched jar is rejected with an unknown-payload disconnect.
+ * The payload ids keep the upstream {@code parcool:payload.*} names for the server-&gt;client
+ * direction; the client-&gt;server direction of the three bidirectional messages uses the same name
+ * with a {@code .c2s} suffix, as in the 1.21.1 tree. Compatibility is enforced by the ids: a
+ * mismatched jar is rejected with an unknown-payload disconnect.
  */
 public final class NetworkRegistries {
 
@@ -62,35 +60,39 @@ public final class NetworkRegistries {
     }
 
     // ------------------------------------------------------------------
-    // registration
+    // ids
     // ------------------------------------------------------------------
 
-    private static <T extends CustomPacketPayload> ResourceLocation id(String path) {
-        return ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, path);
+    private static ResourceLocation id(String path) {
+        return new ResourceLocation(ParCool.MOD_ID, path);
     }
 
     private static ResourceLocation serverbound(String path) {
-        return ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, path + ".c2s");
+        return new ResourceLocation(ParCool.MOD_ID, path + ".c2s");
     }
 
-    /** Client -&gt; server message. */
-    private static <T extends CustomPacketPayload> void registerC2S(
-            Class<T> payloadClass,
-            StreamCodec<? super FriendlyByteBuf, T> codec,
-            CustomPacketPayload.Type<T> type,
-            ResourceLocation wireId,
-            BiConsumer<T, NetworkManager.PacketContext> handler) {
-        PlatformServices.get().getNetwork().register(payloadClass, type, wireId, codec, false, handler);
+    /** Client -&gt; server message type. */
+    public static <T extends ParCoolMessage> MessageType<T> c2s(String path, Function<FriendlyByteBuf, T> reader) {
+        return new MessageType<>(serverbound(path), reader);
     }
 
-    /** Server -&gt; client message. */
-    private static <T extends CustomPacketPayload> void registerS2C(
-            Class<T> payloadClass,
-            StreamCodec<? super FriendlyByteBuf, T> codec,
-            CustomPacketPayload.Type<T> type,
-            ResourceLocation wireId,
-            BiConsumer<T, NetworkManager.PacketContext> handler) {
-        PlatformServices.get().getNetwork().register(payloadClass, type, wireId, codec, true, handler);
+    /** Server -&gt; client message type. */
+    public static <T extends ParCoolMessage> MessageType<T> s2c(String path, Function<FriendlyByteBuf, T> reader) {
+        return new MessageType<>(id(path), reader);
+    }
+
+    // ------------------------------------------------------------------
+    // registration
+    // ------------------------------------------------------------------
+
+    private static <T extends ParCoolMessage> void registerC2S(MessageType<T> type, BiConsumer<T, NetworkManager.PacketContext> handler) {
+        NetworkManager.registerReceiver(NetworkManager.Side.C2S, type.id(),
+                (buffer, context) -> handler.accept(type.read(buffer), context));
+    }
+
+    private static <T extends ParCoolMessage> void registerS2C(MessageType<T> type, BiConsumer<T, NetworkManager.PacketContext> handler) {
+        NetworkManager.registerReceiver(NetworkManager.Side.S2C, type.id(),
+                (buffer, context) -> handler.accept(type.read(buffer), context));
     }
 
     public static void registerPayloads() {
@@ -98,81 +100,61 @@ public final class NetworkRegistries {
         payloadsRegistered = true;
 
         // --- client -> server only ---
-        registerC2S(StaminaProcessOnServerPayload.class, StaminaProcessOnServerPayload.CODEC, StaminaProcessOnServerPayload.TYPE,
-                serverbound("payload.custom_stamina"), StaminaProcessOnServerPayload::handleServer);
+        registerC2S(StaminaProcessOnServerPayload.C2S, StaminaProcessOnServerPayload::handleServer);
 
         // --- server -> client only ---
-        registerS2C(StartBreakfallEventPayload.class, StartBreakfallEventPayload.CODEC, StartBreakfallEventPayload.TYPE,
-                id("payload.start_breakfall_event"), StartBreakfallEventPayload::handleClient);
-        registerS2C(LimitationPayload.class, LimitationPayload.CODEC, LimitationPayload.TYPE,
-                id("payload.limitation"), LimitationPayload::handleClient);
-        registerS2C(StaminaBroadcastPayload.class, StaminaBroadcastPayload.CODEC, StaminaBroadcastPayload.TYPE,
-                id("payload.stamina.broadcast"), StaminaBroadcastPayload::handleClient);
-        registerS2C(ActionStateBroadcastPayload.class, ActionStateBroadcastPayload.CODEC, ActionStateBroadcastPayload.TYPE,
-                id("payload.action_state.broadcast"), ActionStateBroadcastPayload::handleClient);
+        registerS2C(StartBreakfallEventPayload.S2C, StartBreakfallEventPayload::handleClient);
+        registerS2C(LimitationPayload.S2C, LimitationPayload::handleClient);
+        registerS2C(StaminaBroadcastPayload.S2C, StaminaBroadcastPayload::handleClient);
+        registerS2C(ActionStateBroadcastPayload.S2C, ActionStateBroadcastPayload::handleClient);
 
-        // --- both directions; one wire id per direction ---
-        registerC2S(ActionStatePayload.class, ActionStatePayload.CODEC, ActionStatePayload.TYPE,
-                serverbound("payload.action_state"), ActionStatePayload::handleServer);
-        registerS2C(ActionStatePayload.class, ActionStatePayload.CODEC, ActionStatePayload.TYPE,
-                id("payload.action_state"), ActionStatePayload::handleClient);
+        // --- both directions; one id per direction ---
+        registerC2S(ActionStatePayload.C2S, ActionStatePayload::handleServer);
+        registerS2C(ActionStatePayload.S2C, ActionStatePayload::handleClient);
 
-        registerC2S(ClientInformationPayload.class, ClientInformationPayload.CODEC, ClientInformationPayload.TYPE,
-                serverbound("payload.client_info"), ClientInformationPayload::handleServer);
-        registerS2C(ClientInformationPayload.class, ClientInformationPayload.CODEC, ClientInformationPayload.TYPE,
-                id("payload.client_info"), ClientInformationPayload::handleClient);
+        registerC2S(ClientInformationPayload.C2S, ClientInformationPayload::handleServer);
+        registerS2C(ClientInformationPayload.S2C, ClientInformationPayload::handleClient);
 
-        registerC2S(StaminaPayload.class, StaminaPayload.CODEC, StaminaPayload.TYPE,
-                serverbound("payload.stamina"), StaminaPayload::handleServer);
-        registerS2C(StaminaPayload.class, StaminaPayload.CODEC, StaminaPayload.TYPE,
-                id("payload.stamina"), StaminaPayload::handleClient);
+        registerC2S(StaminaPayload.C2S, StaminaPayload::handleServer);
+        registerS2C(StaminaPayload.S2C, StaminaPayload::handleClient);
     }
 
     // ------------------------------------------------------------------
     // sending
     // ------------------------------------------------------------------
 
-    public static <T extends CustomPacketPayload> void sendToServer(
-            StreamCodec<? super FriendlyByteBuf, T> codec, T payload) {
-        PlatformServices.get().getNetwork()
-                .sendToServer(payload, serverbound(wirePath(payload)), codec);
+    /**
+     * The 1.20.1 id of each message has to be declared on both sides by the login handshake
+     * (Fabric: the channel registration packet; Forge: Architectury's own {@code SYNC_IDS} packet),
+     * and {@code NetworkManager.sendToServer} throws when the client is not in a world at all. The
+     * guard covers both. A message dropped here is never a lost update: the only client-&gt;server
+     * messages are the client's own settings, which {@code Parkourability.trySyncLimitation} re-sends
+     * until the server answers, so a race with the Forge handshake only costs one retry.
+     */
+    public static <T extends ParCoolMessage> void sendToServer(MessageType<T> type, T payload) {
+        if (!NetworkManager.canServerReceive(type.id())) return;
+        NetworkManager.sendToServer(type.id(), encode(type, payload));
     }
 
-    public static <T extends CustomPacketPayload> void sendToPlayer(
-            ServerPlayer player, StreamCodec<? super FriendlyByteBuf, T> codec, T payload) {
-        PlatformServices.get().getNetwork()
-                .sendToPlayer(player, payload, id(wirePath(payload)), codec);
+    public static <T extends ParCoolMessage> void sendToPlayer(ServerPlayer player, MessageType<T> type, T payload) {
+        NetworkManager.sendToPlayer(player, type.id(), encode(type, payload));
     }
 
-    public static <T extends CustomPacketPayload> void sendToPlayers(
-            Iterable<ServerPlayer> players, StreamCodec<? super FriendlyByteBuf, T> codec, T payload) {
-        PlatformServices.get().getNetwork()
-                .sendToPlayers(players, payload, id(wirePath(payload)), codec);
+    public static <T extends ParCoolMessage> void sendToPlayers(Iterable<ServerPlayer> players, MessageType<T> type, T payload) {
+        NetworkManager.sendToPlayers(players, type.id(), encode(type, payload));
     }
 
     /** Broadcast, the replacement for {@code PacketDistributor.sendToAllPlayers}. */
-    public static <T extends CustomPacketPayload> void sendToAllPlayers(
-            StreamCodec<? super FriendlyByteBuf, T> codec, T payload) {
+    public static <T extends ParCoolMessage> void sendToAllPlayers(MessageType<T> type, T payload) {
         MinecraftServer current = server;
         if (current == null) return;
-        sendToPlayers(current.getPlayerList().getPlayers(), codec, payload);
+        sendToPlayers(current.getPlayerList().getPlayers(), type, payload);
     }
 
-    /**
-     * The path component of a payload's declared id.
-     *
-     * <p>{@code ResourceLocation#getPath()} never contains the namespace, so this must
-     * not strip one. It previously did, which chopped the first seven characters off
-     * every path: {@code payload.client_info} became {@code nt.client_info}, and the
-     * client then sent the join packet to {@code parcool:nt.client_info.c2s} while
-     * the receiver was registered at {@code parcool:payload.client_info.c2s}. The id
-     * lookup in Architectury's {@code NetworkAggregator} returned {@code null} and the
-     * first client-to-server send of a session - {@code ClientInformationPayload} on
-     * player join - failed with a "Network Protocol Error" disconnect screen.
-     *
-     * <p>{@link #id} and {@link #serverbound} re-attach the namespace.
-     */
-    private static String wirePath(CustomPacketPayload payload) {
-        return payload.type().id().getPath();
+    /** Serialises a message into a fresh buffer, using the message type's own writer. */
+    private static <T extends ParCoolMessage> FriendlyByteBuf encode(MessageType<T> type, T payload) {
+        FriendlyByteBuf buffer = new FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+        type.write(buffer, payload);
+        return buffer;
     }
 }

@@ -3,7 +3,7 @@ package com.alrex.parcool.mixin.common;
 import com.alrex.parcool.common.action.impl.FastRun;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.handlers.PlayerJumpHandler;
-import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -70,8 +70,20 @@ public abstract class PlayerMixin extends LivingEntity {
         }
     }
 
-    @WrapWithCondition(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V"))
-    public boolean wrapSetSprinting(Player instance, boolean b) {
-        return !Parkourability.get(instance).get(FastRun.class).isDoing();
+    /**
+     * Was {@code @WrapWithCondition} from MixinExtras. Vanilla's {@code @Redirect} does the same job
+     * here without dragging MixinExtras into the Forge 1.20.1 runtime: the only ParCool use of the
+     * extras was this veto, and a redirect can skip the original call just as well.
+     *
+     * <p>Vanilla clears the player's sprint flag on the attacking hit; a FastRun must survive it, so the
+     * call is dropped while the action runs and is passed through untouched otherwise.
+     */
+    @Redirect(method = "attack", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;setSprinting(Z)V"))
+    public void parcool$keepSprintingDuringFastRun(Player instance, boolean sprinting) {
+        Parkourability parkourability = Parkourability.get(instance);
+        if (sprinting == false && parkourability != null && parkourability.get(FastRun.class).isDoing()) {
+            return;
+        }
+        instance.setSprinting(sprinting);
     }
 }

@@ -4,10 +4,7 @@ import com.alrex.parcool.common.stamina.handlers.HungerStaminaHandler;
 import com.alrex.parcool.common.stamina.handlers.InfiniteStaminaHandler;
 import com.alrex.parcool.common.stamina.handlers.ParCoolStaminaHandler;
 import com.alrex.parcool.extern.AdditionalMods;
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.DecoderException;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.function.Function;
@@ -46,10 +43,4 @@ public enum StaminaType {
         }
         return values[ordinal];
     }
-
-    public static final StreamCodec<ByteBuf, StaminaType> STREAM_CODEC = StreamCodec.composite(
-            ByteBufCodecs.VAR_INT,
-            StaminaType::ordinal,
-            StaminaType::byOrdinal
-    );
 }

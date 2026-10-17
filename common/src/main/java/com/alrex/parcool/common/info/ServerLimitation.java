@@ -6,8 +6,7 @@ import com.alrex.parcool.common.stamina.StaminaType;
 import com.alrex.parcool.config.ParCoolConfig;
 import com.alrex.parcool.server.limitation.Limitation;
 import com.alrex.parcool.server.limitation.Limitations;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Arrays;
@@ -15,10 +14,6 @@ import java.util.Collection;
 import java.util.EnumMap;
 
 public abstract class ServerLimitation {
-    public static final StreamCodec<ByteBuf, ServerLimitation> STREAM_CODEC = StreamCodec.of(
-            (buf, limitation) -> limitation.writeTo(buf),
-            ServerLimitation::readFrom
-    );
     private static class Default extends ServerLimitation {
         @Override
         public boolean isPermitted(Class<? extends Action> action) {
@@ -179,7 +174,7 @@ public abstract class ServerLimitation {
         return instance;
     }
 
-    public void writeTo(ByteBuf buffer) {
+    public void writeTo(FriendlyByteBuf buffer) {
         for (Class<? extends Action> action : Actions.LIST) {
             buffer.writeByte((byte) (isPermitted(action) ? 1 : 0));
             buffer.writeInt(getStaminaConsumptionOf(action));
@@ -196,7 +191,7 @@ public abstract class ServerLimitation {
         buffer.writeByte(getForcedStamina().ordinal());
     }
 
-    public static ServerLimitation readFrom(ByteBuf buffer) {
+    public static ServerLimitation readFrom(FriendlyByteBuf buffer) {
         Remote instance = new Remote();
         for (int i = 0; i < instance.actionPossibilities.length; i++) {
             instance.actionPossibilities[i] = buffer.readByte() != 0;

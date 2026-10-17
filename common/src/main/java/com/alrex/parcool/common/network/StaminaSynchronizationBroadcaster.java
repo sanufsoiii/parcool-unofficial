@@ -21,7 +21,7 @@ public class StaminaSynchronizationBroadcaster {
         if (staminaMap.isEmpty()) return;
         var payloads = staminaMap.entrySet().stream().map(entry -> new StaminaPayload(entry.getKey(), entry.getValue())).toList();
         staminaMap = new TreeMap<>();
-        NetworkRegistries.sendToAllPlayers(StaminaBroadcastPayload.CODEC, new StaminaBroadcastPayload(payloads));
+        NetworkRegistries.sendToAllPlayers(StaminaBroadcastPayload.S2C, new StaminaBroadcastPayload(payloads));
     }
 
     private static int syncCoolTime = 10;

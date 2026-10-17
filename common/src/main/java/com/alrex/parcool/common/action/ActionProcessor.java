@@ -239,7 +239,7 @@ public class ActionProcessor {
 	}
 
 	private void onTick$sendSynchronizationPacket(Player player, List<ActionStatePayload.Entry> syncStates) {
-		NetworkRegistries.sendToServer(ActionStatePayload.CODEC, new ActionStatePayload(player.getUUID(), syncStates));
+		NetworkRegistries.sendToServer(ActionStatePayload.C2S, new ActionStatePayload(player.getUUID(), syncStates));
 
 	}
 

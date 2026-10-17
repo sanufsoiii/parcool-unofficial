@@ -22,12 +22,13 @@ public class SettingBooleanConfigScreen extends ParCoolSettingScreen {
         super(titleIn, info, theme);
         currentScreen = 1;
         for (int i = 0; i < booleans.length; i++) {
-            configButtons[i] = Checkbox
-                    .builder(Component.translatable(booleans[i].Path), Minecraft.getInstance().font)
-                    .pos(0, 0)
-                    .selected(booleans[i].get())
-                    .build();
-            configButtons[i].setHeight(Checkbox_Item_Height);
+            // 1.20.1's Checkbox has a public constructor instead of a builder, and its height is
+            // only settable there (AbstractWidget#setHeight does not exist before 1.20.2).
+            configButtons[i] = new Checkbox(
+                    0, 0, 0, Checkbox_Item_Height - 1,
+                    Component.translatable(booleans[i].Path),
+                    booleans[i].get()
+            );
         }
     }
 
@@ -50,7 +51,6 @@ public class SettingBooleanConfigScreen extends ParCoolSettingScreen {
             button.setX(offsetX + 1);
             button.setY(topOffset + Checkbox_Item_Height * i);
             button.setWidth(contentWidth);
-            button.setHeight(Checkbox_Item_Height - 1);
             button.render(graphics, mouseX, mouseY, partialTick);
             graphics.fill(offsetX, button.getY() + button.getHeight(), width - offsetX, button.getY() + button.getHeight() + 1, color.getSubSeparator());
             String comment = booleans[i + topIndex].Comment;
@@ -93,6 +93,6 @@ public class SettingBooleanConfigScreen extends ParCoolSettingScreen {
         if (player == null) return;
         Parkourability parkourability = Parkourability.get(player);
         parkourability.getActionInfo().setClientSetting(ClientSetting.readFromLocalConfig());
-        NetworkRegistries.sendToServer(ClientInformationPayload.CODEC, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
+        NetworkRegistries.sendToServer(ClientInformationPayload.C2S, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
     }
 }

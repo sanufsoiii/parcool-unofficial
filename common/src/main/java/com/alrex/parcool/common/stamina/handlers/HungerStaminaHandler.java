@@ -31,7 +31,7 @@ public class HungerStaminaHandler implements IParCoolStaminaHandler {
     @Override
     public ReadonlyStamina onTick(LocalPlayer player, ReadonlyStamina current) {
         if (consumed > 0) {
-            NetworkRegistries.sendToServer(StaminaProcessOnServerPayload.CODEC, new StaminaProcessOnServerPayload(StaminaType.HUNGER, consumed));
+            NetworkRegistries.sendToServer(StaminaProcessOnServerPayload.C2S, new StaminaProcessOnServerPayload(StaminaType.HUNGER, consumed));
             consumed = 0;
         }
         return new ReadonlyStamina(

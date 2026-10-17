@@ -10,6 +10,7 @@ import com.alrex.parcool.common.action.StaminaConsumeTiming;
 import com.alrex.parcool.common.data.ParCoolDataKeys;
 import com.alrex.parcool.common.data.client.Animation;
 import com.alrex.parcool.common.data.Parkourability;
+import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.common.entity.zipline.ZiplineRopeEntity;
 import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.utilities.BufferUtil;
@@ -147,7 +148,7 @@ public class RideZipline extends Action {
         double oldSpeed = speed;
         Zipline zipline = ridingZipline.getZipline();
 
-        double gravity = player.getAttributeValue(Attributes.GRAVITY);
+        double gravity = PlatformServices.get().getGravity(player);
         slope = zipline.getSlope(currentT);
         speed *= 0.98;
         if (player.isInWater()) speed *= 0.8;

@@ -15,6 +15,6 @@ public class PlayerJoinHandler {
         Parkourability parkourability = Parkourability.get(player);
         if (parkourability == null) return;
         parkourability.getActionInfo().setClientSetting(ClientSetting.readFromLocalConfig());
-        NetworkRegistries.sendToServer(ClientInformationPayload.CODEC, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
+        NetworkRegistries.sendToServer(ClientInformationPayload.C2S, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
     }
 }

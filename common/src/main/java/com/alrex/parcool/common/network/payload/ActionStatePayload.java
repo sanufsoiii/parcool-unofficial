@@ -1,48 +1,39 @@
 package com.alrex.parcool.common.network.payload;
 
 import com.alrex.parcool.ParCool;
-import com.alrex.parcool.common.network.ServerPayloadGuard;
+import com.alrex.parcool.api.event.ParCoolEventBus;
 import com.alrex.parcool.api.unstable.action.ParCoolActionEvent;
 import com.alrex.parcool.common.action.Action;
 import com.alrex.parcool.common.action.Actions;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.network.ActionSynchronizationBroadcaster;
-import io.netty.buffer.ByteBuf;
-import io.netty.handler.codec.DecoderException;
-import com.alrex.parcool.api.event.ParCoolEventBus;
+import com.alrex.parcool.common.network.MessageType;
+import com.alrex.parcool.common.network.ParCoolMessage;
+import com.alrex.parcool.common.network.NetworkRegistries;
+import com.alrex.parcool.common.network.ServerPayloadGuard;
 import dev.architectury.networking.NetworkManager;
-
-import javax.annotation.Nonnull;
+import io.netty.handler.codec.DecoderException;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.codec.StreamCodec;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public record ActionStatePayload(UUID playerID, List<Entry> states) implements CustomPacketPayload {
-    public static final Type<ActionStatePayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.action_state"));
-    public static final StreamCodec<ByteBuf, ActionStatePayload> CODEC = StreamCodec.of(
-            ActionStatePayload::encode,
-            ActionStatePayload::decode
-    );
+public record ActionStatePayload(UUID playerID, List<Entry> states) implements ParCoolMessage {
+    public static final MessageType<ActionStatePayload> S2C
+            = NetworkRegistries.s2c("payload.action_state", ActionStatePayload::read);
+    public static final MessageType<ActionStatePayload> C2S
+            = NetworkRegistries.c2s("payload.action_state", ActionStatePayload::read);
 
-    @Nonnull
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
-    }
-
-    private static void encode(ByteBuf buf, ActionStatePayload payload) {
-        buf.writeLong(payload.playerID().getMostSignificantBits());
-        buf.writeLong(payload.playerID().getLeastSignificantBits());
-        buf.writeInt(payload.states().size());
-        for (var s : payload.states()) {
-            s.encode(buf);
+    public void write(FriendlyByteBuf buf) {
+        buf.writeLong(playerID().getMostSignificantBits());
+        buf.writeLong(playerID().getLeastSignificantBits());
+        buf.writeInt(states().size());
+        for (var s : states()) {
+            s.write(buf);
         }
     }
 
@@ -53,7 +44,7 @@ public record ActionStatePayload(UUID playerID, List<Entry> states) implements C
      */
     public static final int MAX_ENTRIES = 32;
 
-    private static ActionStatePayload decode(ByteBuf buf) {
+    public static ActionStatePayload read(FriendlyByteBuf buf) {
         var id = new UUID(buf.readLong(), buf.readLong());
         int size = buf.readInt();
         if (size < 0 || size > MAX_ENTRIES) {
@@ -61,7 +52,7 @@ public record ActionStatePayload(UUID playerID, List<Entry> states) implements C
         }
         ArrayList<Entry> entries = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            entries.addLast(Entry.decode(buf));
+            entries.add(Entry.read(buf));
         }
         return new ActionStatePayload(id, entries);
     }
@@ -135,7 +126,7 @@ public record ActionStatePayload(UUID playerID, List<Entry> states) implements C
             Normal, Start, Finish;
         }
 
-        private void encode(ByteBuf buf) {
+        private void write(FriendlyByteBuf buf) {
             buf
                     .writeShort(Actions.getIndexOf(action))
                     .writeByte(type().ordinal())
@@ -154,7 +145,7 @@ public record ActionStatePayload(UUID playerID, List<Entry> states) implements C
          */
         public static final int MAX_DATA_LENGTH = 4096;
 
-        private static Entry decode(ByteBuf buf) {
+        private static Entry read(FriendlyByteBuf buf) {
             int index = buf.readShort();
             var action = Actions.getByIndex(index);
             if (action == null) {

@@ -1,10 +1,9 @@
 {
   "required": true,
   "package": "com.alrex.parcool.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_17",
   "client": [
     "client.CameraAnglesMixin",
-    "client.ClientPacketListenerMixin",
     "client.ClientWorldMixin",
     "client.GameRendererTickMixin",
     "client.KeyMappingMixin",
@@ -31,6 +30,6 @@
     "common.PlayerForcedPoseMixin",
     "common.PlayerInteractionVisibilityMixin",
     "common.PlayerMixin",
-    "common.PotionBrewingBuilderMixin"
+    "common.PotionBrewingMixin"
   ]
 }

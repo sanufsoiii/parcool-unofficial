@@ -61,7 +61,7 @@ public class PlayerDamageHandler {
 						ParCoolConfig.Client.Doubles.LowestFallDistanceForBreakfall,
 						ParCoolConfig.Server.Doubles.MinLowestFallDistanceForBreakfall
 				)) {
-                    NetworkRegistries.sendToPlayer(player, StartBreakfallEventPayload.CODEC, new StartBreakfallEventPayload(justTime));
+                    NetworkRegistries.sendToPlayer(player, StartBreakfallEventPayload.S2C, new StartBreakfallEventPayload(justTime));
 				} else {
 					return;
 				}

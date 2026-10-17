@@ -23,7 +23,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 
 
 public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity> {
-    private static final ResourceLocation TEXTURE_LOCATION = ResourceLocation.parse("textures/entity/arrow");
+    private static final ResourceLocation TEXTURE_LOCATION = new ResourceLocation("textures/entity/arrow");
 
     public ZiplineRopeRenderer(EntityRendererProvider.Context p_i46179_1_) {
         super(p_i46179_1_);
@@ -149,38 +149,38 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity> {
 
             if (i == 0) {
                 vertexConsumer
-                        .addVertex(transformMatrix,
+                        .vertex(transformMatrix,
                                 (midPoint.x() + xBaseOffset + xOffset),
                                 (midPoint.y() - yOffset),
                                 (midPoint.z() + zBaseOffset + zOffset)
                         )
-                        .setColor(r, g, b, 1f)
-                        .setLight(lightLevel);
+                        .color(r, g, b, 1f)
+                        .uv2(lightLevel).endVertex();
                 vertexConsumer
-                        .addVertex(transformMatrix,
+                        .vertex(transformMatrix,
                                 (midPoint.x() - xBaseOffset - xOffset),
                                 (midPoint.y() + yOffset),
                                 (midPoint.z() - zBaseOffset - zOffset)
                         )
-                        .setColor(r, g, b, 1f)
-                        .setLight(lightLevel);
+                        .color(r, g, b, 1f)
+                        .uv2(lightLevel).endVertex();
             } else {
                 vertexConsumer
-                        .addVertex(transformMatrix,
+                        .vertex(transformMatrix,
                                 (midPoint.x() - xBaseOffset - xOffset),
                                 (midPoint.y() + yOffset),
                                 (midPoint.z() - zBaseOffset - zOffset)
                         )
-                        .setColor(r, g, b, 1f)
-                        .setLight(lightLevel);
+                        .color(r, g, b, 1f)
+                        .uv2(lightLevel).endVertex();
                 vertexConsumer
-                        .addVertex(transformMatrix,
+                        .vertex(transformMatrix,
                                 (midPoint.x() + xBaseOffset + xOffset),
                                 (midPoint.y() - yOffset),
                                 (midPoint.z() + zBaseOffset + zOffset)
                         )
-                        .setColor(r, g, b, 1f)
-                        .setLight(lightLevel);
+                        .color(r, g, b, 1f)
+                        .uv2(lightLevel).endVertex();
             }
         }
     }
@@ -235,21 +235,21 @@ public class ZiplineRopeRenderer extends EntityRenderer<ZiplineRopeEntity> {
             );
         }
         for (int i = 0; i < 4; i++) {
-            vertexConsumer.addVertex(transformMatrix, vertexList[i].x(), vertexList[i].y(), vertexList[i].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[(i + 1) % 4].x(), vertexList[(i + 1) % 4].y(), vertexList[(i + 1) % 4].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[4 + (i + 1) % 4].x(), vertexList[4 + (i + 1) % 4].y(), vertexList[4 + (i + 1) % 4].z()).setColor(r, g, b, 1f).setLight(lightLevelList[1]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[4 + i].x(), vertexList[4 + i].y(), vertexList[4 + i].z()).setColor(r, g, b, 1f).setLight(lightLevelList[1]);
+            vertexConsumer.vertex(transformMatrix, vertexList[i].x(), vertexList[i].y(), vertexList[i].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[(i + 1) % 4].x(), vertexList[(i + 1) % 4].y(), vertexList[(i + 1) % 4].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[4 + (i + 1) % 4].x(), vertexList[4 + (i + 1) % 4].y(), vertexList[4 + (i + 1) % 4].z()).color(r, g, b, 1f).uv2(lightLevelList[1]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[4 + i].x(), vertexList[4 + i].y(), vertexList[4 + i].z()).color(r, g, b, 1f).uv2(lightLevelList[1]).endVertex();
         }
         if (currentCount == 0) {
-            vertexConsumer.addVertex(transformMatrix, vertexList[3].x(), vertexList[3].y(), vertexList[3].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[2].x(), vertexList[2].y(), vertexList[2].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[1].x(), vertexList[1].y(), vertexList[1].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[0].x(), vertexList[0].y(), vertexList[0].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
+            vertexConsumer.vertex(transformMatrix, vertexList[3].x(), vertexList[3].y(), vertexList[3].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[2].x(), vertexList[2].y(), vertexList[2].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[1].x(), vertexList[1].y(), vertexList[1].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[0].x(), vertexList[0].y(), vertexList[0].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
         } else if (currentCount == maxCount - 1) {
-            vertexConsumer.addVertex(transformMatrix, vertexList[4].x(), vertexList[4].y(), vertexList[4].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[5].x(), vertexList[5].y(), vertexList[5].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[6].x(), vertexList[6].y(), vertexList[6].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
-            vertexConsumer.addVertex(transformMatrix, vertexList[7].x(), vertexList[7].y(), vertexList[7].z()).setColor(r, g, b, 1f).setLight(lightLevelList[0]);
+            vertexConsumer.vertex(transformMatrix, vertexList[4].x(), vertexList[4].y(), vertexList[4].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[5].x(), vertexList[5].y(), vertexList[5].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[6].x(), vertexList[6].y(), vertexList[6].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
+            vertexConsumer.vertex(transformMatrix, vertexList[7].x(), vertexList[7].y(), vertexList[7].z()).color(r, g, b, 1f).uv2(lightLevelList[0]).endVertex();
         }
     }
 }

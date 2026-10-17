@@ -18,7 +18,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.util.FastColor;
-import net.minecraft.core.HolderLookup;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -53,8 +52,10 @@ public class ZiplineHookTileEntity extends BlockEntity {
         if (!level.isClientSide()) {
             connectionEntities.values().forEach((it) -> it.remove(Entity.RemovalReason.DISCARDED));
             itemStacks = getConnectionInfo().values().stream().map(it -> {
-                ItemStack stack = new ItemStack(Items.ZIPLINE_ROPE::get);
-                ZiplineRopeItem.setColor(stack, FastColor.ARGB32.color(0xFF, it.getColor()));
+                ItemStack stack = new ItemStack(Items.ZIPLINE_ROPE.get());
+                // ARGB32.color's two-argument (opaque) overload does not exist on 1.20.1, so the
+                // stored RGB is promoted to opaque explicitly.
+                ZiplineRopeItem.setColor(stack, 0xFF000000 | (it.getColor() & 0xFFFFFF));
                 return stack;
             }).collect(Collectors.toList());
         }
@@ -180,31 +181,29 @@ public class ZiplineHookTileEntity extends BlockEntity {
         }
     }
 
+    // 1.20.1 signatures: BlockEntity#saveAdditional(CompoundTag) and BlockEntity#load(CompoundTag),
+    // both without the HolderLookup.Provider that 1.20.5 added. `load` is also what vanilla's
+    // default `handleUpdateTag` calls, so the disk load and the client sync share this one hook -
+    // which is why no separate handleUpdateTag override is needed here.
     @Override
-    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
         saveTo(tag);
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    public void load(CompoundTag tag) {
+        super.load(tag);
         restoreFrom(tag);
     }
 
     @Nonnull
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
-        var nbt = super.getUpdateTag(registries);
+    public CompoundTag getUpdateTag() {
+        var nbt = super.getUpdateTag();
         saveTo(nbt);
         return nbt;
     }
-
-    /**
-     * Was {@code handleUpdateTag(CompoundTag, HolderLookup.Provider)}, a NeoForge addition. Vanilla
-     * routes both the disk load and the client sync through {@link #loadAdditional}, so the restore
-     * hook lives there.
-     */
 
     public static void tick(Level level, BlockPos pos, BlockState state, BlockEntity entity) {
         if (!(entity instanceof ZiplineHookTileEntity self)) return;

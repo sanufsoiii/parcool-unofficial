@@ -23,9 +23,9 @@ import javax.annotation.Nullable;
 /**
  * Fabric implementation of {@link ParCoolPlatform}.
  *
- * <p>Paraglider, EpicFight and BetterThirdPerson have no 1.21.1 Fabric build, so their hooks report
+ * <p>Paraglider, EpicFight and BetterThirdPerson have no 1.20.1 Fabric build, so their hooks report
  * "absent" and ParCool falls back to its own stamina and camera behaviour — exactly as it does when
- * the mod is not installed at all. The swim speed attribute is NeoForge-only, so FastSwim's
+ * the mod is not installed at all. The swim speed attribute is Forge-only, so FastSwim's
  * server-side speed bonus is a no-op here.
  */
 public class FabricParCoolPlatform implements ParCoolPlatform {
@@ -36,13 +36,23 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
         return null;
     }
 
+    /**
+     * Vanilla 1.20.1 has no gravity attribute - {@code LivingEntity} applies the fixed
+     * {@code DEFAULT_BASE_GRAVITY} - so {@code ParCoolPlatform#getGravity} falls back to that constant.
+     */
+    @Override
+    public AttributeInstance getGravityAttribute(Player player) {
+        return null;
+    }
+
     @Override
     @Nullable
     public DamageSource createDamageSource(Player player, ResourceKey<DamageType> type) {
-        // Vanilla 1.21.1 has no Level#damageSources(); DamageSource takes the DamageType directly.
+        // Vanilla 1.20.1 has no Level#damageSources(); DamageSource takes the DamageType holder, which
+        // has to be resolved out of the level's registry access by hand.
         Holder<DamageType> holder = player.level().registryAccess()
-                .lookupOrThrow(Registries.DAMAGE_TYPE)
-                .getOrThrow(type);
+                .registryOrThrow(Registries.DAMAGE_TYPE)
+                .getHolderOrThrow(type);
         return new DamageSource(holder);
     }
 
@@ -59,19 +69,9 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
 
     @Override
     public void setForcedPose(Player player, @Nullable Pose pose) {
-        // Vanilla 1.21.1 has no forced-pose concept; the mixin re-adds NeoForge's one, without which
+        // Vanilla 1.20.1 has no forced-pose concept; the mixin re-adds Forge's one, without which
         // Crawl/Slide cannot hold Pose.SWIMMING and Entity#isVisuallyCrawling() never reports true.
         ((IPlayerForcedPose) player).parcool$setForcedPose(pose);
-    }
-
-    /** Single instance: the Fabric implementation de-duplicates registrations per payload class,
-     *  which only works if the same object is returned for the whole mod lifetime. */
-    private static final com.alrex.parcool.platform.ParCoolNetwork NETWORK =
-            new com.alrex.parcool.platform.FabricParCoolNetwork();
-
-    @Override
-    public com.alrex.parcool.platform.ParCoolNetwork getNetwork() {
-        return NETWORK;
     }
 
     @Override

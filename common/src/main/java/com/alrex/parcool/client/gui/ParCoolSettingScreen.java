@@ -48,8 +48,9 @@ public abstract class ParCoolSettingScreen extends Screen {
 
 	@Override
 	public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float p_230430_4_) {
+		// 1.20.1's Screen#render already calls renderBackground (the themed fill below) before the
+		// widgets, which is the same order the 1.21.1 tree had to force by hand.
 		super.render(graphics, mouseX, mouseY, p_230430_4_);
-		renderBackground(graphics, mouseX, mouseY, p_230430_4_);
 		int topBarHeight = font.lineHeight * 2;
         int topBarItemWidth = (int) (1.2 * Arrays.stream(screenList).map(it -> font.width(it.title)).max(Integer::compareTo).orElse(0));
         // Clamped so the leftmost tab cannot be pushed off a narrow window: the bar is right-aligned, and
@@ -123,7 +124,7 @@ public abstract class ParCoolSettingScreen extends Screen {
 	}
 
 	@Override
-	public void renderBackground(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+	public void renderBackground(@Nonnull GuiGraphics graphics) {
 		graphics.fill(0, 0, this.width, this.height, color.getBackground());
 	}
 
@@ -156,11 +157,8 @@ public abstract class ParCoolSettingScreen extends Screen {
 		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
+	// 1.20.1 takes a single scroll delta; the scrollX/scrollY split arrives in 1.20.5.
 	@Override
-	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		return mouseScrolled(mouseX, mouseY, scrollY);
-	}
-
 	public boolean mouseScrolled(double x, double y, double value) {
         int scroll = (int) -Math.signum(value);
         if (scroll <= 0 || isDownScrollable()) {

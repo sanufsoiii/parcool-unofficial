@@ -202,11 +202,11 @@ public class ZiplineRopeEntity extends net.minecraft.world.entity.Entity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        builder.define(DATA_START_POS, BlockPos.ZERO);
-        builder.define(DATA_END_POS, BlockPos.ZERO);
-        builder.define(DATA_COLOR, ZiplineRopeItem.DEFAULT_COLOR);
-        builder.define(DATA_ZIP_TYPE, ZiplineType.STANDARD.ordinal());
+    protected void defineSynchedData() {
+        getEntityData().define(DATA_START_POS, BlockPos.ZERO);
+        getEntityData().define(DATA_END_POS, BlockPos.ZERO);
+        getEntityData().define(DATA_COLOR, ZiplineRopeItem.DEFAULT_COLOR);
+        getEntityData().define(DATA_ZIP_TYPE, ZiplineType.STANDARD.ordinal());
     }
 
     @Override

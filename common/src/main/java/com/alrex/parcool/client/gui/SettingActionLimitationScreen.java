@@ -29,12 +29,12 @@ public class SettingActionLimitationScreen extends ParCoolSettingScreen {
         currentScreen = 0;
         for (int i = 0; i < actionList.length; i++) {
             actionList[i] = new ActionConfigSet(Actions.getByIndex(i), info);
-            actionButtons[i] = Checkbox
-                    .builder(Component.literal(actionList[i].name), Minecraft.getInstance().font)
-                    .selected(actionList[i].get())
-                    .pos(0, 0)
-                    .build();
-            actionButtons[i].setHeight(Checkbox_Item_Height);
+            // Height is a constructor argument on 1.20.1 (no Checkbox#builder, no setHeight).
+            actionButtons[i] = new Checkbox(
+                    0, 0, 0, Checkbox_Item_Height - 1,
+                    Component.literal(actionList[i].name),
+                    actionList[i].get()
+            );
         }
     }
 
@@ -67,7 +67,6 @@ public class SettingActionLimitationScreen extends ParCoolSettingScreen {
             button.setX(offsetX + 1);
             button.setY(contentOffsetY + Checkbox_Item_Height * i);
             button.setWidth(nameColumnWidth - 5);
-            button.setHeight(Checkbox_Item_Height - 1);
             button.render(graphics, mouseX, mouseY, partialTick);
             graphics.fill(offsetX, button.getY() + button.getHeight(), width - offsetX, button.getY() + button.getHeight() + 1, color.getSubSeparator());
             int rowY = contentOffsetY + Checkbox_Item_Height * i + Checkbox_Item_Height / 2;
@@ -108,7 +107,7 @@ public class SettingActionLimitationScreen extends ParCoolSettingScreen {
         if (player == null) return;
         Parkourability parkourability = Parkourability.get(player);
         parkourability.getActionInfo().setClientSetting(ClientSetting.readFromLocalConfig());
-        NetworkRegistries.sendToServer(ClientInformationPayload.CODEC, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
+        NetworkRegistries.sendToServer(ClientInformationPayload.C2S, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
     }
 
     private static class ActionConfigSet {

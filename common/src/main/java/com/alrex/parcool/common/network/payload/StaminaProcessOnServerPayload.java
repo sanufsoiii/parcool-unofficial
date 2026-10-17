@@ -1,33 +1,26 @@
 package com.alrex.parcool.common.network.payload;
 
 import com.alrex.parcool.ParCool;
+import com.alrex.parcool.common.network.MessageType;
+import com.alrex.parcool.common.network.ParCoolMessage;
+import com.alrex.parcool.common.network.NetworkRegistries;
 import com.alrex.parcool.common.network.ServerPayloadGuard;
 import com.alrex.parcool.common.stamina.StaminaType;
-import io.netty.buffer.ByteBuf;
 import dev.architectury.networking.NetworkManager;
-
-import javax.annotation.Nonnull;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 
-public record StaminaProcessOnServerPayload(StaminaType stamina, int value) implements CustomPacketPayload {
-    public static final Type<StaminaProcessOnServerPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.custom_stamina"));
-    public static final StreamCodec<ByteBuf, StaminaProcessOnServerPayload> CODEC = StreamCodec.composite(
-            StaminaType.STREAM_CODEC,
-            StaminaProcessOnServerPayload::stamina,
-            ByteBufCodecs.VAR_INT,
-            StaminaProcessOnServerPayload::value,
-            StaminaProcessOnServerPayload::new
-    );
+public record StaminaProcessOnServerPayload(StaminaType stamina, int value) implements ParCoolMessage {
+    public static final MessageType<StaminaProcessOnServerPayload> C2S
+            = NetworkRegistries.c2s("payload.custom_stamina", StaminaProcessOnServerPayload::read);
 
-    @Nonnull
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+    public void write(FriendlyByteBuf buf) {
+        buf.writeVarInt(stamina().ordinal());
+        buf.writeVarInt(value());
+    }
+
+    public static StaminaProcessOnServerPayload read(FriendlyByteBuf buf) {
+        return new StaminaProcessOnServerPayload(StaminaType.byOrdinal(buf.readVarInt()), buf.readVarInt());
     }
 
     public static void handleClient(StaminaProcessOnServerPayload payload, NetworkManager.PacketContext context) {

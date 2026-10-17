@@ -40,7 +40,7 @@ public class EnableOrDisableParCoolHandler {
             Parkourability parkourability = Parkourability.get(player);
             if (parkourability == null) return;
             parkourability.getActionInfo().setClientSetting(ClientSetting.readFromLocalConfig());
-            NetworkRegistries.sendToServer(ClientInformationPayload.CODEC, new ClientInformationPayload(player.getUUID(), false, parkourability.getClientInfo()));
+            NetworkRegistries.sendToServer(ClientInformationPayload.C2S, new ClientInformationPayload(player.getUUID(), false, parkourability.getClientInfo()));
             player.displayClientMessage(Component.translatable(currentStatus ? "parcool.message.enabled" : "parcool.message.disabled"), true);
             if (currentStatus) {
                 player.playSound(SoundEvents.PARCOOL_ENABLE.get(), 1.0f, 1.0f);

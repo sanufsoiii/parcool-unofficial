@@ -4,30 +4,33 @@ import com.alrex.parcool.common.item.Items;
 import com.alrex.parcool.common.item.recipe.Recipes;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
 import javax.annotation.Nonnull;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.inventory.CraftingContainer;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CustomRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
 import net.minecraft.world.level.Level;
 import net.minecraft.util.Mth;
 import net.minecraft.util.FastColor;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.world.item.crafting.CraftingBookCategory;
-import net.minecraft.world.item.crafting.CraftingInput;
-import java.util.LinkedList;
 
 public class ZiplineRopeDyeRecipe extends CustomRecipe {
 
-    public ZiplineRopeDyeRecipe(CraftingBookCategory p_252125_) {
-        super(p_252125_);
+    // 1.20.1 recipes carry their own id and category: CustomRecipe(ResourceLocation, CraftingBookCategory),
+    // which is what SimpleCraftingRecipeSerializer's Factory constructs.
+    public ZiplineRopeDyeRecipe(ResourceLocation id, CraftingBookCategory category) {
+        super(id, category);
     }
 
     @Override
-    public boolean matches(@Nonnull CraftingInput input, @Nonnull Level level) {
+    public boolean matches(@Nonnull CraftingContainer input, @Nonnull Level level) {
         boolean ziplineRopeFound = false;
         boolean dyeItemFound = false;
-        for (int i = 0; i < input.size(); i++) {
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack stack = input.getItem(i);
             if (stack.getItem().equals(Items.ZIPLINE_ROPE.get())) {
                 if (ziplineRopeFound) return false;
@@ -43,10 +46,10 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
 
     @Nonnull
     @Override
-    public ItemStack assemble(@Nonnull CraftingInput input, @Nonnull HolderLookup.Provider provider) {
+    public ItemStack assemble(CraftingContainer input, @Nonnull RegistryAccess registryAccess) {
         ItemStack ziplineRope = null;
-        LinkedList<DyeItem> dyeItems = new LinkedList<>();
-        for (int i = 0; i < input.size(); i++) {
+        java.util.LinkedList<DyeItem> dyeItems = new java.util.LinkedList<>();
+        for (int i = 0; i < input.getContainerSize(); i++) {
             ItemStack stack = input.getItem(i);
             Item item = stack.getItem();
             if (item instanceof ZiplineRopeItem) {
@@ -58,15 +61,17 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
             }
         }
         if (ziplineRope == null || dyeItems.isEmpty()) return ItemStack.EMPTY;
-        ItemStack resultZiplineRope = new ItemStack(Items.ZIPLINE_ROPE::get);
-        resultZiplineRope.applyComponents(resultZiplineRope.getComponents());
+        ItemStack resultZiplineRope = new ItemStack(Items.ZIPLINE_ROPE.get());
+        // Carry the bound hook and the previous colour over before averaging the new dye in: without
+        // this the recipe would silently clear both.
+        resultZiplineRope.setTag(ziplineRope.getTag());
         int r = 0, g = 0, b = 0;
         int dyeSize = dyeItems.size();
         for (DyeItem dyeItem : dyeItems) {
-            int color = dyeItem.getDyeColor().getTextureDiffuseColor();
-            r += FastColor.ARGB32.red(color);
-            g += FastColor.ARGB32.green(color);
-            b += FastColor.ARGB32.blue(color);
+            float[] color = dyeItem.getDyeColor().getTextureDiffuseColors();
+            r += (int) (color[0] * 255f);
+            g += (int) (color[1] * 255f);
+            b += (int) (color[2] * 255f);
         }
         if (ZiplineRopeItem.hasCustomColor(resultZiplineRope)) {
             dyeSize++;
@@ -78,7 +83,10 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
         r = Mth.clamp(r / dyeSize, 0, 0xFF);
         g = Mth.clamp(g / dyeSize, 0, 0xFF);
         b = Mth.clamp(b / dyeSize, 0, 0xFF);
-        ZiplineRopeItem.setColor(resultZiplineRope, FastColor.ARGB32.color(r, g, b));
+        // FastColor.ARGB32.color has no single-argument (alpha=opaque) overload on 1.20.1 - only the
+        // four-argument one - so the alpha is explicit. A colour without alpha is what makes upstream's
+        // rope default render transparent through ItemColor.
+        ZiplineRopeItem.setColor(resultZiplineRope, FastColor.ARGB32.color(0xFF, r, g, b));
         return resultZiplineRope;
     }
 

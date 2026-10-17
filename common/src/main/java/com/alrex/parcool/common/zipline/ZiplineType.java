@@ -21,8 +21,18 @@ public enum ZiplineType {
         return Component.translatable(translationID);
     }
 
-    public Zipline getZipline(Vec3 point1, Vec3 point2) {
-        if (this == STRAIGHT) {
+    /**
+     * Resolves a rope's stored type. The value comes out of the stack's NBT, which a hand-edited or
+     * downgraded item can put anything into - upstream indexed {@code values()} with it directly, so a
+     * negative byte (or any value with a matching negative modulo) was an
+     * ArrayIndexOutOfBoundsException thrown from the tooltip renderer.
+     */
+    public static ZiplineType byOrdinal(int ordinal) {
+        if (ordinal < 0 || ordinal >= values().length) return STRAIGHT;
+        return values()[ordinal];
+    }
+
+    public Zipline getZipline(Vec3 point1, Vec3 point2) {        if (this == STRAIGHT) {
             return new StraightZipline(point1, point2);
         } else if (this == STANDARD) {
             if (Math.abs(point1.y() - point2.y()) < 0.0001)

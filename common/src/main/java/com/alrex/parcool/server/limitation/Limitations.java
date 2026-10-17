@@ -83,13 +83,13 @@ public class Limitations {
     public static void update(ServerPlayer player) {
         Parkourability parkourability = Parkourability.get(player);
         parkourability.getActionInfo().setServerLimitation(ServerLimitation.get(player));
-        NetworkRegistries.sendToPlayer(player, LimitationPayload.CODEC, new LimitationPayload(parkourability.getActionInfo().getServerLimitation()));
+        NetworkRegistries.sendToPlayer(player, LimitationPayload.S2C, new LimitationPayload(parkourability.getActionInfo().getServerLimitation()));
     }
 
     public static void updateOnlyLimitation(ServerPlayer player) {
         Parkourability parkourability = Parkourability.get(player);
         parkourability.getActionInfo().setServerLimitation(ServerLimitation.get(player));
-        NetworkRegistries.sendToPlayer(player, LimitationPayload.CODEC, new LimitationPayload(parkourability.getActionInfo().getServerLimitation()));
+        NetworkRegistries.sendToPlayer(player, LimitationPayload.S2C, new LimitationPayload(parkourability.getActionInfo().getServerLimitation()));
     }
 
     public static SortedMap<Limitation.ID, Limitation> load(UUID playerID) {

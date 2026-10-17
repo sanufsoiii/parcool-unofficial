@@ -1,37 +1,35 @@
 package com.alrex.parcool.common.network.payload;
 
 import com.alrex.parcool.ParCool;
-import com.alrex.parcool.common.network.ServerPayloadGuard;
 import com.alrex.parcool.common.data.ParCoolDataKeys;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.data.ReadonlyStamina;
+import com.alrex.parcool.common.network.MessageType;
+import com.alrex.parcool.common.network.ParCoolMessage;
+import com.alrex.parcool.common.network.NetworkRegistries;
+import com.alrex.parcool.common.network.ServerPayloadGuard;
 import com.alrex.parcool.common.network.StaminaSynchronizationBroadcaster;
-import io.netty.buffer.ByteBuf;
 import dev.architectury.networking.NetworkManager;
-
-import javax.annotation.Nonnull;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.UUIDUtil;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.network.codec.StreamCodec;
+
 import java.util.UUID;
 
-public record StaminaPayload(UUID playerID, ReadonlyStamina stamina) implements CustomPacketPayload {
-    public static final Type<StaminaPayload> TYPE
-            = new Type<>(ResourceLocation.fromNamespaceAndPath(ParCool.MOD_ID, "payload.stamina"));
-    public static final StreamCodec<ByteBuf, StaminaPayload> CODEC = StreamCodec.composite(
-            UUIDUtil.STREAM_CODEC,
-            StaminaPayload::playerID,
-            ReadonlyStamina.STREAM_CODEC,
-            StaminaPayload::stamina,
-            StaminaPayload::new
-    );
+public record StaminaPayload(UUID playerID, ReadonlyStamina stamina) implements ParCoolMessage {
+    public static final MessageType<StaminaPayload> S2C
+            = NetworkRegistries.s2c("payload.stamina", StaminaPayload::read);
+    public static final MessageType<StaminaPayload> C2S
+            = NetworkRegistries.c2s("payload.stamina", StaminaPayload::read);
 
-    @Nonnull
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+    public void write(FriendlyByteBuf buf) {
+        // The UUID used to travel as two VAR_LONGs on 1.21.1; FriendlyByteBuf#writeUUID is the same
+        // varlong pair, so the wire contents are unchanged.
+        buf.writeUUID(playerID());
+        stamina().writeTo(buf);
+    }
+
+    public static StaminaPayload read(FriendlyByteBuf buf) {
+        return new StaminaPayload(buf.readUUID(), ReadonlyStamina.readFrom(buf));
     }
 
     /** Client side: apply the server-broadcast stamina of the named player. */

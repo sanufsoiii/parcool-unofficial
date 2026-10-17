@@ -4,28 +4,25 @@ import com.alrex.parcool.api.SoundEvents;
 import com.alrex.parcool.common.block.zipline.ZiplineHookBlock;
 import com.alrex.parcool.common.block.zipline.ZiplineHookTileEntity;
 import com.alrex.parcool.common.block.zipline.ZiplineInfo;
-import com.alrex.parcool.common.item.DataComponents;
-import com.alrex.parcool.common.item.component.ZiplineColorComponent;
-import com.alrex.parcool.common.item.component.ZiplinePositionComponent;
-import com.alrex.parcool.common.item.component.ZiplineTensionComponent;
 import com.alrex.parcool.common.zipline.Zipline;
 import com.alrex.parcool.common.zipline.ZiplineType;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.color.item.ItemColor;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.client.color.item.ItemColor;
-import net.minecraft.util.Mth;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class ZiplineRopeItem extends Item {
@@ -40,38 +37,35 @@ public class ZiplineRopeItem extends Item {
         super(p_i48487_1_);
     }
 
+    /**
+     * 1.20.1 stores the rope state in the stack's NBT instead of 1.21's data components; the keys are
+     * the ones upstream uses on this Minecraft version ({@code Tile_X}/{@code Tile_Y}/{@code Tile_Z},
+     * {@code color}, {@code zipline_type}), so a world upgraded from the original Forge ParCool keeps
+     * its ropes' bound hook and colour.
+     *
+     * <p>The alpha is set here, unlike upstream's {@code 0x4C7FE6}: {@code ItemColor#getColor} returns
+     * ARGB, so an upstream-dyed rope renders fully transparent.
+     */
     public static final int DEFAULT_COLOR = 0xFF4C7FE6;
-    private static final DecimalFormat PERCENT_FORMATTER;
 
-    static {
-        DecimalFormatSymbols decimalFormatSymbols = new DecimalFormatSymbols();
-        decimalFormatSymbols.setGroupingSeparator(' ');
-        PERCENT_FORMATTER = new DecimalFormat("##0.0", decimalFormatSymbols);
-    }
+    private static final String TAG_POS_X = "Tile_X";
+    private static final String TAG_POS_Y = "Tile_Y";
+    private static final String TAG_POS_Z = "Tile_Z";
+    private static final String TAG_COLOR = "color";
+    private static final String TAG_ZIPLINE_TYPE = "zipline_type";
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nonnull TooltipContext context, @Nonnull List<Component> lines, @Nonnull TooltipFlag tooltipFlag) {
-        var posComponent = stack.getComponents().get(DataComponents.ZIPLINE_POSITION.get());
+    public void appendHoverText(ItemStack stack, @Nullable Level level, @Nonnull List<Component> lines, @Nonnull TooltipFlag tooltipFlag) {
+        BlockPos pos = getBlockPosition(stack);
 
-        if (posComponent != null) {
-            lines.add(Component.translatable("parcool.gui.text.zipline.bind_pos", posComponent.pos().getX() + ", " + posComponent.pos().getY() + ", " + posComponent.pos().getZ()).withStyle(ChatFormatting.YELLOW));
+        if (pos != null) {
+            lines.add(Component.translatable("parcool.gui.text.zipline.bind_pos", pos.getX() + ", " + pos.getY() + ", " + pos.getZ()).withStyle(ChatFormatting.YELLOW));
         } else {
             lines.add(Component.translatable("parcool.gui.text.zipline.not_bound").withStyle(ChatFormatting.DARK_GRAY));
         }
         lines.add(Component.empty());
         lines.add(Component.translatable("parcool.gui.text.zipline.tension", getZiplineType(stack).getTranslationName()).withStyle(ChatFormatting.GRAY));
         if (hasCustomColor(stack)) {
-            /*
-            int color = getColor(stack);
-            DecimalFormat format = PERCENT_FORMATTER;
-            float r = 100f * ((color & 0xFF0000) >> 16) / 255f;
-            float g = 100f * ((color & 0x00FF00) >> 8) / 255f;
-            float b = 100f * (color & 0x0000FF) / 255f;
-            lines.add(new StringTextComponent(""));
-            lines.add(new StringTextComponent("R : " + format.format(r) + "%").withStyle(TextFormatting.RED));
-            lines.add(new StringTextComponent("G : " + format.format(g) + "%").withStyle(TextFormatting.GREEN));
-            lines.add(new StringTextComponent("B : " + format.format(b) + "%").withStyle(TextFormatting.BLUE));
-             */
             lines.add(Component.translatable("parcool.gui.text.zipline.colored").withStyle(ChatFormatting.BLUE));
         }
     }
@@ -187,52 +181,72 @@ public class ZiplineRopeItem extends Item {
     }
 
     public static void setBlockPosition(ItemStack stack, BlockPos pos) {
-        stack.set(DataComponents.ZIPLINE_POSITION.get(), new ZiplinePositionComponent(pos));
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putInt(TAG_POS_X, pos.getX());
+        tag.putInt(TAG_POS_Y, pos.getY());
+        tag.putInt(TAG_POS_Z, pos.getZ());
     }
 
     public static void removeBlockPosition(ItemStack stack) {
-        stack.remove(DataComponents.ZIPLINE_POSITION.get());
+        CompoundTag tag = stack.getTag();
+        if (tag == null) return;
+        tag.remove(TAG_POS_X);
+        tag.remove(TAG_POS_Y);
+        tag.remove(TAG_POS_Z);
     }
 
     public static boolean hasBlockPosition(ItemStack stack) {
-        return stack.has(DataComponents.ZIPLINE_POSITION.get());
+        CompoundTag tag = stack.getTag();
+        return tag != null && tag.contains(TAG_POS_X) && tag.contains(TAG_POS_Y) && tag.contains(TAG_POS_Z);
     }
 
     @Nullable
     public static BlockPos getBlockPosition(ItemStack stack) {
-        var posComp = stack.getComponents().get(DataComponents.ZIPLINE_POSITION.get());
-        return posComp == null ? null : posComp.pos();
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains(TAG_POS_X) || !tag.contains(TAG_POS_Y) || !tag.contains(TAG_POS_Z)) {
+            return null;
+        }
+        return new BlockPos(tag.getInt(TAG_POS_X), tag.getInt(TAG_POS_Y), tag.getInt(TAG_POS_Z));
     }
 
     public static void setColor(ItemStack stack, int color) {
+        CompoundTag tag = stack.getOrCreateTag();
         if (color != DEFAULT_COLOR) {
-            stack.set(DataComponents.ZIPLINE_COLOR.get(), new ZiplineColorComponent(color));
-        }else {
-            stack.remove(DataComponents.ZIPLINE_COLOR.get());
+            tag.putInt(TAG_COLOR, color);
+        } else {
+            tag.remove(TAG_COLOR);
         }
     }
 
     public static int getColor(ItemStack stack) {
-        var colorComp = stack.get(DataComponents.ZIPLINE_COLOR.get());
-        return colorComp == null ? DEFAULT_COLOR : colorComp.color();
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains(TAG_COLOR)) {
+            return DEFAULT_COLOR;
+        }
+        return tag.getInt(TAG_COLOR);
     }
 
     public static boolean hasCustomColor(ItemStack stack) {
-        var colorComp = stack.get(DataComponents.ZIPLINE_COLOR.get());
-        return colorComp != null && colorComp.color() != DEFAULT_COLOR;
+        CompoundTag tag = stack.getTag();
+        return tag != null && tag.contains(TAG_COLOR) && tag.getInt(TAG_COLOR) != DEFAULT_COLOR;
     }
 
     public static ZiplineType getZiplineType(ItemStack stack) {
-        var tensionComp = stack.get(DataComponents.ZIPLINE_TENSION.get());
-        return tensionComp == null ? ZiplineType.STANDARD : tensionComp.type();
+        CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains(TAG_ZIPLINE_TYPE)) {
+            return ZiplineType.STANDARD;
+        }
+        // Read back defensively: the byte is written by this mod but a hand-edited or downgraded stack
+        // can hold any value, and an ordinal outside the enum would be an ArrayIndexOutOfBoundsException
+        // from the tooltip renderer.
+        return ZiplineType.byOrdinal(tag.getByte(TAG_ZIPLINE_TYPE));
     }
 
     public static void changeZiplineType(ItemStack stack) {
-        var currentType = getZiplineType(stack);
         setZiplineType(stack, ZiplineType.values()[(getZiplineType(stack).ordinal() + 1) % ZiplineType.values().length]);
     }
 
     public static void setZiplineType(ItemStack stack, ZiplineType type) {
-        stack.set(DataComponents.ZIPLINE_TENSION.get(), new ZiplineTensionComponent(type));
+        stack.getOrCreateTag().putByte(TAG_ZIPLINE_TYPE, (byte) type.ordinal());
     }
 }

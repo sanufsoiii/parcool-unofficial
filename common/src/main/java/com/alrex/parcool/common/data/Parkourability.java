@@ -129,7 +129,7 @@ public class Parkourability {
 	 */
 	public void trySyncLimitation(Player player) {
 		synchronizeTrialCount++;
-		NetworkRegistries.sendToServer(ClientInformationPayload.CODEC, new ClientInformationPayload(player.getUUID(), true, getClientInfo()));
+		NetworkRegistries.sendToServer(ClientInformationPayload.C2S, new ClientInformationPayload(player.getUUID(), true, getClientInfo()));
 	}
 
 	public int getSynchronizeTrialCount() {

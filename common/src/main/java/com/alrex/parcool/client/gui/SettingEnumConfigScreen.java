@@ -72,7 +72,6 @@ public class SettingEnumConfigScreen extends ParCoolSettingScreen {
             button.setX(width - offsetX - buttonWidth);
             button.setY(topOffset + boxHeight * i);
             button.setWidth(buttonWidth);
-            button.setHeight(20);
             button.render(graphics, mouseX, mouseY, partialTick);
             List<String> path = enumConfigList[i + topIndex].configInstance.getPath();
             graphics.drawString(font, path.get(path.size() - 1), offsetX + 6, button.getY() + 1 + (button.getHeight() - font.lineHeight) / 2, color.getText());
@@ -107,7 +106,7 @@ public class SettingEnumConfigScreen extends ParCoolSettingScreen {
         Parkourability parkourability = Parkourability.get(player);
         parkourability.getActionInfo().setClientSetting(ClientSetting.readFromLocalConfig());
         parkourability.getActionInfo().updateStaminaType(LocalStamina.get(player), player);
-        NetworkRegistries.sendToServer(ClientInformationPayload.CODEC, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
+        NetworkRegistries.sendToServer(ClientInformationPayload.C2S, new ClientInformationPayload(player.getUUID(), true, parkourability.getClientInfo()));
     }
 
     private static class EnumConfigSet<T extends Enum<T>> {
