@@ -14,10 +14,11 @@ import net.minecraft.world.entity.player.Player;
  * Entry point for the optional third-party integrations.
  *
  * <p>Upstream this was a four-valued enum of {@link ModManager}s. Paraglider, EpicFight and
- * BetterThirdPerson only ship NeoForge jars for 1.21.1, so their managers moved to the
- * {@code neoforge} module and are reached through {@link com.alrex.parcool.platform.ParCoolPlatform};
- * on Fabric the platform implementation reports "not installed" and ParCool degrades exactly the way
- * it does when the mod is simply absent. ShoulderSurfing is genuinely multiloader and stays here.
+ * BetterThirdPerson have Forge-only jars for 1.20.1, so their managers moved to the
+ * {@code forge} module and are reached through
+ * {@link com.alrex.parcool.platform.ParCoolPlatform}; on Fabric the platform implementation reports
+ * "not installed" and ParCool degrades exactly the way it does when the mod is simply absent.
+ * ShoulderSurfing is genuinely multiloader and stays here.
  */
 public enum AdditionalMods {
     BETTER_THIRD_PERSON("betterthirdperson"),
@@ -118,6 +119,9 @@ public enum AdditionalMods {
         for (AdditionalMods mod : values()) {
             mod.initModInClient();
         }
+        // Loader-specific subscriptions (Forge: the Paraglider HUD/animation hooks). Upstream never
+        // reached them because only ShoulderSurfing was wired through this enum.
+        PlatformServices.get().initClientIntegrations();
     }
 
     public static void initInDedicatedServer() {

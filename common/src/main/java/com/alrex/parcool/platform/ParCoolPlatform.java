@@ -4,6 +4,8 @@ import com.alrex.parcool.common.action.impl.Dodge;
 import com.alrex.parcool.common.data.Parkourability;
 import com.alrex.parcool.common.stamina.IParCoolStaminaHandler;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
@@ -39,7 +41,7 @@ import javax.annotation.Nullable;
 public interface ParCoolPlatform {
 
     /**
-     * @return the player's {@code neoforgeswim_speed} attribute, or {@code null} on loaders that
+     * @return the player's {@code forge:swim_speed} attribute, or {@code null} on loaders that
      * do not have it.
      */
     @Nullable
@@ -66,15 +68,27 @@ public interface ParCoolPlatform {
     }
 
     /**
+     * Resolves a damage type key into a {@link DamageSource}.
+     *
+     * <p>Neither loader exposes a shortcut on 1.20.1 - vanilla keeps
+     * {@code DamageSources#source(ResourceKey)} private and Forge 1.20.1 adds no replacement - so the
+     * holder is looked up out of the level's registry access here, once, instead of in each loader
+     * implementation.
+     *
      * @return a damage source for the given damage type key, or {@code null} if it cannot be built.
      */
     @Nullable
-    DamageSource createDamageSource(Player player, ResourceKey<DamageType> type);
+    default DamageSource createDamageSource(Player player, ResourceKey<DamageType> type) {
+        Holder<DamageType> holder = player.level().registryAccess()
+                .registryOrThrow(Registries.DAMAGE_TYPE)
+                .getHolderOrThrow(type);
+        return new DamageSource(holder);
+    }
 
     /**
-     * Entity-aware block friction. NeoForge adds {@code BlockState#getFriction(Level, BlockPos, Entity)}
-     * so that, for example, a sneaking player slides less on ice; vanilla only offers the
-     * state-level {@code Block#getFriction()}.
+     * Entity-aware block friction. Forge adds
+     * {@code BlockState#getFriction(LevelReader, BlockPos, Entity)} so that, for example, a sneaking
+     * player slides less on ice; vanilla only offers the state-level {@code Block#getFriction()}.
      */
     float getFriction(BlockState state, Level level, BlockPos pos, @Nullable Entity entity);
 
@@ -88,13 +102,13 @@ public interface ParCoolPlatform {
     void setForcedPose(Player player, @Nullable Pose pose);
 
     // ------------------------------------------------------------------
-    // BetterThirdPerson (NeoForge only)
+    // BetterThirdPerson (Forge only)
     // ------------------------------------------------------------------
 
     boolean isBetterThirdPersonCameraDecoupled();
 
     // ------------------------------------------------------------------
-    // Paraglider (NeoForge only)
+    // Paraglider (Forge only)
     // ------------------------------------------------------------------
 
     IParCoolStaminaHandler newParagliderStaminaHandler(Player player);
@@ -104,7 +118,7 @@ public interface ParCoolPlatform {
     boolean isFallingWithParaglider(Player player);
 
     // ------------------------------------------------------------------
-    // EpicFight (NeoForge only)
+    // EpicFight (Forge only)
     // ------------------------------------------------------------------
 
     IParCoolStaminaHandler newEpicFightStaminaHandler(Player player);
@@ -122,5 +136,16 @@ public interface ParCoolPlatform {
      */
     default Dodge.DodgeDirection handleDodgeCameraRotation(Dodge.DodgeDirection direction) {
         return direction;
+    }
+
+    /**
+     * Lets the loader subscribe its client-side integration hooks. Called once from
+     * {@link com.alrex.parcool.extern.AdditionalMods#initInClient()}.
+     *
+     * <p>Only Forge has anything to do here: its Paraglider integration cancels the ParCool HUD and
+     * the player animations while the glider is out, and those listeners are registered on ParCool's
+     * own event bus rather than on the loader's.
+     */
+    default void initClientIntegrations() {
     }
 }
