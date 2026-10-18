@@ -243,7 +243,11 @@ mismatched jar is rejected with an unknown-payload disconnect.
   putting them on Loom's normal configurations makes Loom try to merge those mappings into
   `:common` and abort with "Mapping source name conflicts detected". Every entry point checks that
   the mod is loaded *and* that its API classes resolve, so an absent integration degrades to
-  ParCool's own stamina/camera behaviour.
+  ParCool's own stamina/camera behaviour. The Forge metadata's `shouldersurfing` range is
+  `[1.20.1,)`: it has to admit the jars that exist for this Minecraft (`1.20.1-4.11.0` is the
+  newest), not the 4.11 API the coupling code is written against, because FML's `ModSorter` turns an
+  installed but out-of-range *optional* dependency into a hard early-loading failure — `[4.11.0,)`
+  would have aborted the boot for exactly the players who have ShoulderSurfing installed.
 * **Forge metadata:** `META-INF/mods.toml` uses the 1.20.1 dependency spelling
   `mandatory = true|false` — Forge 47 rejects a dependency without it
   (`InvalidModFileException: Missing required field mandatory in dependency`), and the newer
