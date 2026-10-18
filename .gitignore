@@ -41,7 +41,7 @@ Thumbs.db
 # to a module's build.gradle would not be, so name the distribution outputs too.
 common/build/libs/
 fabric/build/libs/
-neoforge/build/libs/
+forge/build/libs/
 *.class
 
 # Build logs and pasted game-session dumps. They carry the local path layout, the player name and

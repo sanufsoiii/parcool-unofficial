@@ -325,7 +325,7 @@ Three things about the packaging are load-bearing and are explained at length in
   `transformProductionFabric`** — same reason: the transform runs in "named" mode and would ship
   mojmap bytecode to an intermediary client.
 
-The published copies in `/home/sanufsoii/ports/готовые порты/parcool/` are:
+The two jars are distributed under these names:
 
 ```
 0.1-mc1.20.1fabric-3.4.3.3.jar   # = fabric/build/libs/parcool-1.20.1-3.4.3.3-fabric.jar
