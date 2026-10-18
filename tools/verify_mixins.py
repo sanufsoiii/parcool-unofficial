@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Checks every @Mixin target and every @Inject/@Redirect/@Modify*/@Wrap*/@Accessor/@Invoker/@Shadow
-target under common/src/main/java against the resolved 1.20.6 mojmap jar.
+target under common/src/main/java against the resolved 1.20.2 mojmap jar.
 
 The point of this script is that it must be *able* to fail. A previous port's checker parsed
 annotations with a regex like `\\(([^)]*)\\)`, which silently truncated on the first `)` inside a
@@ -18,10 +18,26 @@ about an entirely broken tree. So:
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 
 JAR = None
+
+
+def _resolve_javap():
+    """`$JAVAP`, else `$JAVA_HOME/bin/javap`, else the `javap` on `PATH`."""
+    candidates = [os.environ.get("JAVAP")]
+    if os.environ.get("JAVA_HOME"):
+        candidates.append(os.path.join(os.environ["JAVA_HOME"], "bin", "javap"))
+    candidates.append(shutil.which("javap"))
+    for candidate in candidates:
+        if candidate and os.path.exists(candidate):
+            return candidate
+    sys.exit("javap not found: install a JDK, or point JAVA_HOME or JAVAP at one")
+
+
+JAVAP = _resolve_javap()
 
 _ENTRIES = set()
 _MEMBERS = {}
@@ -52,7 +68,7 @@ def javap(fqn):
     if fqn in _MEMBERS:
         return _MEMBERS[fqn]
     proc = subprocess.run(
-        ["/usr/lib/jvm/java-17-openjdk/bin/javap", "-cp", JAR, "-p", "-s", fqn],
+        [JAVAP, "-cp", JAR, "-p", "-s", fqn],
         capture_output=True, text=True)
     if proc.returncode != 0:
         _MEMBERS[fqn] = (False, [])
@@ -89,7 +105,7 @@ def has_method_by_name(fqn, name):
 def has_field(fqn, name):
     if fqn in _FIELDS:
         return name in _FIELDS[fqn]
-    proc = subprocess.run(["/usr/lib/jvm/java-17-openjdk/bin/javap", "-cp", JAR, "-p", fqn],
+    proc = subprocess.run([JAVAP, "-cp", JAR, "-p", fqn],
                           capture_output=True, text=True)
     names = set()
     if proc.returncode == 0:
@@ -113,7 +129,7 @@ def supers(fqn, seen=None):
     if fqn in _SUPERS:
         return _SUPERS[fqn]
     seen = seen | {fqn}
-    proc = subprocess.run(["/usr/lib/jvm/java-17-openjdk/bin/javap", "-cp", JAR, "-p", fqn],
+    proc = subprocess.run([JAVAP, "-cp", JAR, "-p", fqn],
                           capture_output=True, text=True)
     direct = []
     if proc.returncode == 0:
@@ -141,7 +157,7 @@ _FIELDDESC = {}
 def _has_field_descriptor(fqn, name, descriptor):
     key = fqn
     if key not in _FIELDDESC:
-        proc = subprocess.run(["/usr/lib/jvm/java-17-openjdk/bin/javap", "-cp", JAR, "-p", "-s", fqn],
+        proc = subprocess.run([JAVAP, "-cp", JAR, "-p", "-s", fqn],
                               capture_output=True, text=True)
         found = set()
         if proc.returncode == 0:
@@ -276,7 +292,7 @@ def check_file(path, report):
         report("%s: %d @Mixin targets, expected 1" % (path, len(targets)))
     for t in targets:
         if not class_exists(t):
-            report("%s: @Mixin target class does not exist in 1.20.6: %s" % (path, t))
+            report("%s: @Mixin target class does not exist in 1.20.2: %s" % (path, t))
     own = targets[0]
     if not class_exists(own):
         return
@@ -365,7 +381,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(PlayerModel.class)
 public abstract class BrokenArity {
-    // right name, WRONG arity: 1.20.6's setupAnim(LivingEntity, float, float, float, float, float)
+    // right name, WRONG arity: 1.20.2's setupAnim(LivingEntity, float, float, float, float, float)
     // takes five floats
     @Inject(method = "setupAnim(Lnet/minecraft/world/entity/LivingEntity;FFFF)V",
             at = @At("HEAD"), cancellable = true)
@@ -424,7 +440,7 @@ def self_test():
 def main():
     global JAR
     if len(sys.argv) < 3:
-        print("usage: verify_mixins.py <1.20.6-mojmap.jar> <source-root>...")
+        print("usage: verify_mixins.py <1.20.2-mojmap.jar> <source-root>...")
         sys.exit(1)
     JAR = sys.argv[1]
 

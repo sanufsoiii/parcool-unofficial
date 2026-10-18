@@ -236,7 +236,7 @@ required by org.lwjgl.openal.natives` from `net.minecraftforge.bootstrap.Bootstr
 recorded here only so that nobody "restores" the workaround: this tree's launcher is the pre-49 one,
 the run boots without any classpath filtering, and adding the filter would be cargo cult.
 
-## Loom cache traps seen on this machine
+## Loom cache traps seen while porting
 
 * **A remapped architectury jar carrying stub classes.** If `:fabric:runServer` dies inside
   `dev.architectury.registry.registries.RegistrarManager._get` (or
@@ -288,7 +288,7 @@ Three things about the packaging are load-bearing and are explained at length in
   `transformProductionFabric`** — same reason: the transform runs in "named" mode and would ship
   mojmap bytecode to an intermediary client.
 
-The published copies in `/home/sanufsoii/ports/готовые порты/parcool/` are:
+The two jars are distributed under these names:
 
 ```
 0.1-mc1.20.2fabric-3.4.3.3.jar     # = fabric/build/libs/parcool-1.20.2-3.4.3.3-fabric.jar
