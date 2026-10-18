@@ -1,0 +1,252 @@
+plugins {
+	id 'architectury-plugin'
+	id 'dev.architectury.loom'
+}
+
+// architectury-plugin registers :common's `transformProduction*` tasks while evaluating :common, and
+// this module references them below, so :common has to be evaluated first.
+evaluationDependsOn(':common')
+
+version = "${project.minecraft_version}-${project.mod_version}"
+group = project.maven_group
+
+architectury {
+	platformSetupLoomIde()
+	forge()
+}
+
+repositories {
+	maven { url = 'https://maven.blamejared.com' }
+	maven { url = 'https://www.cursemaven.com' }
+	maven { url = 'https://maven.architectury.dev/' }
+	maven { url = 'https://maven.minecraftforge.net/' }
+	mavenCentral()
+}
+
+loom {
+	// The access widener lives in :common resources; Loom needs a concrete file to apply it.
+	accessWidenerPath = project(':common').file('src/main/resources/parcool.accesswidener')
+
+	forge {
+		// Forge has no access widener concept. Loom converts the shared AW into an access transformer
+		// (`META-INF/accesstransformer.cfg`) and embeds it in this module's remapJar; FML applies every
+		// such file it finds inside a mod jar, so the widened members exist in production too.
+		convertAccessWideners = true
+		// Loom only auto-converts the AW given through `accessWidenerPath`; listing it again keeps
+		// `extraAccessWideners` non-empty, which is what the conversion task keys on for the
+		// production jar.
+		extraAccessWideners.add loom.accessWidenerPath.get().asFile.name
+	}
+
+	mixin {
+		defaultRefmapName = 'parcool-forge-refmap.json'
+		// Static remapping, same reasoning as :common/build.gradle. On Forge the target namespace is
+		// SRG, so this is what rewrites the module's few @Mixin references (there are none today) and
+		// -- more importantly -- leaves the already-SRG :common transform artifact alone.
+		useLegacyMixinAp = false
+	}
+
+	mods {
+		"${project.mod_id}" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+configurations {
+	common
+	// Don't use the shadow plugin: it *excludes* files instead of merging them, and the explicit
+	// distJar below already spells out exactly which artifact contributes what.
+	//
+	// `common` feeds the compile classpath only. The dev run must not see a second :common classpath
+	// entry - see the :common artifact note below - so neither runtimeClasspath nor developmentForge
+	// extends from it; the dev run reads the same classes from this module's own resources instead.
+	compileClasspath.extendsFrom common
+
+	// The optional integration mods ship Forge jars (SRG member names) built with their own mappings.
+	// Putting them on Loom's compile/runtime configurations makes Loom merge those mappings into
+	// :common and abort with "Mapping source name conflicts detected", so they live in an isolated,
+	// resolvable-only configuration that is appended to this module's compile classpath below.
+	// Class names are identical between SRG and Mojang mappings, and the integrations only expose
+	// their own methods, so compiling against the raw SRG jars is safe.
+	parcoolIntegrationsCompile {
+		canBeConsumed = false
+		canBeResolved = true
+	}
+}
+
+dependencies {
+	// Loom needs the vanilla jar and a mapping set even on Forge: it merges the Forge userdev patches
+	// on top of them. Official Mojang mappings everywhere, same as :common and :fabric.
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	forge "net.minecraftforge:forge:${project.forge_version}"
+	modImplementation "dev.architectury:architectury-forge:${project.architectury_api_version}"
+
+	// javac reads ParCool's own classes from the plain named jar (always in sync with :common, and
+	// immune to Loom's stale remap cache); the dev *runtime* reads the :common artifact exploded into
+	// this module's resources (see below). Both are mojmap-named, which is Forge's dev namespace.
+	common(project(path: ':common', configuration: 'namedElements')) { transitive false }
+	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+	compileOnly "com.google.code.gson:gson:2.10.1"
+
+	// The closest builds for every integration. Only Better Third Person and ShoulderSurfing have
+	// releases that name this Minecraft version's neighbourhood at all (Better Third Person 1.9.0 is a 1.20-1.20.4 jar; the
+	// ShoulderSurfing 4.2.1 line was published for 1.20.2-1.20.4), so Paraglider and Epic Fight are
+	// compiled against their newest 1.20 era jars, exactly like the sibling 1.20 tree does. Every
+	// entry point checks isInstalled() *and* that the API classes resolve, so a missing or
+	// mismatched jar makes ParCool fall back to its own stamina and camera behaviour instead of
+	// failing to load. Patchouli is only an optional book dependency and is never referenced from
+	// source.
+	parcoolIntegrationsCompile "curse.maven:paraglider-289240:5046069"        // Paraglider-forge-20.1.3
+	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8049910"        // Epic Fight 20.14.17
+	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:4596768" // Better Third Person 1.9.0 (1.20-1.20.4)
+	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6496631"   // 1.20.1-4.11.0 API
+}
+
+tasks.named('compileJava') {
+	classpath += configurations.parcoolIntegrationsCompile
+}
+
+// Forge 49.0.2 (the newest 1.20.3 build there is) ships bootstrap 2.0.0, whose launcher never asks
+// the `BootstrapClasspathModifier` services to run. The dev classpath fixer that merges Loom's
+// exploded build/classes/java/main + build/resources/main pair into the single mod file FML scans is
+// therefore dead code there, FML's ClasspathLocator claims only the resources directory as the whole
+// `parcool` mod file, and the dev launch dies before Minecraft starts with
+//   File .../forge/build/resources/main constructed 0 mods: [], but had 1 mods specified: [parcool]
+// Forge fixed that in bootstrap 2.1.x (the launcher the 1.20.4 line ships), so the fixed launcher is
+// declared here, the same way the *declared* userdev libraries do. Declaring it - instead of only
+// forcing the resolved version - also matters for Loom itself: ForgeRunsProvider picks the
+// MOD_CLASSES separator from the declared bootstrap-dev version (>= 2.1.4 -> File.pathSeparator,
+// older -> ";", which the fixer's parser never splits on), so a resolved-only override would still
+// hand the fixer an unparsable MOD_CLASSES. Dev-only: bootstrap never reaches the built jars.
+dependencies.add('forgeDependencies', 'net.minecraftforge:bootstrap:2.1.8')
+dependencies.add('forgeDependencies', 'net.minecraftforge:bootstrap-api:2.1.8')
+dependencies.add('forgeDependencies', 'net.minecraftforge:bootstrap-dev:2.1.8')
+
+// The access widener and the mixin config live in :common so both loaders ship the same copy; the
+// Forge module only needs them present in its own output, because mods.toml references them.
+//
+// The whole :common artifact is exploded into this module's own output on purpose. Forge's production
+// runtime is SRG-named (`m_...` on every vanilla member), and the namespace remap is done by *this*
+// module's `remapJar`: Loom remaps the jar it produces, and only what is inside it. A common half that
+// bypassed that step would ship mojmap bytecode - it resolves
+// `net.minecraft.world.entity.player.Player#getAttribute` in a mojmap dev environment and nowhere
+// else, so the first vanilla call aborts the game in production. Keeping the common code, its assets
+// and its mixin annotations inside the remapped jar is also what rewrites the mixin targets to SRG.
+//
+// Loom's Forge pipeline additionally converts the shared access widener it finds here into an access
+// transformer while remapping (it looks the widener up by file name inside the jar, hence the copy;
+// without it `:forge:remapJar` fails with "Could not find AW 'parcool.accesswidener' to convert into
+// AT!"), and the converted transformer replaces it in the remapped jar.
+//
+// The dev run loads exactly the same exploded copy, and here that is the whole point. Forge's
+// BootstrapLauncher refuses two JPMS modules that own the same package, and this mod's own classes
+// already live in `com.alrex.parcool`: a second `:common` classpath entry - architectury's usual
+// `developmentForge.extendsFrom common` - aborts the launcher before the game starts with
+//   java.lang.module.ResolutionException: Module generated_... contains package
+//   com.alrex.parcool.common.action.instant, module parcool exports package com.alrex.parcool
+// (`common` above therefore feeds only the compile classpath.) Putting the classes in a separate
+// source-set output directory does not work either: Loom hands FML just this module's classes and
+// resources directories as the `parcool` mod, so classes living elsewhere stay in the unnamed module
+// and the mod cannot read them (`ClassNotFoundException: com.alrex.parcool.ParCool`). The resources
+// copy is what keeps every ParCool class inside the one `parcool` module - the same single-module
+// layout the shipped jar has - so both the dev run and the remap below see one consistent set.
+def commonArtifactFile = project(':common').tasks.named('transformProductionForge').flatMap { it.archiveFile }
+
+processResources {
+	from(commonArtifactFile.map { zipTree(it) })
+	// The LGPL text ships inside the jar next to the sources.
+	from(rootProject.file('LICENSE'))
+}
+
+tasks.named('processResources') {
+	def props = [
+			version          : project.version,
+			mod_id           : project.mod_id,
+			mod_name         : project.mod_name,
+			mod_license      : project.mod_license,
+			mod_authors      : project.mod_authors,
+			minecraft_version: project.minecraft_version,
+			forge_version    : project.forge_version,
+	]
+	inputs.properties props
+	filesMatching('META-INF/mods.toml') { expand props }
+}
+
+// mixin.debug makes the dev log list every applied ParCool mixin (see :fabric/build.gradle).
+['runClient', 'runServer'].each { runTask ->
+	tasks.named(runTask) {
+		it.jvmArgs '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
+		if (runTask == 'runClient') {
+			if (project.hasProperty('parcoolQuickPlay')) {
+				it.args '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
+			}
+			if (project.hasProperty('parcoolQuickPlayWorld')) {
+				it.args '--quickPlaySingleplayer', project.property('parcoolQuickPlayWorld').toString()
+			}
+		}
+	}
+}
+
+// Architectury Loom strips the client-only LWJGL main jars from a dev *server* classpath but keeps
+// the LWJGL natives jars (architectury-loom#191, still open). Forge 49+ builds its module layer
+// straight from the classpath, and every LWJGL natives jar is a multi-release jar whose module
+// requires its main module, so the launch dies with "Module org.lwjgl.openal not found, required by
+// org.lwjgl.openal.natives" before Minecraft even starts. A dedicated server never touches LWJGL,
+// so drop the whole group from the runServer classpath. Dev-only: the published jars are built from
+// remapJar and are unaffected.
+afterEvaluate {
+	tasks.named('runServer').configure {
+		classpath = classpath.filter { entry -> !entry.path.replace('\\', '/').contains('/org.lwjgl/') }
+	}
+}
+
+tasks.withType(Jar).configureEach {
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	// Also on the plain jar: Loom's Forge dev runs launch from the jar manifest, and the config has
+	// to be announced there too for mixins to apply outside a production install.
+	manifest {
+		attributes('MixinConfigs': 'parcool-common.mixins.json')
+	}
+}
+
+/**
+ * The distributable Forge jar.
+ *
+ * <p>Forge's production runtime is SRG-named, so unlike the 1.21.1 tree's NeoForge jar this one must
+ * ship SRG bytecode. Everything therefore goes through `:forge:remapJar`: `processResources` explodes
+ * the :common artifact into this module's own output (see above), the module's own classes are added
+ * by compilation, and Loom remaps the resulting jar named -&gt; SRG in one step - classes, members,
+ * mixin annotation targets and the access widener - so no part is remapped twice or left behind.
+ */
+tasks.register('distJar', Jar) {
+	group = 'build'
+	description = 'Assembles the distributable Forge jar (common + forge module, both SRG-named).'
+
+	archiveClassifier = 'forge'
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+	dependsOn ':forge:remapJar'
+
+	// The remapped jar carries the SRG bytecode, the assets and data, the converted access
+	// transformer, the expanded mods.toml and the ServiceLoader registration.
+	from({
+		zipTree(tasks.named('remapJar').get().archiveFile.get().asFile)
+	})
+
+	manifest {
+		attributes(
+				'Implementation-Title': project.mod_name,
+				'Implementation-Version': project.mod_version,
+				'Implementation-Vendor': project.mod_authors,
+				// Forge 1.20.1 has no [[mixins]] entry in mods.toml (that arrives with 1.20.2):
+				// Mixin's FML platform agent reads the config list from this manifest attribute.
+				'MixinConfigs': 'parcool-common.mixins.json'
+		)
+	}
+}
+
+tasks.named('assemble') {
+	dependsOn 'distJar'
+}

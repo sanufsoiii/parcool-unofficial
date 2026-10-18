@@ -1,0 +1,97 @@
+# Forge 1.20.3 mod metadata. The dollar-brace placeholders below are expanded by :forge's
+# processResources from gradle.properties and the project version.
+modLoader = "javafml"
+loaderVersion = "[49,)"
+license = "${mod_license}"
+issueTrackerURL = "https://github.com/alRex-U/ParCool/issues"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${version}"
+displayName = "${mod_name}"
+displayURL = "https://www.curseforge.com/minecraft/mc-mods/parcool"
+logoFile = "parcool_logo.png"
+authors = "${mod_authors}"
+description = '''
+    This enable us act like parkour players.
+    Enjoy Minecraft with cool actions!
+'''
+
+# No [[mixins]] section: Forge 49.2.13's mod metadata has no concept of one (the section arrives
+# with NeoForge 20.5 / Forge 50; the 1.20.5 and 1.20.6 sibling trees carry it, and Forge's own
+# 1.20.x MDK does not). The config is announced through the jar manifest's MixinConfigs attribute
+# instead, which :forge's Jar tasks set.
+#
+# Same for the access transformer: FML picks up META-INF/accesstransformer.cfg automatically when
+# mods.toml does not list accessTransformers, and that file is what Loom's
+# `forge { convertAccessWideners = true }` emits from :common's access widener.
+#
+# The dependency blocks below use Forge's `mandatory = true|false` field, which FML 49 still parses
+# (it is a field of the parsed ModVersion record); the newer `type = "required"|"optional"` spelling
+# only exists from NeoForge 20.5 / Forge 50 on (the 1.20.6 tree carries it).
+
+[[dependencies.${mod_id}]]
+modId = "forge"
+mandatory = true
+versionRange = "[49,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.3,1.21)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "architectury"
+mandatory = true
+versionRange = "[11.0.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+# Optional integrations. Their code lives in this source set; every entry point checks that the mod
+# is actually loaded and that its classes resolve, and ParCool degrades to its own stamina / camera
+# behaviour when it is not.
+#
+# The ranges are written the way the installed mod versions are spelled: Better Third Person's jar
+# is plain `1.9.0`, while ShoulderSurfing versions its jars `<mc>-<mod>` `1.20.4-4.2.1`, which is
+# why its range carries the Minecraft prefix. A range that does not contain an installed version is
+# a hard FML failure even for `mandatory = false` dependencies (ModSorter collects them into the
+# "Unsupported installed optional dependencies" error), so these strings are load order critical,
+# not cosmetic.
+[[dependencies.${mod_id}]]
+modId = "paraglider"
+mandatory = false
+versionRange = "[20.1.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "epicfight"
+mandatory = false
+versionRange = "[20.14.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "betterthirdperson"
+mandatory = false
+versionRange = "[1.9.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
+modId = "shouldersurfing"
+mandatory = false
+versionRange = "[1.20.3,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
+modId = "patchouli"
+mandatory = false
+versionRange = "*"
+ordering = "AFTER"
+side = "BOTH"
