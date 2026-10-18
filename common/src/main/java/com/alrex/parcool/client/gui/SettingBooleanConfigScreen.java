@@ -22,12 +22,13 @@ public class SettingBooleanConfigScreen extends ParCoolSettingScreen {
         super(titleIn, info, theme);
         currentScreen = 1;
         for (int i = 0; i < booleans.length; i++) {
-            configButtons[i] = Checkbox
-                    .builder(Component.translatable(booleans[i].Path), Minecraft.getInstance().font)
-                    .pos(0, 0)
-                    .selected(booleans[i].get())
-                    .build();
-            configButtons[i].setHeight(Checkbox_Item_Height);
+            // 1.20.2's Checkbox still takes its size in the public constructor; the builder form
+            // (Checkbox#builder(...) with a setHeight call) arrives in 1.20.3.
+            configButtons[i] = new Checkbox(
+                    0, 0, 0, Checkbox_Item_Height - 1,
+                    Component.translatable(booleans[i].Path),
+                    booleans[i].get()
+            );
         }
     }
 

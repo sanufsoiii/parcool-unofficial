@@ -29,12 +29,13 @@ public class SettingActionLimitationScreen extends ParCoolSettingScreen {
         currentScreen = 0;
         for (int i = 0; i < actionList.length; i++) {
             actionList[i] = new ActionConfigSet(Actions.getByIndex(i), info);
-            actionButtons[i] = Checkbox
-                    .builder(Component.literal(actionList[i].name), Minecraft.getInstance().font)
-                    .selected(actionList[i].get())
-                    .pos(0, 0)
-                    .build();
-            actionButtons[i].setHeight(Checkbox_Item_Height);
+            // 1.20.2's Checkbox still takes its size in the public constructor; the builder form
+            // (Checkbox#builder(...) with a setHeight call) arrives in 1.20.3.
+            actionButtons[i] = new Checkbox(
+                    0, 0, 0, Checkbox_Item_Height - 1,
+                    Component.literal(actionList[i].name),
+                    actionList[i].get()
+            );
         }
     }
 
