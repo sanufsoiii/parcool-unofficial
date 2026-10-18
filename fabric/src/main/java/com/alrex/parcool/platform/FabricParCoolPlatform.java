@@ -6,11 +6,6 @@ import com.alrex.parcool.common.stamina.IParCoolStaminaHandler;
 import com.alrex.parcool.common.stamina.handlers.ParCoolStaminaHandler;
 import com.alrex.parcool.compat.IPlayerForcedPose;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -43,17 +38,6 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
     @Override
     public AttributeInstance getGravityAttribute(Player player) {
         return null;
-    }
-
-    @Override
-    @Nullable
-    public DamageSource createDamageSource(Player player, ResourceKey<DamageType> type) {
-        // Vanilla 1.20.1 has no Level#damageSources(); DamageSource takes the DamageType holder, which
-        // has to be resolved out of the level's registry access by hand.
-        Holder<DamageType> holder = player.level().registryAccess()
-                .registryOrThrow(Registries.DAMAGE_TYPE)
-                .getHolderOrThrow(type);
-        return new DamageSource(holder);
     }
 
     @Override

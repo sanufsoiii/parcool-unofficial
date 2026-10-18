@@ -36,7 +36,7 @@ loom {
 // The access widener and the mixin config live in :common so both loaders ship the same copy; the
 // Fabric module only needs them present in its own jar, because fabric.mod.json references them.
 processResources {
-	// neoforge.mods.toml points LicenseFile at the LGPL text, so it has to be inside both jars.
+	// mods.toml points LicenseFile at the LGPL text, so it has to be inside both jars.
 	from(rootProject.file('LICENSE'))
 }
 
@@ -48,17 +48,16 @@ tasks.named('processResources') {
 			mod_license        : project.mod_license,
 			mod_authors        : project.mod_authors,
 			minecraft_version  : project.minecraft_version,
-			neo_version        : project.neo_version,
 	]
 	inputs.properties props
 	filesMatching('fabric.mod.json') { expand props }
 }
 
-// mixin.debug makes the dev log list every applied ParCool mixin (see neoforge/build.gradle).
+// mixin.debug makes the dev log list every applied ParCool mixin (see forge/build.gradle).
 ['runClient', 'runServer'].each { runTask ->
 	tasks.named(runTask) {
 		it.jvmArgs '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
-		// Same properties as the NeoForge run: `-PparcoolQuickPlay=host:port` boots straight into a
+		// Same properties as the Forge run: `-PparcoolQuickPlay=host:port` boots straight into a
 		// server, `-PparcoolQuickPlayWorld=<name>` into a saved world.
 		if (runTask == 'runClient') {
 			if (project.hasProperty('parcoolQuickPlay')) {
@@ -89,7 +88,7 @@ dependencies {
 	compileOnly project(':common')
 	modImplementation project(':common')
 
-	// Upstream uses javax.annotation.Nullable/Nonnull throughout; NeoForge puts JSR-305 on the
+	// Upstream uses javax.annotation.Nullable/Nonnull throughout; Forge puts JSR-305 on the
 	// compile classpath for free, Loom does not.
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 	compileOnly "com.google.code.gson:gson:2.10.1"
@@ -99,9 +98,9 @@ dependencies {
  * The distributable Fabric jar: the SRG/intermediary-transformed :common artifact plus this
  * module's own classes, the loader metadata and the ServiceLoader registration.
  *
- * architectury-plugin's `neoForge()`/`fabric()` transform normally does this, but the NeoForge side
- * of that transform requires a Loom extension that cannot set up NeoForge 21.1 (see
- * neoforge/build.gradle), so the assembly is done explicitly here and mirrored in :neoforge.
+ * architectury-plugin's `forge()`/`fabric()` transform normally does this, but the Forge half needs
+ * the mod jar SRG-remapped (see forge/build.gradle), so the assembly is done explicitly here and
+ * mirrored in :forge.
  */
 tasks.withType(Jar).configureEach {
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -117,9 +116,8 @@ tasks.register('distJar', Jar) {
 	// The distributable is built from :common's remapJar output, NOT from architectury-plugin's
 	// transformProductionFabric artifact.
 	//
-	// Why: architectury-plugin's transform runs in "named" mode unless the Loom NeoForge extension is
-	// present (see neoforge/build.gradle - that extension cannot set up NeoForge 21.1), so its Fabric
-	// half emitted mojmap bytecode. A jar like that resolves `net.minecraft.world.entity.player.Player`
+	// Why: architectury-plugin's transform runs in "named" mode, so its Fabric half emitted mojmap
+	// bytecode. A jar like that resolves `net.minecraft.world.entity.player.Player`
 	// in a mojmap dev environment and nowhere else: on a PrismLauncher / production Fabric client the
 	// game runs on intermediary names, so the class simply does not exist and the JVM dies during
 	// mixin application, before log4j can record anything - which is exactly a boot that ends with the
@@ -135,10 +133,10 @@ tasks.register('distJar', Jar) {
 	// Order matters, and not only for readability: duplicatesStrategy is EXCLUDE, so the first `from`
 	// that contributes an entry wins.
 	//
-	// This module goes first on purpose. :fabric:remapJar carries the four loader-side classes already
-	// remapped to intermediary (ParCoolFabric, ParCoolFabricClient, FabricParCoolPlatform,
-	// FabricParCoolNetwork) - `sourceSets.main.output` is the raw mojmap output and would have shipped
-	// them unmapped, e.g. FabricParCoolNetwork still referencing net.minecraft.network.FriendlyByteBuf.
+	// This module goes first on purpose. :fabric:remapJar carries the loader-side classes already
+	// remapped to intermediary - `sourceSets.main.output` is the raw mojmap output and would have
+	// shipped them unmapped, e.g. FabricParCoolPlatform still referencing
+	// net.minecraft.world.level.Level.
 	//
 	// It also carries the authoritative access widener, remapped to `v2 intermediary`. :common:remapJar
 	// leaves the access widener in `v2 named`, because namespacesMatch() is true for that module, and
