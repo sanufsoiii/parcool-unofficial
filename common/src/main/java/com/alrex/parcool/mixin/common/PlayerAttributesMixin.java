@@ -21,10 +21,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * </ul>
  *
  * Extending the builder that {@code Player#createAttributes} already assembles is additive, keeps
- * every vanilla attribute, and behaves identically on both loaders. The attributes themselves are
- * registered by {@link Attributes}; this hook runs later than that registration on both loaders
- * (Fabric registers while the built-in registries are still writable, Forge on {@code RegisterEvent},
- * which precedes {@code DefaultAttributes}' initialisation that calls this method).
+ * every vanilla attribute, and behaves identically on both loaders.
+ *
+ * <p>The raw {@link Attributes#MAX_STAMINA_ATTRIBUTE} / {@link Attributes#STAMINA_RECOVERY_ATTRIBUTE}
+ * instances are added rather than the {@link net.minecraft.world.entity.ai.attributes.Attribute}s read
+ * back out of the registry: this method runs from {@code DefaultAttributes'} static initialiser,
+ * which the bootstrap pass reaches <i>before</i> any loader entry point on Fabric, so the registry
+ * still has no entry to read at this moment - see {@code Attributes}' class documentation.
  */
 @Mixin(Player.class)
 public abstract class PlayerAttributesMixin {
@@ -32,7 +35,7 @@ public abstract class PlayerAttributesMixin {
     @Inject(method = "createAttributes", at = @At("RETURN"))
     private static void parcool$addParCoolAttributes(CallbackInfoReturnable<AttributeSupplier.Builder> cir) {
         cir.getReturnValue()
-                .add(Attributes.MAX_STAMINA.get())
-                .add(Attributes.STAMINA_RECOVERY.get());
+                .add(Attributes.MAX_STAMINA_ATTRIBUTE)
+                .add(Attributes.STAMINA_RECOVERY_ATTRIBUTE);
     }
 }

@@ -10,6 +10,8 @@ import com.alrex.parcool.common.network.payload.StaminaPayload;
 import com.alrex.parcool.common.network.payload.StaminaProcessOnServerPayload;
 import com.alrex.parcool.common.network.payload.StartBreakfallEventPayload;
 import dev.architectury.networking.NetworkManager;
+import dev.architectury.platform.Platform;
+import dev.architectury.utils.Env;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
@@ -32,6 +34,19 @@ import java.util.function.Function;
  * direction and {@code sendToServer/sendToPlayer/sendToPlayers(id, buffer)} for the sends. Both 9.2.14
  * backends keep one receiver per (id, direction) in a map, so a bidirectional message under one id
  * works on both loaders.
+ *
+ * <h2>Server-&gt;client receivers are registered in the client environment only</h2>
+ * Architectury's Fabric backend marks its S2C registrar {@code @Environment(EnvType.CLIENT)}: the
+ * receiver goes into Fabric's <i>client</i> networking, so Fabric strips that member from the class
+ * when the game runs as a dedicated server - and the shared
+ * {@code NetworkManager#registerReceiver(Side.S2C, ...)} then dies with
+ * {@code NoSuchMethodError: ...registerS2CReceiver(...)} while the server is still starting. That is
+ * exactly how this port's first dedicated-server boot failed. {@link #registerPayloads()} therefore
+ * registers the C2S receivers unconditionally and the S2C receivers only when
+ * {@code Platform#getEnvironment()} is {@code Env.CLIENT}, which is also the only place a client-bound
+ * receiver can ever fire. Sending is unaffected: the ids travel inside the payload and the Forge
+ * backend keeps the S2C receivers in a plain map, so a skipped registration on a dedicated server
+ * costs nothing there either.
  *
  * <h2>Compatibility</h2>
  * The payload ids keep the upstream {@code parcool:payload.*} names for the server-&gt;client
@@ -102,20 +117,25 @@ public final class NetworkRegistries {
         // --- client -> server only ---
         registerC2S(StaminaProcessOnServerPayload.C2S, StaminaProcessOnServerPayload::handleServer);
 
+        // --- both directions; one id per direction ---
+        registerC2S(ActionStatePayload.C2S, ActionStatePayload::handleServer);
+        registerC2S(ClientInformationPayload.C2S, ClientInformationPayload::handleServer);
+        registerC2S(StaminaPayload.C2S, StaminaPayload::handleServer);
+
+        // Server -> client receivers only exist where those packets arrive; a dedicated server must
+        // not install them (see the class documentation for the NoSuchMethodError this caused).
+        if (Platform.getEnvironment() != Env.CLIENT) {
+            return;
+        }
+
         // --- server -> client only ---
         registerS2C(StartBreakfallEventPayload.S2C, StartBreakfallEventPayload::handleClient);
         registerS2C(LimitationPayload.S2C, LimitationPayload::handleClient);
         registerS2C(StaminaBroadcastPayload.S2C, StaminaBroadcastPayload::handleClient);
         registerS2C(ActionStateBroadcastPayload.S2C, ActionStateBroadcastPayload::handleClient);
 
-        // --- both directions; one id per direction ---
-        registerC2S(ActionStatePayload.C2S, ActionStatePayload::handleServer);
         registerS2C(ActionStatePayload.S2C, ActionStatePayload::handleClient);
-
-        registerC2S(ClientInformationPayload.C2S, ClientInformationPayload::handleServer);
         registerS2C(ClientInformationPayload.S2C, ClientInformationPayload::handleClient);
-
-        registerC2S(StaminaPayload.C2S, StaminaPayload::handleServer);
         registerS2C(StaminaPayload.S2C, StaminaPayload::handleClient);
     }
 
