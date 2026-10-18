@@ -108,21 +108,14 @@ tasks.named('compileJava') {
 	classpath += configurations.parcoolIntegrationsCompile
 }
 
-// Forge 49.0.2 (the newest 1.20.3 build there is) ships bootstrap 2.0.0, whose launcher never asks
-// the `BootstrapClasspathModifier` services to run. The dev classpath fixer that merges Loom's
-// exploded build/classes/java/main + build/resources/main pair into the single mod file FML scans is
-// therefore dead code there, FML's ClasspathLocator claims only the resources directory as the whole
-// `parcool` mod file, and the dev launch dies before Minecraft starts with
-//   File .../forge/build/resources/main constructed 0 mods: [], but had 1 mods specified: [parcool]
-// Forge fixed that in bootstrap 2.1.x (the launcher the 1.20.4 line ships), so the fixed launcher is
-// declared here, the same way the *declared* userdev libraries do. Declaring it - instead of only
-// forcing the resolved version - also matters for Loom itself: ForgeRunsProvider picks the
-// MOD_CLASSES separator from the declared bootstrap-dev version (>= 2.1.4 -> File.pathSeparator,
-// older -> ";", which the fixer's parser never splits on), so a resolved-only override would still
-// hand the fixer an unparsable MOD_CLASSES. Dev-only: bootstrap never reaches the built jars.
-dependencies.add('forgeDependencies', 'net.minecraftforge:bootstrap:2.1.8')
-dependencies.add('forgeDependencies', 'net.minecraftforge:bootstrap-api:2.1.8')
-dependencies.add('forgeDependencies', 'net.minecraftforge:bootstrap-dev:2.1.8')
+// No bootstrap override and no LWJGL classpath filter are needed here, unlike the 1.20.3/1.20.4
+// trees: Forge 48.1.0 still launches through the older BootstrapLauncher (the userdev config's
+// `modules` list pins `net.minecraftforge:bootstrap:1.2.0`), which takes its module path from the
+// run config's `-p {modules}` list instead of deriving a module layer from the whole classpath. The
+// dev mod file is therefore built by FML 48's own MOD_CLASSES handling, and the client-only LWJGL
+// jars Loom strips on a server classpath (plus the natives jars it keeps) never become modules of
+// the launch layer. That whole class of Forge 49.0.2 dev-run trouble simply does not exist on this
+// line.
 
 // The access widener and the mixin config live in :common so both loaders ship the same copy; the
 // Forge module only needs them present in its own output, because mods.toml references them.
@@ -186,19 +179,6 @@ tasks.named('processResources') {
 				it.args '--quickPlaySingleplayer', project.property('parcoolQuickPlayWorld').toString()
 			}
 		}
-	}
-}
-
-// Architectury Loom strips the client-only LWJGL main jars from a dev *server* classpath but keeps
-// the LWJGL natives jars (architectury-loom#191, still open). Forge 49+ builds its module layer
-// straight from the classpath, and every LWJGL natives jar is a multi-release jar whose module
-// requires its main module, so the launch dies with "Module org.lwjgl.openal not found, required by
-// org.lwjgl.openal.natives" before Minecraft even starts. A dedicated server never touches LWJGL,
-// so drop the whole group from the runServer classpath. Dev-only: the published jars are built from
-// remapJar and are unaffected.
-afterEvaluate {
-	tasks.named('runServer').configure {
-		classpath = classpath.filter { entry -> !entry.path.replace('\\', '/').contains('/org.lwjgl/') }
 	}
 }
 

@@ -19,7 +19,7 @@ import net.minecraft.util.FastColor;
 
 public class ZiplineRopeDyeRecipe extends CustomRecipe {
 
-    // 1.20.3 recipes carry only the category: CustomRecipe(CraftingBookCategory), which is what
+    // 1.20.2 recipes carry only the category: CustomRecipe(CraftingBookCategory), which is what
     // SimpleCraftingRecipeSerializer's Factory constructs. (The recipe id field is a 1.20.1-only
     // shape; it comes back as part of the RecipeHolder rework in 1.20.5.)
     public ZiplineRopeDyeRecipe(CraftingBookCategory category) {

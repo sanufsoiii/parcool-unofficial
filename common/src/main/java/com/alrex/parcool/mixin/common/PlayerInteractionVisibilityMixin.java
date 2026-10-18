@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * Replaces {@code LivingEvent.LivingVisibilityEvent}.
  * <p>
- * Forge fires that event from {@code ForgeHooks#getEntityVisibilityMultiplier}, and on 1.20.3 (as
+ * Forge fires that event from {@code ForgeHooks#getEntityVisibilityMultiplier}, and on 1.20.2 (as
  * on 1.20.1) its only vanilla caller is {@code LivingEntity#getVisibilityPercent(Entity)} — the
  * score a viewer assigns to this entity when it looks for targets. (The newer ports inject into
  * {@code Player#canInteractWithEntity} instead; that method only appears in 1.20.5, which is why

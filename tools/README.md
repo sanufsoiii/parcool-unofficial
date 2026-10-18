@@ -6,7 +6,7 @@ resolved mojmap Minecraft jar, so a target that silently stops matching is caugh
 the game.
 
 ```bash
-JAR=$(ls ~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.20.3-loom.mappings.*/*.jar | head -1)
+JAR=$(ls ~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.20.2-loom.mappings.*/*.jar | head -1)
 python3 tools/verify_mixins.py "$JAR" common/src/main/java
 ```
 
@@ -26,7 +26,7 @@ broken tree. Two things guard against that here:
 * every run first executes `self_test()`, which feeds the *same* code path three targets — one with
   the wrong arity, one with a wrong method name, and one genuinely correct — and refuses to report
   anything unless the first two are flagged and the third stays silent. The self-test targets are
-  anchored to `PlayerModel#setupAnim(...)` (five floats on 1.20.3); if you retarget the checker to
+  anchored to `PlayerModel#setupAnim(...)` (five floats on 1.20.2); if you retarget the checker to
   another Minecraft version, re-anchor them there.
 
 The self-test is what makes "no problems found" a statement worth anything.

@@ -1,7 +1,6 @@
 {
     "pack": {
         "description": "ParCool mod resources",
-        "pack_format": 22,
-        "supported_formats": [22, 26]
+        "pack_format": 18
     }
 }

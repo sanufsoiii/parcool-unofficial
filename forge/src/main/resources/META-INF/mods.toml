@@ -1,7 +1,7 @@
-# Forge 1.20.3 mod metadata. The dollar-brace placeholders below are expanded by :forge's
+# Forge 1.20.2 mod metadata. The dollar-brace placeholders below are expanded by :forge's
 # processResources from gradle.properties and the project version.
 modLoader = "javafml"
-loaderVersion = "[49,)"
+loaderVersion = "[48,)"
 license = "${mod_license}"
 issueTrackerURL = "https://github.com/alRex-U/ParCool/issues"
 
@@ -17,7 +17,7 @@ description = '''
     Enjoy Minecraft with cool actions!
 '''
 
-# No [[mixins]] section: Forge 49.2.13's mod metadata has no concept of one (the section arrives
+# No [[mixins]] section: Forge 48.1.0's mod metadata has no concept of one (the section arrives
 # with NeoForge 20.5 / Forge 50; the 1.20.5 and 1.20.6 sibling trees carry it, and Forge's own
 # 1.20.x MDK does not). The config is announced through the jar manifest's MixinConfigs attribute
 # instead, which :forge's Jar tasks set.
@@ -26,28 +26,28 @@ description = '''
 # mods.toml does not list accessTransformers, and that file is what Loom's
 # `forge { convertAccessWideners = true }` emits from :common's access widener.
 #
-# The dependency blocks below use Forge's `mandatory = true|false` field, which FML 49 still parses
+# The dependency blocks below use Forge's `mandatory = true|false` field, which FML 48 still parses
 # (it is a field of the parsed ModVersion record); the newer `type = "required"|"optional"` spelling
 # only exists from NeoForge 20.5 / Forge 50 on (the 1.20.6 tree carries it).
 
 [[dependencies.${mod_id}]]
 modId = "forge"
 mandatory = true
-versionRange = "[49,)"
+versionRange = "[48,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.20.3,1.21)"
+versionRange = "[1.20.2,1.21)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
 modId = "architectury"
 mandatory = true
-versionRange = "[11.0.0,)"
+versionRange = "[10.0.0,)"
 ordering = "AFTER"
 side = "BOTH"
 
@@ -56,7 +56,7 @@ side = "BOTH"
 # behaviour when it is not.
 #
 # The ranges are written the way the installed mod versions are spelled: Better Third Person's jar
-# is plain `1.9.0`, while ShoulderSurfing versions its jars `<mc>-<mod>` `1.20.4-4.2.1`, which is
+# is plain `1.9.0`, while ShoulderSurfing versions its jars `<mc>-<mod>` `1.20.2-4.2.1`, which is
 # why its range carries the Minecraft prefix. A range that does not contain an installed version is
 # a hard FML failure even for `mandatory = false` dependencies (ModSorter collects them into the
 # "Unsupported installed optional dependencies" error), so these strings are load order critical,
@@ -85,7 +85,7 @@ side = "CLIENT"
 [[dependencies.${mod_id}]]
 modId = "shouldersurfing"
 mandatory = false
-versionRange = "[1.20.3,)"
+versionRange = "[1.20.2,)"
 ordering = "NONE"
 side = "CLIENT"
 
