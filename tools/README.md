@@ -10,8 +10,8 @@ JAR=$(ls ~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-mer
 python3 tools/verify_mixins.py "$JAR" common/src/main/java
 ```
 
-It needs `python3` and a JDK (it shells out to `unzip` and `javap`; the script pins
-`/usr/lib/jvm/java-21-openjdk/bin/javap`, the JDK 21 the project's toolchain uses).
+It needs `python3` and a JDK (it shells out to `unzip` and `javap`; javap is taken from
+`$JAVAP` when set, else `$JAVA_HOME/bin/javap`, else the `javap` on `PATH`).
 
 ## Why it self-tests
 
@@ -26,7 +26,7 @@ broken tree. Two things guard against that here:
 * every run first executes `self_test()`, which feeds the *same* code path three targets — one with
   the wrong arity, one with a wrong method name, and one genuinely correct — and refuses to report
   anything unless the first two are flagged and the third stays silent. The self-test targets are
-  anchored to `PlayerModel#setupAnim(...)` (five floats on 1.20.6); if you retarget the checker to
+  anchored to `PlayerModel#setupAnim(...)` (five floats on 1.20.5); if you retarget the checker to
   another Minecraft version, re-anchor them there.
 
 The self-test is what makes "no problems found" a statement worth anything.

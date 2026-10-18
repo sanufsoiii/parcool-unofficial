@@ -175,7 +175,7 @@ Two things about the packaging are load-bearing and are explained at length in t
   the reasons in the header of `neoforge/build.gradle` (Loom 1.7.x cannot merge the Mojang and
   NeoForge mappings on this Minecraft).
 
-The published copies in `/home/sanufsoii/ports/готовые порты/parcool/` are:
+The two jars are distributed under these names:
 
 ```
 0.1-mc1.20.5fabric-3.4.3.3.jar      # = fabric/build/libs/parcool-1.20.5-3.4.3.3-fabric.jar
