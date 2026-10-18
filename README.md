@@ -1,10 +1,10 @@
-# ParCool — Architectury API port (Minecraft 1.20.1)
+# ParCool — Architectury API port (Minecraft 1.20)
 
 A multiloader port of the Minecraft mod **ParCool** by **alRex_U** (LGPL-3.0), originally built for
 Forge, reworked onto the [Architectury API](https://github.com/architectury/architectury-api) so
 that one codebase ships both a **Fabric** and a **Forge** artifact.
 
-Minecraft **1.20.1**, Java **17**.
+Minecraft **1.20**, Java **17**.
 
 > This repository contains a *port*, not alRex_U's original sources. The original project lives at
 > <https://github.com/alRex-U/ParCool> and on CurseForge at
@@ -34,25 +34,25 @@ entrypoints and their platform implementation.
 ./gradlew build           # from then on
 ```
 
-See [BUILDING.md](BUILDING.md) for the module layout, the 1.21.1 → 1.20.1 port notes (Forge targets
-SRG names, so the distributable is assembled by `:forge:remapJar`, and the Forge dev run has to load
-a single `parcool` JPMS module), the dev run tasks (`:fabric:runClient`, `:forge:runClient`,
-`:fabric:runServer`, `:forge:runServer`), the mixin target verifier (`tools/verify_mixins.py`) and
-the loader-independence check.
+See [BUILDING.md](BUILDING.md) for the module layout, the 1.21.1 → 1.20.1 → 1.20 port notes (this
+tree is the 1.20.1 port retargeted — Forge targets SRG names, so the distributable is assembled by
+`:forge:remapJar`, and the Forge dev run has to load a single `parcool` JPMS module), the dev run
+tasks (`:fabric:runClient`, `:forge:runClient`, `:fabric:runServer`, `:forge:runServer`), the mixin
+target verifier (`tools/verify_mixins.py`) and the loader-independence check.
 
 ## Installing
 
 Drop the matching jar into `mods/`:
 
-* Fabric — `fabric/build/libs/parcool-1.20.1-3.4.3.3-fabric.jar`
-* Forge — `forge/build/libs/parcool-1.20.1-3.4.3.3-forge.jar`
+* Fabric — `fabric/build/libs/parcool-1.20-3.4.3.3-fabric.jar`
+* Forge — `forge/build/libs/parcool-1.20-3.4.3.3-forge.jar`
 
 ## Dependencies
 
 **Required**
 
 * Architectury API 9.2.14 or newer (the 1.20.x line)
-* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.92.12+1.20.1
+* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.83.0+1.20
 
 **Optional**
 
