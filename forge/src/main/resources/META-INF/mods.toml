@@ -27,8 +27,8 @@ description = '''
 # `forge { convertAccessWideners = true }` emits from :common's access widener.
 #
 # The dependency blocks below use Forge's `mandatory = true|false` field, which FML 49 still parses
-# (it is a field of ModInfo$ModVersion); the newer `type = "required"|"optional"` spelling only
-# exists from NeoForge 20.5 / Forge 50 on (the 1.20.6 tree carries it).
+# (it is a field of the parsed ModVersion record); the newer `type = "required"|"optional"` spelling
+# only exists from NeoForge 20.5 / Forge 50 on (the 1.20.6 tree carries it).
 
 [[dependencies.${mod_id}]]
 modId = "forge"
