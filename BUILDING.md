@@ -9,7 +9,7 @@ Java 24, so a machine whose default `java` is 25 has to set `JAVA_HOME` to a 21 
 every invocation:
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew build
+JAVA_HOME=/path/to/jdk-21 ./gradlew build
 ```
 
 Versions (all in `gradle.properties` / `settings.gradle`): Minecraft 1.21.4, Architectury API 15.0.3,
