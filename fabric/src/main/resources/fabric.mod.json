@@ -29,11 +29,11 @@
   ],
   "accessWidener": "parcool.accesswidener",
   "depends": {
-    "fabricloader": ">=0.15.0",
+    "fabricloader": ">=0.15.1",
     "fabric-api": "*",
-    "minecraft": "~1.20.1",
+    "minecraft": "~1.20.4",
     "java": ">=17",
-    "architectury": ">=9.0.0"
+    "architectury": ">=11.0.0"
   },
   "suggests": {
     "patchouli": "*",

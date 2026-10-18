@@ -90,14 +90,18 @@ dependencies {
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 	compileOnly "com.google.code.gson:gson:2.10.1"
 
-	// Pinned 1.20.1 builds. Every entry point checks isInstalled() *and* that the API classes
-	// resolve (EpicFightManager#isEpicFightUsable and friends), so a missing or mismatched jar makes
-	// ParCool fall back to its own stamina and camera behaviour instead of failing to load.
-	// Patchouli is only an optional book dependency and is never referenced from source.
+	// The closest builds for every integration. Only Better Third Person and ShoulderSurfing have
+	// releases that name 1.20.4 at all (Better Third Person 1.9.0 is a 1.20-1.20.4 jar; the
+	// ShoulderSurfing 4.2.1 line was published for 1.20.2-1.20.4), so Paraglider and Epic Fight are
+	// compiled against their newest 1.20 era jars, exactly like the sibling 1.20 tree does. Every
+	// entry point checks isInstalled() *and* that the API classes resolve, so a missing or
+	// mismatched jar makes ParCool fall back to its own stamina and camera behaviour instead of
+	// failing to load. Patchouli is only an optional book dependency and is never referenced from
+	// source.
 	parcoolIntegrationsCompile "curse.maven:paraglider-289240:5046069"        // Paraglider-forge-20.1.3
 	parcoolIntegrationsCompile "curse.maven:EpicFight-405076:8049910"        // Epic Fight 20.14.17
-	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:4596768" // Better Third Person 1.9.0
-	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6496631"   // 1.20.1-4.11.0
+	parcoolIntegrationsCompile "curse.maven:BetterThirdPerson-435044:4596768" // Better Third Person 1.9.0 (1.20-1.20.4)
+	parcoolIntegrationsCompile "curse.maven:ShoulderSurfing-243190:6496631"   // 1.20.1-4.11.0 API
 }
 
 tasks.named('compileJava') {
