@@ -2,6 +2,7 @@ package com.alrex.parcool.mixin.common;
 
 import com.alrex.parcool.common.handlers.PlayerVisibilityHandler;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -11,20 +12,21 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * Replaces {@code LivingEvent.LivingVisibilityEvent}.
  * <p>
- * NeoForge posts that event from {@code CommonHooks#getEntityVisibilityMultiplier}, whose only
- * vanilla caller is {@code Player#canInteractWithEntity(Entity, double)} — the predicate the entity
- * tracker uses to decide whether a viewer can see a tracked entity at a given range. The upstream
- * handler multiplied the visibility modifier by 0.1, which always lands below the interaction range
- * threshold, so returning {@code false} outright is behaviourally equivalent and is what this
- * injection does.
+ * Forge fires that event from {@code ForgeHooks#getEntityVisibilityMultiplier}, and on 1.20.1 its
+ * only vanilla caller is {@code LivingEntity#getVisibilityPercent(Entity)} — the score a viewer
+ * assigns to this entity when it looks for targets. (1.20.2+ moved the equivalent hook to
+ * {@code Player#canInteractWithEntity}, which is the target the newer ports inject into; that method
+ * does not exist here yet, which is why this class targets a different one.) Upstream's handler
+ * multiplied the event's modifier by 0.1, so the same factor is applied to the value vanilla
+ * computed.
  */
-@Mixin(Player.class)
+@Mixin(LivingEntity.class)
 public abstract class PlayerInteractionVisibilityMixin {
 
-    @Inject(method = "canInteractWithEntity(Lnet/minecraft/world/entity/Entity;D)Z", at = @At("HEAD"), cancellable = true)
-    private void parcool$hideFromViewer(Entity target, double distance, CallbackInfoReturnable<Boolean> cir) {
-        if (target instanceof Player other && PlayerVisibilityHandler.isHiddenFrom((Player) (Object) this, other)) {
-            cir.setReturnValue(false);
-        }
-    }
+	@Inject(method = "getVisibilityPercent(Lnet/minecraft/world/entity/Entity;)D", at = @At("RETURN"), cancellable = true)
+	private void parcool$hideFromViewer(Entity viewer, CallbackInfoReturnable<Double> cir) {
+		if ((Object) this instanceof Player target && viewer != null && PlayerVisibilityHandler.isHiddenFrom(viewer, target)) {
+			cir.setReturnValue(cir.getReturnValueD() * 0.1);
+		}
+	}
 }

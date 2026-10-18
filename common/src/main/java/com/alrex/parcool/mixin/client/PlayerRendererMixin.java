@@ -23,8 +23,8 @@ public abstract class PlayerRendererMixin extends LivingEntityRenderer<AbstractC
     @Unique
     private PlayerModelRotator parCool$rotator = null;
 
-    @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V", at = @At("RETURN"))
-    protected void onSetupRotationsTail(AbstractClientPlayer player, PoseStack poseStack, float bob, float yBodyRot, float partialTick, float scale, CallbackInfo ci) {
+    @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFF)V", at = @At("RETURN"))
+    protected void onSetupRotationsTail(AbstractClientPlayer player, PoseStack poseStack, float bob, float yBodyRot, float partialTick, CallbackInfo ci) {
 		// arg names may be incorrect
 		Animation animation = Animation.get(player);
 		if (animation == null) {
@@ -36,8 +36,10 @@ public abstract class PlayerRendererMixin extends LivingEntityRenderer<AbstractC
         }
     }
 
-    @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFFF)V", at = @At("HEAD"), cancellable = true)
-    protected void onSetupRotationsHead(AbstractClientPlayer player, PoseStack poseStack, float bob, float yBodyRot, float partialTick, float scale, CallbackInfo ci) {
+    // 1.20.1 still has the five-argument form: the trailing `scale` that 1.20.2 added is not passed
+    // yet, so the descriptor ends in FFF instead of FFFF.
+    @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFF)V", at = @At("HEAD"), cancellable = true)
+    protected void onSetupRotationsHead(AbstractClientPlayer player, PoseStack poseStack, float bob, float yBodyRot, float partialTick, CallbackInfo ci) {
         Animation animation = Animation.get(player);
         if (animation == null) {
             return;
