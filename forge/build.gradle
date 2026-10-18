@@ -173,6 +173,19 @@ tasks.named('processResources') {
 	}
 }
 
+// Architectury Loom strips the client-only LWJGL main jars from a dev *server* classpath but keeps
+// the LWJGL natives jars (architectury-loom#191, still open). Forge 49+ builds its module layer
+// straight from the classpath, and every LWJGL natives jar is a multi-release jar whose module
+// requires its main module, so the launch dies with "Module org.lwjgl.openal not found, required by
+// org.lwjgl.openal.natives" before Minecraft even starts. A dedicated server never touches LWJGL,
+// so drop the whole group from the runServer classpath. Dev-only: the published jars are built from
+// remapJar and are unaffected.
+afterEvaluate {
+	tasks.named('runServer').configure {
+		classpath = classpath.filter { entry -> !entry.path.replace('\\', '/').contains('/org.lwjgl/') }
+	}
+}
+
 tasks.withType(Jar).configureEach {
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 	// Also on the plain jar: Loom's Forge dev runs launch from the jar manifest, and the config has
