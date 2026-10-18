@@ -131,7 +131,10 @@ Architectury 1.20.1 port tree as the base for the 1.20 port`) and was then retar
   BetterThirdPerson 1.9.0, ShoulderSurfing 1.20.1-4.11.0): the four mods do not publish a separate
   jar for 1.20, but the classes ParCool compiles against are unchanged between the two releases and
   every entry point guards itself at runtime, so an absent integration degrades to ParCool's own
-  behaviour. None of the four was loaded here (see the end of this document).
+  behaviour. The Forge metadata accepts `shouldersurfing [1.20,)` for the same reason: the range has
+  to admit the only ShoulderSurfing jar that serves 1.20 (`1.20.1-4.11.0`), not the 4.11 API, since
+  FML's `ModSorter` treats an installed but out-of-range *optional* dependency as a hard
+  early-loading failure. None of the four was loaded here (see the end of this document).
 
 ## The one real dev-run trap on Loom's Forge: one JPMS module, not two
 

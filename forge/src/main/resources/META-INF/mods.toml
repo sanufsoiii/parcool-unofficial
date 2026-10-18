@@ -75,10 +75,16 @@ versionRange = "[1.9.0,)"
 ordering = "NONE"
 side = "CLIENT"
 
+# The range names the versions that exist for this Minecraft (1.20.1-4.11.0 is the jar this tree
+# compiles against, and ShoulderSurfing publishes no 1.20-specific build), not the API the coupling
+# code is written against: FML's ModSorter turns an installed but out-of-range optional dependency
+# into a hard early-loading failure, so a range no published jar satisfies would break the boot for
+# exactly the players who do have ShoulderSurfing. The 4.11.0 API is checked at runtime instead
+# (ShoulderSurfingManager#isCameraDecoupled).
 [[dependencies.${mod_id}]]
 modId = "shouldersurfing"
 mandatory = false
-versionRange = "[4.11.0,)"
+versionRange = "[1.20,)"
 ordering = "NONE"
 side = "CLIENT"
 
