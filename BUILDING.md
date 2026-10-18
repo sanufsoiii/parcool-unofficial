@@ -201,7 +201,15 @@ silent) and refuses to report anything if that fails — see `tools/README.md`.
   On a brand-new `run/` directory the client first shows the vanilla accessibility onboarding
   screen, which quick-play does not dismiss; click *Continue* once.
 
-Not verified for this port: a NeoForge client session (the NeoForge server boot and the Fabric
-client boot cover both loaders and both sides between them), and the optional
-Paraglider/EpicFight/BetterThirdPerson integrations. They compile against the pinned integration
-jars, and every entry point guards itself at runtime, but none of them was loaded.
+* The NeoForge **client** was booted the same way (`./gradlew :neoforge:runClient
+  -PparcoolQuickPlayWorld=parcool-dev`): it reaches `Loaded 1399 advancements`, then
+  `Preparing start region for dimension minecraft:overworld` and the mod's own `Loaded 2
+  advancements`, with all twelve `client.*` ParCool mixins applied and `0` `GL ERROR` lines. The
+  session stayed in the world for about a minute and was closed normally — `Stopping!`,
+  `Stopping singleplayer server as player logged out` and `Saving chunks for level
+  'ServerLevel[parcool-dev]'` for the overworld, the nether and the end — and the run task ends with
+  `BUILD SUCCESSFUL`. Between them the two client sessions cover the render path on both loaders.
+
+Not verified for this port: the optional Paraglider/EpicFight/BetterThirdPerson integrations. They
+compile against the pinned integration jars, and every entry point guards itself at runtime, but
+none of them was loaded.
