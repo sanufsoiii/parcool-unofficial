@@ -1,10 +1,10 @@
-# ParCool — Architectury API port (Minecraft 1.20.1)
+# ParCool — Architectury API port (Minecraft 1.20.4)
 
 A multiloader port of the Minecraft mod **ParCool** by **alRex_U** (LGPL-3.0), originally built for
 Forge, reworked onto the [Architectury API](https://github.com/architectury/architectury-api) so
 that one codebase ships both a **Fabric** and a **Forge** artifact.
 
-Minecraft **1.20.1**, Java **17**.
+Minecraft **1.20.4**, Java **17**.
 
 > This repository contains a *port*, not alRex_U's original sources. The original project lives at
 > <https://github.com/alRex-U/ParCool> and on CurseForge at
@@ -34,30 +34,34 @@ entrypoints and their platform implementation.
 ./gradlew build           # from then on
 ```
 
-See [BUILDING.md](BUILDING.md) for the module layout, the 1.21.1 → 1.20.1 port notes (Forge targets
-SRG names, so the distributable is assembled by `:forge:remapJar`, and the Forge dev run has to load
-a single `parcool` JPMS module), the dev run tasks (`:fabric:runClient`, `:forge:runClient`,
-`:fabric:runServer`, `:forge:runServer`), the mixin target verifier (`tools/verify_mixins.py`) and
-the loader-independence check.
+See [BUILDING.md](BUILDING.md) for the module layout, the 1.21.1 → 1.20.1 → 1.20.4 port notes (this
+tree is the 1.20.1 port retargeted to the 1.20.2/1.20.3/1.20.4 API generation; Forge targets SRG
+names, so the distributable is assembled by `:forge:remapJar`, the Forge dev run has to load a single
+`parcool` JPMS module, and Forge 49's new bootstrap needs the LWJGL modules Loom splits off filtered
+out of `runServer`), the dev run tasks (`:fabric:runClient`, `:forge:runClient`, `:fabric:runServer`,
+`:forge:runServer`), the mixin target verifier (`tools/verify_mixins.py`) and the loader-independence
+check.
 
 ## Installing
 
 Drop the matching jar into `mods/`:
 
-* Fabric — `fabric/build/libs/parcool-1.20.1-3.4.3.3-fabric.jar`
-* Forge — `forge/build/libs/parcool-1.20.1-3.4.3.3-forge.jar`
+* Fabric — `fabric/build/libs/parcool-1.20.4-3.4.3.3-fabric.jar`
+* Forge — `forge/build/libs/parcool-1.20.4-3.4.3.3-forge.jar`
 
 ## Dependencies
 
 **Required**
 
-* Architectury API 9.2.14 or newer (the 1.20.x line)
-* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.92.12+1.20.1
+* Architectury API 11.1.17 or newer (the 1.20.3/1.20.4 line)
+* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.97.3+1.20.4
 
 **Optional**
 
 * [Patchouli](https://modrinth.com/mod/patchouli) — in-game guide
-* [ShoulderSurfing](https://www.curseforge.com/minecraft/mc-mods/shouldersurfing)
+* [ShoulderSurfing](https://www.curseforge.com/minecraft/mc-mods/shouldersurfing) — the 1.20.4-era
+  4.2.x builds work; only the camera-coupling part of the integration needs the newer 4.11.0 API, and
+  it degrades cleanly (see BUILDING.md)
 * [Paraglider](https://www.curseforge.com/minecraft/mc-mods/paraglider) — Forge only
 * [EpicFight](https://www.curseforge.com/minecraft/mc-mods/epicfight) — Forge only
 * BetterThirdPerson — Forge only
