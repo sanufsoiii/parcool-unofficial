@@ -90,7 +90,7 @@ dependencies {
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 	compileOnly "com.google.code.gson:gson:2.10.1"
 
-	// Pinned 1.20.1 builds. Every entry point checks isInstalled() *and* that the API classes
+	// Pinned 1.20.1-era builds. Every entry point checks isInstalled() *and* that the API classes
 	// resolve (EpicFightManager#isEpicFightUsable and friends), so a missing or mismatched jar makes
 	// ParCool fall back to its own stamina and camera behaviour instead of failing to load.
 	// Patchouli is only an optional book dependency and is never referenced from source.
@@ -207,7 +207,7 @@ tasks.register('distJar', Jar) {
 				'Implementation-Title': project.mod_name,
 				'Implementation-Version': project.mod_version,
 				'Implementation-Vendor': project.mod_authors,
-				// Forge 1.20.1 has no [[mixins]] entry in mods.toml (that arrives with 1.20.2):
+				// Forge 1.20.x has no [[mixins]] entry in mods.toml (that arrives with 1.20.2):
 				// Mixin's FML platform agent reads the config list from this manifest attribute.
 				'MixinConfigs': 'parcool-common.mixins.json'
 		)

@@ -1,7 +1,7 @@
-# Forge 1.20.1 mod metadata. The dollar-brace placeholders below are expanded by :forge's
+# Forge 1.20 mod metadata. The dollar-brace placeholders below are expanded by :forge's
 # processResources from gradle.properties and the project version.
 modLoader = "javafml"
-loaderVersion = "[47,)"
+loaderVersion = "[46,)"
 license = "${mod_license}"
 issueTrackerURL = "https://github.com/alRex-U/ParCool/issues"
 
@@ -17,30 +17,30 @@ description = '''
     Enjoy Minecraft with cool actions!
 '''
 
-# No [[mixins]] section: Forge 1.20.1's ModFileParser has no concept of one (it arrives with
-# NeoForge 1.20.2 / Forge 1.20.2+). The config is announced the 1.20.1 way, through the jar
+# No [[mixins]] section: Forge 1.20.x's ModFileParser has no concept of one (it arrives with
+# NeoForge 1.20.2 / Forge 1.20.2+). The config is announced the 1.20 way, through the jar
 # manifest's MixinConfigs attribute, which :forge's Jar tasks set.
 #
 # Same for the access transformer: FML picks up META-INF/accesstransformer.cfg automatically when
 # mods.toml does not list accessTransformers, and that file is what Loom's
 # `forge { convertAccessWideners = true }` emits from :common's access widener.
 #
-# The dependency blocks below use Forge 1.20.1's `mandatory = true|false` field. The newer
+# The dependency blocks below use Forge 1.20's `mandatory = true|false` field. The newer
 # `type = "required"|"optional"` spelling only exists from Forge/NeoForge 1.20.2 on (the 1.20.6
-# tree carries it); FML 47 rejects a dependency without `mandatory` outright with
+# tree carries it); FML 46 rejects a dependency without `mandatory` outright with
 # "Missing required field mandatory in dependency".
 
 [[dependencies.${mod_id}]]
 modId = "forge"
 mandatory = true
-versionRange = "[47,)"
+versionRange = "[46,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.20.1,1.21)"
+versionRange = "[1.20,1.21)"
 ordering = "NONE"
 side = "BOTH"
 
