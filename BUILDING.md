@@ -261,7 +261,7 @@ diagnosed); 1.20.3 pairs the same Loom with a Forge build of the same 49 line, s
 unchanged. `runClient` is left alone: issue #191 also reports the client side breaking on some
 Forge 50/1.20.6 combinations, but no client was booted here (see the end of this document).
 
-## Loom cache traps seen on this machine
+## Loom cache traps seen while porting
 
 * **A remapped architectury jar carrying stub classes.** If `:fabric:runServer` dies inside
   `dev.architectury.registry.registries.RegistrarManager._get` (or
@@ -313,7 +313,7 @@ Three things about the packaging are load-bearing and are explained at length in
   `transformProductionFabric`** — same reason: the transform runs in "named" mode and would ship
   mojmap bytecode to an intermediary client.
 
-The published copies in `/home/sanufsoii/ports/готовые порты/parcool/` are:
+The two jars are distributed under these names:
 
 ```
 0.1-mc1.20.3fabric-3.4.3.3.jar     # = fabric/build/libs/parcool-1.20.3-3.4.3.3-fabric.jar
