@@ -1,20 +1,22 @@
 plugins {
 	id 'architectury-plugin'
-	id 'net.neoforged.moddev'
+	id 'net.neoforged.gradle.userdev'
 }
 
 // architectury-plugin registers :common's `transformProduction*` tasks while evaluating :common, and
 // this module references them below, so :common has to be evaluated first.
 evaluationDependsOn(':common')
 
-// NOTE: architectury-plugin's `neoForge()` transform is intentionally not declared yet. It requires
-// a Loom extension in this project, and `dev.architectury.loom` 1.7.x cannot merge the Mojang and
+// NeoGradle's userdev plugin is the toolchain here, not ModDevGradle: ModDevGradle resolves NeoForge
+// through the `neoforge-moddev-bundle` capability, which the 20.5 line does not publish (it starts
+// at 20.6), so `:neoforge` would fail with "Unable to find a variant providing the requested
+// capability 'net.neoforged:neoforge-moddev-bundle'". NeoGradle consumes the `userdev` artifact that
+// the 20.5 line does publish and is what the official MDK-1.20.5-NeoGradle uses.
+//
+// NOTE: architectury-plugin's `neoForge()` transform is intentionally not declared. It requires a
+// Loom extension in this project, and `dev.architectury.loom` 1.7.x cannot merge the Mojang and
 // NeoForge mappings (the base tree records the merge aborting with `RuntimeException: Unfixable
-// conflicts`), so the split is kept. ModDevGradle is the correct toolchain here - it is what
-// upstream ParCool 3.4.3.3 uses - and architectury-plugin still produces the
-// `transformProductionNeoForge` SRG artifact that this module consumes below. Re-enabling
-// `neoForge()` (and the refmap/AT packaging it performs) is tracked as the remaining NeoForge build
-// item.
+// conflicts`), so the distributable jar is assembled explicitly below, mirroring :fabric.
 
 repositories {
 	maven { url = 'https://www.cursemaven.com' }
@@ -24,42 +26,42 @@ repositories {
 	maven { url = 'https://maven.neoforged.net/releases/' }
 }
 
-neoForge {
-	version = project.neo_version
+// NeoForge reads the access transformer from `META-INF/neoforge.mods.toml` in a production jar; the
+// dev runs need it registered here, or every widened member ParCool touches fails with
+// IllegalAccessError in dev only.
+minecraft {
+	accessTransformers.file file('src/main/resources/META-INF/accesstransformer.cfg')
+}
 
-	runs {
-		client {
-			client()
-			// Same as the server run: mixin.debug makes the dev log list every applied ParCool mixin,
-			// which is how the client half of the mixin set is verified.
-			jvmArguments.addAll '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
-			// `./gradlew :neoforge:runClient -PparcoolQuickPlay=host:port` boots straight into a server and
-			// `-PparcoolQuickPlayWorld=<name>` into a saved world, so the in-world paths - the ParCool
-			// attributes resolve on the first Player#createAttributes, the render pass, the stamina HUD -
-			// are reproducible without a mouse. Same properties drive :fabric:runClient.
-			if (project.hasProperty('parcoolQuickPlay')) {
-				programArguments.addAll '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
-			}
-			if (project.hasProperty('parcoolQuickPlayWorld')) {
-				programArguments.addAll '--quickPlaySingleplayer', project.property('parcoolQuickPlayWorld').toString()
-			}
+runs {
+	configureEach {
+		// The mod's own classes and resources, so FML loads this module as a mod in dev. The
+		// :common classes and assets are part of this source set's resources (see
+		// processResources), which is what makes the common mixins resolvable in a dev run.
+		modSource project.sourceSets.main
+		// mixin.debug makes the dev log list every applied ParCool mixin, which is how the mixin set
+		// is verified without an IDE.
+		systemProperty 'mixin.debug', 'true'
+		systemProperty 'mixin.debug.verbose', 'true'
+	}
+	client {
+		workingDirectory project.file('run')
+		// `./gradlew :neoforge:runClient -PparcoolQuickPlay=host:port` boots straight into a server and
+		// `-PparcoolQuickPlayWorld=<name>` into a saved world, so the in-world paths - the ParCool
+		// attributes resolve on the first Player#createAttributes, the render pass, the stamina HUD -
+		// are reproducible without a mouse. Same properties drive :fabric:runClient.
+		if (project.hasProperty('parcoolQuickPlay')) {
+			arguments.addAll '--quickPlayMultiplayer', project.property('parcoolQuickPlay').toString()
 		}
-		server {
-			server()
-			programArguments.addAll '--nogui'
-			// Its own game directory so a dev server can run next to a dev client (ModDevGradle
-			// defaults both to <module>/run, and the two would fight over saves, logs and options).
-			gameDirectory = project.file('run-server')
-			// mixin.debug makes the dev log list every applied ParCool mixin, which is how the
-			// port's mixin set is verified without launching a client.
-			jvmArguments.addAll '-Dmixin.debug=true', '-Dmixin.debug.verbose=true'
+		if (project.hasProperty('parcoolQuickPlayWorld')) {
+			arguments.addAll '--quickPlaySingleplayer', project.property('parcoolQuickPlayWorld').toString()
 		}
 	}
-
-	mods {
-		"${project.mod_id}" {
-			sourceSet sourceSets.main
-		}
+	server {
+		argument '--nogui'
+		// Its own game directory so a dev server can run next to a dev client (they would otherwise
+		// fight over saves, logs and options).
+		workingDirectory project.file('run-server')
 	}
 }
 
@@ -85,6 +87,7 @@ dependencies {
 	implementation files(
 			project(':common').tasks.named('transformProductionNeoForge').flatMap { it.archiveFile }
 	)
+	implementation "net.neoforged:neoforge:${project.neo_version}"
 	implementation "dev.architectury:architectury-neoforge:${project.architectury_api_version}"
 	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
 
@@ -107,10 +110,6 @@ tasks.named('compileJava') {
 	classpath += configurations.parcoolIntegrationsCompile
 }
 
-tasks.named('neoForgeIdeSync') {
-	// present on ModDevGradle 1.0.x; ignored when absent
-}
-
 /**
  * The distributable NeoForge jar: the mojmap-named :common artifact plus this module's own
  * classes, the loader metadata and the ServiceLoader registration.
@@ -121,23 +120,17 @@ tasks.named('neoForgeIdeSync') {
  * assembly is done explicitly here, mirroring :fabric.
  */
 // The access widener and the mixin config live in :common so both loaders ship the same copy. The
-// dev runtime loads this module from its own sourceSet output, so the files have to be present here
-// as well (the distributed jar picks them up from the :common transform artifact).
-// Explodes the mojmap-named :common artifact so its classes are part of this module's own output.
-def explodedCommon = layout.buildDirectory.dir('explodedCommon')
-
-def explodeCommon = tasks.register('explodeCommon', Copy) {
-	duplicatesStrategy = DuplicatesStrategy.INCLUDE
-	dependsOn ':common:transformProductionNeoForge'
-	from { zipTree(project(':common').tasks.named('transformProductionNeoForge').get().archiveFile) }
-	into explodedCommon
-}
-
-sourceSets.main.output.dir(explodedCommon, builtBy: explodeCommon)
+// whole :common artifact is exploded into this module's resources: NeoGradle hands FML a dev mod
+// built from the module's own classes and resources only - extra source-set output dirs and plain
+// classpath jars are *not* part of the mod's file set, so without this the game starts with an
+// empty parcool mod and Mixin aborts on the first common mixin with "InvalidMixinException: The
+// specified mixin 'com.alrex.parcool.mixin.common.*' was not found". With the common classes,
+// assets and data inside the mod's own resources, the dev run sees exactly what the distributable
+// jar contains - and this module's own `jar` task is self-contained as a bonus.
+def commonArtifactFile = project(':common').tasks.named('transformProductionNeoForge').flatMap { it.archiveFile }
 
 processResources {
-	from(project(':common').file('src/main/resources/parcool.accesswidener'))
-	from(project(':common').file('src/main/resources/parcool-common.mixins.json'))
+	from(commonArtifactFile.map { zipTree(it) })
 	// neoforge.mods.toml points LicenseFile at the LGPL text, so it has to be inside the jar.
 	from(rootProject.file('LICENSE'))
 }
@@ -161,10 +154,8 @@ tasks.register('distJar', Jar) {
 	archiveClassifier = 'neoforge'
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-	// zipTree, not a plain file copy, so the common code is expanded into the output jar.
-	from({
-		zipTree(project(':common').tasks.named('transformProductionNeoForge').get().archiveFile.get().asFile)
-	})
+	// The module's own output already carries the exploded :common classes, assets and data (see
+	// processResources above), so this is just the module jar under its published name.
 	from(sourceSets.main.output)
 	from(configurations.parcoolIntegrationsRuntime.findAll { it.name.endsWith('.jar') }.collect { zipTree(it) }) {
 		include 'META-INF/services/com.alrex.parcool.platform.ParCoolPlatform'
