@@ -1,5 +1,6 @@
 package com.alrex.parcool.common.block.zipline;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
@@ -50,5 +51,15 @@ public class WoodenZiplineHookBlock extends ZiplineHookBlock {
     @Override
     public VoxelShape getShape(@Nonnull BlockState state, @Nonnull BlockGetter getter, @Nonnull BlockPos pos, @Nonnull CollisionContext context) {
         return SHAPES[state.getValue(FACING).ordinal()];
+    }
+
+    // 1.20.4's DirectionalBlock declares `codec()` abstract; 1.20.1 does not have the method at all,
+    // which is why the sibling 1.20/1.20.1 trees do not implement it.
+    private static final MapCodec<WoodenZiplineHookBlock> CODEC = simpleCodec(WoodenZiplineHookBlock::new);
+
+    @Nonnull
+    @Override
+    protected MapCodec<? extends DirectionalBlock> codec() {
+        return CODEC;
     }
 }

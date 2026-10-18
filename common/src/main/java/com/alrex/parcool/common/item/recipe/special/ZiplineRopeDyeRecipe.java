@@ -5,7 +5,6 @@ import com.alrex.parcool.common.item.recipe.Recipes;
 import com.alrex.parcool.common.item.zipline.ZiplineRopeItem;
 import javax.annotation.Nonnull;
 import net.minecraft.core.RegistryAccess;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.DyeItem;
@@ -20,10 +19,11 @@ import net.minecraft.util.FastColor;
 
 public class ZiplineRopeDyeRecipe extends CustomRecipe {
 
-    // 1.20.1 recipes carry their own id and category: CustomRecipe(ResourceLocation, CraftingBookCategory),
-    // which is what SimpleCraftingRecipeSerializer's Factory constructs.
-    public ZiplineRopeDyeRecipe(ResourceLocation id, CraftingBookCategory category) {
-        super(id, category);
+    // 1.20.4 recipes carry only the category: CustomRecipe(CraftingBookCategory), which is what
+    // SimpleCraftingRecipeSerializer's Factory constructs. (The recipe id field is a 1.20.1-only
+    // shape; it comes back as part of the RecipeHolder rework in 1.20.5.)
+    public ZiplineRopeDyeRecipe(CraftingBookCategory category) {
+        super(category);
     }
 
     @Override
@@ -83,9 +83,8 @@ public class ZiplineRopeDyeRecipe extends CustomRecipe {
         r = Mth.clamp(r / dyeSize, 0, 0xFF);
         g = Mth.clamp(g / dyeSize, 0, 0xFF);
         b = Mth.clamp(b / dyeSize, 0, 0xFF);
-        // FastColor.ARGB32.color has no single-argument (alpha=opaque) overload on 1.20.1 - only the
-        // four-argument one - so the alpha is explicit. A colour without alpha is what makes upstream's
-        // rope default render transparent through ItemColor.
+        // FastColor.ARGB32 only has the four-argument color(a, r, g, b) before 1.20.5; the
+        // three-argument overload that defaults the alpha to opaque comes with 1.20.5.
         ZiplineRopeItem.setColor(resultZiplineRope, FastColor.ARGB32.color(0xFF, r, g, b));
         return resultZiplineRope;
     }

@@ -36,8 +36,8 @@ public abstract class PlayerRendererMixin extends LivingEntityRenderer<AbstractC
         }
     }
 
-    // 1.20.1 still has the five-argument form: the trailing `scale` that 1.20.2 added is not passed
-    // yet, so the descriptor ends in FFF instead of FFFF.
+    // 1.20.4 still has the five-argument form: the trailing `scale` argument is only added in
+    // 1.20.5, so the descriptor ends in FFF instead of the FFFF the 1.21.1 tree uses.
     @Inject(method = "Lnet/minecraft/client/renderer/entity/player/PlayerRenderer;setupRotations(Lnet/minecraft/client/player/AbstractClientPlayer;Lcom/mojang/blaze3d/vertex/PoseStack;FFF)V", at = @At("HEAD"), cancellable = true)
     protected void onSetupRotationsHead(AbstractClientPlayer player, PoseStack poseStack, float bob, float yBodyRot, float partialTick, CallbackInfo ci) {
         Animation animation = Animation.get(player);
