@@ -1,10 +1,10 @@
-# ParCool — Architectury API port (Minecraft 1.20.6)
+# ParCool — Architectury API port (Minecraft 1.20.5)
 
 A multiloader port of the Minecraft mod **ParCool** by **alRex_U** (LGPL-3.0), originally built for
 NeoForge, reworked onto the [Architectury API](https://github.com/architectury/architectury-api) so
 that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
-Minecraft **1.20.6**, Java **21**.
+Minecraft **1.20.5**, Java **21**.
 
 > This repository contains a *port*, not alRex_U's original sources. The original project lives at
 > <https://github.com/alRex-U/ParCool> and on CurseForge at
@@ -34,25 +34,25 @@ and their platform implementation.
 ./gradlew build           # from then on
 ```
 
-See [BUILDING.md](BUILDING.md) for the module layout, the 1.21.1 → 1.20.6 port notes (the
-`ResourceLocation` constructors, `DeltaTracker`, the attribute-modifier keys, the pre-1.21 data
-directories), the dev run tasks (`:fabric:runClient`, `:neoforge:runClient`, `:fabric:runServer`,
-`:neoforge:runServer`), the mixin target verifier (`tools/verify_mixins.py`) and the
-loader-independence check.
+See [BUILDING.md](BUILDING.md) for the module layout, the 1.21.1 → 1.20.6 → 1.20.5 port notes (this
+tree is the 1.20.6 port retargeted; the loader modules moved from ModDevGradle to NeoGradle, `@Mod`
+gained no `dist` attribute on this line, and the metadata ranges follow), the dev run tasks
+(`:fabric:runClient`, `:neoforge:runClient`, `:fabric:runServer`, `:neoforge:runServer`), the mixin
+target verifier (`tools/verify_mixins.py`) and the loader-independence check.
 
 ## Installing
 
 Drop the matching jar into `mods/`:
 
-* Fabric — `fabric/build/libs/parcool-1.20.6-3.4.3.3-fabric.jar`
+* Fabric — `fabric/build/libs/parcool-1.20.5-3.4.3.3-fabric.jar`
 * NeoForge — `neoforge/build/libs/parcool-neoforge.jar`
 
 ## Dependencies
 
 **Required**
 
-* Architectury API 12.1.4 or newer
-* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.100.8+1.20.6
+* Architectury API 12.0.29 or newer (the 1.20.5 line)
+* Fabric: [Fabric API](https://modrinth.com/mod/fabric-api) 0.97.8+1.20.5
 
 **Optional**
 
@@ -62,8 +62,8 @@ Drop the matching jar into `mods/`:
 * [EpicFight](https://www.curseforge.com/minecraft/mc-mods/epicfight) — NeoForge only
 * BetterThirdPerson — NeoForge only
 
-None of the optional integration mods published a 1.20.5/1.20.6 build (their release lines jump from
-the 1.20.x era to 1.21), so their integration code is compiled against the 1.21.1-era API and every
+None of the optional integration mods published a 1.20.5-era build (their release lines jump from the
+1.20.x era to 1.21), so their integration code is compiled against the 1.21.1-era API and every
 entry point reports the mod absent at runtime when its classes are not loadable — see
 [BUILDING.md](BUILDING.md).
 
