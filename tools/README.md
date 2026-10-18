@@ -6,7 +6,7 @@ resolved mojmap Minecraft jar, so a target that silently stops matching is caugh
 the game.
 
 ```bash
-JAR=$(ls ~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.20.6-loom.mappings.*/*.jar | head -1)
+JAR=$(ls ~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged/1.20.5-loom.mappings.*/*.jar | head -1)
 python3 tools/verify_mixins.py "$JAR" common/src/main/java
 ```
 
