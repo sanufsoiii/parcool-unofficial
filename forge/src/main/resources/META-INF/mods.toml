@@ -1,0 +1,90 @@
+# Forge 1.20.1 mod metadata. The dollar-brace placeholders below are expanded by :forge's
+# processResources from gradle.properties and the project version.
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "${mod_license}"
+issueTrackerURL = "https://github.com/alRex-U/ParCool/issues"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${version}"
+displayName = "${mod_name}"
+displayURL = "https://www.curseforge.com/minecraft/mc-mods/parcool"
+logoFile = "parcool_logo.png"
+authors = "${mod_authors}"
+description = '''
+    This enable us act like parkour players.
+    Enjoy Minecraft with cool actions!
+'''
+
+# No [[mixins]] section: Forge 1.20.1's ModFileParser has no concept of one (it arrives with
+# NeoForge 1.20.2 / Forge 1.20.2+). The config is announced the 1.20.1 way, through the jar
+# manifest's MixinConfigs attribute, which :forge's Jar tasks set.
+#
+# Same for the access transformer: FML picks up META-INF/accesstransformer.cfg automatically when
+# mods.toml does not list accessTransformers, and that file is what Loom's
+# `forge { convertAccessWideners = true }` emits from :common's access widener.
+#
+# The dependency blocks below use Forge 1.20.1's `mandatory = true|false` field. The newer
+# `type = "required"|"optional"` spelling only exists from Forge/NeoForge 1.20.2 on (the 1.20.6
+# tree carries it); FML 47 rejects a dependency without `mandatory` outright with
+# "Missing required field mandatory in dependency".
+
+[[dependencies.${mod_id}]]
+modId = "forge"
+mandatory = true
+versionRange = "[47,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1,1.21)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "architectury"
+mandatory = true
+versionRange = "[9.0.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+# Optional integrations. Their code lives in this source set; every entry point checks that the mod
+# is actually loaded and that its classes resolve, and ParCool degrades to its own stamina / camera
+# behaviour when it is not.
+[[dependencies.${mod_id}]]
+modId = "paraglider"
+mandatory = false
+versionRange = "[20.1.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "epicfight"
+mandatory = false
+versionRange = "[20.14.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "betterthirdperson"
+mandatory = false
+versionRange = "[1.9.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
+modId = "shouldersurfing"
+mandatory = false
+versionRange = "[4.11.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.${mod_id}]]
+modId = "patchouli"
+mandatory = false
+versionRange = "*"
+ordering = "AFTER"
+side = "BOTH"
