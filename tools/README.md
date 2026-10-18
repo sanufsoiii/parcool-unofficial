@@ -10,8 +10,8 @@ JAR=$(ls ~/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-mer
 python3 tools/verify_mixins.py "$JAR" common/src/main/java
 ```
 
-It needs `python3` and a JDK (it shells out to `unzip` and `javap`; the script pins
-`/usr/lib/jvm/java-21-openjdk/bin/javap`, the JDK 21 the project's toolchain uses).
+It needs `python3` and a JDK (it shells out to `unzip` and `javap`; javap is taken from
+`$JAVAP` when set, else `$JAVA_HOME/bin/javap`, else the `javap` on `PATH`).
 
 ## Why it self-tests
 
