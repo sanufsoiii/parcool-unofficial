@@ -1,11 +1,11 @@
 {
-  "type": "crafting_shapeless",
+  "type": "minecraft:crafting_shapeless",
   "ingredients": [
     {
       "item": "parcool:zipline_rope"
     }
   ],
   "result": {
-    "id": "parcool:zipline_rope"
+    "item": "parcool:zipline_rope"
   }
 }
