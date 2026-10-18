@@ -1,4 +1,4 @@
-# Forge 1.20.4 mod metadata. The dollar-brace placeholders below are expanded by :forge's
+# Forge 1.20.3 mod metadata. The dollar-brace placeholders below are expanded by :forge's
 # processResources from gradle.properties and the project version.
 modLoader = "javafml"
 loaderVersion = "[49,)"
@@ -40,7 +40,7 @@ side = "BOTH"
 [[dependencies.${mod_id}]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.20.4,1.21)"
+versionRange = "[1.20.3,1.21)"
 ordering = "NONE"
 side = "BOTH"
 
@@ -56,7 +56,7 @@ side = "BOTH"
 # behaviour when it is not.
 #
 # The ranges are written the way the installed mod versions are spelled: Better Third Person's jar
-# is plain `1.9.0`, while ShoulderSurfing versions its jars `<mc>-<mod>` (`1.20.4-4.2.1`), which is
+# is plain `1.9.0`, while ShoulderSurfing versions its jars `<mc>-<mod>` `1.20.4-4.2.1`, which is
 # why its range carries the Minecraft prefix. A range that does not contain an installed version is
 # a hard FML failure even for `mandatory = false` dependencies (ModSorter collects them into the
 # "Unsupported installed optional dependencies" error), so these strings are load order critical,
@@ -85,7 +85,7 @@ side = "CLIENT"
 [[dependencies.${mod_id}]]
 modId = "shouldersurfing"
 mandatory = false
-versionRange = "[1.20.4,)"
+versionRange = "[1.20.3,)"
 ordering = "NONE"
 side = "CLIENT"
 

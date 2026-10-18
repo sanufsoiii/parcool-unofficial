@@ -47,7 +47,7 @@ public class IronZiplineHookBlock extends ZiplineHookBlock {
         return SHAPES[state.getValue(FACING).ordinal()];
     }
 
-    // 1.20.4's DirectionalBlock declares `codec()` abstract; 1.20.1 does not have the method at all,
+    // 1.20.3's DirectionalBlock declares `codec()` abstract; 1.20.1 does not have the method at all,
     // which is why the sibling 1.20/1.20.1 trees do not implement it.
     private static final MapCodec<IronZiplineHookBlock> CODEC = simpleCodec(IronZiplineHookBlock::new);
 

@@ -24,7 +24,7 @@ public class ShoulderSurfingManager extends ModManager {
                     && ShoulderSurfing.getInstance().isCameraDecoupled();
         } catch (NoSuchMethodError | NoClassDefFoundError error) {
             // The integration is written against the 4.11.0 API, and the ShoulderSurfing releases
-            // published for 1.20.4 are the older 4.2.x line, whose IShoulderSurfing has no
+            // published for 1.20.2-1.20.4 are the older 4.2.x line, whose IShoulderSurfing has no
             // isCameraDecoupled. Degrade to "not decoupled" - the answer an absent ShoulderSurfing
             // gives - instead of letting the first dodge throw NoSuchMethodError into the client.
             // ShoulderSurfing's own plugin loader catches Throwable, so the coupling plugin fails

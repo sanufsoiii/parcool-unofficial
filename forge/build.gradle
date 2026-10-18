@@ -91,7 +91,7 @@ dependencies {
 	compileOnly "com.google.code.gson:gson:2.10.1"
 
 	// The closest builds for every integration. Only Better Third Person and ShoulderSurfing have
-	// releases that name 1.20.4 at all (Better Third Person 1.9.0 is a 1.20-1.20.4 jar; the
+	// releases that name this Minecraft version's neighbourhood at all (Better Third Person 1.9.0 is a 1.20-1.20.4 jar; the
 	// ShoulderSurfing 4.2.1 line was published for 1.20.2-1.20.4), so Paraglider and Epic Fight are
 	// compiled against their newest 1.20 era jars, exactly like the sibling 1.20 tree does. Every
 	// entry point checks isInstalled() *and* that the API classes resolve, so a missing or

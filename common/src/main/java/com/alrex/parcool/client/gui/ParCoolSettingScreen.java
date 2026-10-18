@@ -48,7 +48,7 @@ public abstract class ParCoolSettingScreen extends Screen {
 
 	@Override
 	public void render(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float p_230430_4_) {
-		// 1.20.4's Screen#render still calls renderBackground (the themed fill below) before the
+		// 1.20.3's Screen#render still calls renderBackground (the themed fill below) before the
 		// widgets itself, which is the same order the 1.21.1 tree had to force by hand.
 		super.render(graphics, mouseX, mouseY, p_230430_4_);
 		int topBarHeight = font.lineHeight * 2;
@@ -124,7 +124,7 @@ public abstract class ParCoolSettingScreen extends Screen {
 	}
 
 	// 1.20.2 replaced the one-argument renderBackground with this four-argument one; it is the only
-	// one Screen#render calls on 1.20.4.
+	// one Screen#render calls on 1.20.3.
 	@Override
 	public void renderBackground(@Nonnull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
 		graphics.fill(0, 0, this.width, this.height, color.getBackground());
@@ -159,7 +159,7 @@ public abstract class ParCoolSettingScreen extends Screen {
 		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
-	// 1.20.4 takes the same four-double form as 1.21.1; the scrollX/scrollY argument split of the
+	// 1.20.3 takes the same four-double form as 1.21.1; the scrollX/scrollY argument split of the
 	// values themselves arrives in 1.20.5. The three-argument helper below is what keyPressed and
 	// the mouse wheel handling call.
 	@Override

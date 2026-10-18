@@ -78,7 +78,7 @@ dependencies {
 	// ShoulderSurfing is genuinely multiloader, so its plugin API stays in :common.
 	// runtimeOnly in the loader modules so an absent ShoulderSurfing is not a hard dependency.
 	// 1.20.1-4.11.0 is the closest build that exposes the API this integration is written against
-	// (IShoulderSurfing#isCameraDecoupled, ICameraCouplingCallback); the 1.20.4-era releases of
+	// (IShoulderSurfing#isCameraDecoupled, ICameraCouplingCallback); the 1.20.2-1.20.4 releases of
 	// ShoulderSurfing are the older 4.2.x line, whose API does not have them. ShoulderSurfingManager
 	// checks for exactly that and degrades to "not decoupled" instead of crashing.
 	compileOnly "curse.maven:ShoulderSurfing-243190:6496631"
