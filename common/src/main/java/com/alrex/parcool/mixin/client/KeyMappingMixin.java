@@ -1,7 +1,7 @@
 package com.alrex.parcool.mixin.client;
 
-import com.alrex.parcool.client.input.KeyBindings;
 import com.alrex.parcool.compat.IKeyMappingDuck;
+import com.alrex.parcool.platform.PlatformServices;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import org.spongepowered.asm.mixin.Mixin;
@@ -35,15 +35,14 @@ public abstract class KeyMappingMixin implements IKeyMappingDuck {
      * <p>That rebuild happens in exactly two places: {@code Options#load()} (every start) and
      * {@code KeyBindsList#resetMappingAndUpdateButtons()} - the latter is what runs when a player
      * changes <em>any</em> key in the Controls screen, which is precisely the reported case of binding
-     * an action to the right mouse button and losing right-click for the whole session (the screen only
-     * stops asking for the repair once a world has been loaded, because the old repair path ran from
-     * the client tick).
+     * an action to the right mouse button and losing right-click for the whole session.
      *
-     * <p>Repairing here covers both call sites, leaves the vanilla code untouched, and is a no-op on
-     * NeoForge, where {@code MAP} is a {@code KeyMappingLookup} that stores every mapping of a key.
+     * <p>Repairing here covers both call sites, leaves the vanilla code untouched, and delegates to
+     * loader platform services (type-safe on Fabric via Access Widener, no-op on NeoForge where
+     * {@code MAP} is a {@code KeyMappingLookup}).
      */
     @Inject(method = "resetMapping", at = @At("TAIL"))
     private static void parcool$restoreSharedVanillaKeys(CallbackInfo ci) {
-        KeyBindings.restoreVanillaBindings();
+        PlatformServices.get().restoreVanillaBindings();
     }
 }

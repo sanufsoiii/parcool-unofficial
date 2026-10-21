@@ -30,9 +30,6 @@ public class KeyRecorder {
 	 * NeoForge fires the event from — so the sampled key states see the same values on both loaders.
 	 */
 	public static void onClientTick() {
-		// Fabric runs the client entrypoint before Minecraft builds its Options, so vanilla's own
-		// bindings are created *after* ours and re-claim the shared keys. Repair once the world is up.
-		KeyBindings.restoreVanillaBindings();
         record(KeyBindings.isKeyForwardDown(), keyForward);
         record(KeyBindings.isKeyBackDown(), keyBack);
         record(KeyBindings.isKeyRightDown(), keyRight);
