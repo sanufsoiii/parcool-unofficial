@@ -1,6 +1,6 @@
 package com.alrex.parcool.mixin.client;
 
-import com.alrex.parcool.client.input.KeyBindings;
+import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.compat.IKeyMappingDuck;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -47,6 +47,6 @@ public abstract class KeyMappingMixin implements IKeyMappingDuck {
      */
     @Inject(method = "resetMapping", at = @At("TAIL"))
     private static void parcool$restoreSharedVanillaKeys(CallbackInfo ci) {
-        KeyBindings.restoreVanillaBindings();
+        PlatformServices.get().restoreVanillaBindings();
     }
 }
