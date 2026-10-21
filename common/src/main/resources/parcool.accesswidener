@@ -14,3 +14,8 @@ accessible method net/minecraft/commands/synchronization/ArgumentTypeInfos regis
 # 1.20.1 at all. Its body lives in the protected Entity#canEnterPose, so Crawl spells the check out
 # itself (see Crawl#parcool$canFitStanding) and nothing needs widening here.
 accessible method net/minecraft/world/level/storage/LevelResource <init> (Ljava/lang/String;)V
+
+# KeyMapping table access for Fabric loader to restore shared keys without reflection
+accessible field net/minecraft/client/KeyMapping MAP Ljava/util/Map;
+accessible field net/minecraft/client/KeyMapping ALL Ljava/util/Map;
+accessible field net/minecraft/client/KeyMapping key Lcom/mojang/blaze3d/platform/InputConstants$Key;
