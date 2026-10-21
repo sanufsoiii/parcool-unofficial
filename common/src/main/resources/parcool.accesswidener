@@ -15,3 +15,8 @@ accessible method net/minecraft/commands/synchronization/ArgumentTypeInfos regis
 # NeoForge widens this; ParCool calls it directly. 1.21.2 already made LevelResource's constructor
 # public, so unlike the 1.21.1 widener this file needs no entry for it.
 accessible method net/minecraft/world/entity/player/Player canPlayerFitWithinBlocksAndEntitiesWhen (Lnet/minecraft/world/entity/Pose;)Z
+
+# KeyMapping table access for Fabric loader to restore shared keys without reflection
+accessible field net/minecraft/client/KeyMapping MAP Ljava/util/Map;
+accessible field net/minecraft/client/KeyMapping ALL Ljava/util/Map;
+accessible field net/minecraft/client/KeyMapping key Lcom/mojang/blaze3d/platform/InputConstants$Key;

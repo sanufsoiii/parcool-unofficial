@@ -1,11 +1,11 @@
 package com.alrex.parcool.client.input;
 
+import com.alrex.parcool.platform.PlatformServices;
 import com.alrex.parcool.compat.IKeyMappingDuck;
 import dev.architectury.registry.client.keymappings.KeyMappingRegistry;
 import com.alrex.parcool.utilities.VectorUtil;
 import org.lwjgl.glfw.GLFW;
 
-import java.lang.reflect.Field;
 import java.util.Map;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.KeyMapping;
@@ -287,90 +287,6 @@ public class KeyBindings {
 		for (KeyMapping mapping : ALL) {
 			KeyMappingRegistry.register(mapping);
 		}
-		restoreVanillaBindings();
+		PlatformServices.get().restoreVanillaBindings();
 	}
-
-    /**
-     * Hands every key ParCool shares with vanilla back to the other mapping.
-     *
-     * <p>Minecraft 1.21.1 stores bindings in {@code KeyMapping.MAP} with exactly one
-     * {@link KeyMapping} per physical key, and every {@code new KeyMapping(...)} overwrites that
-     * entry. ParCool binds 16 keys vanilla also owns (the right mouse button five times, {@code R}
-     * three times, {@code C} twice, plus {@code Space}, {@code P} and left-control), so registering
-     * them can evict {@code keyUse} / {@code keySprint} from the map — and a mapping that is not in
-     * the map never receives press or release events. That is exactly why right-click stopped
-     * placing blocks and left-control stopped sprinting; unbinding ParCool's keys in the Controls
-     * screen restored vanilla, which confirms the diagnosis.
-     *
-     * <p>Called both right after registration and once more on the first client tick, because on
-     * Fabric the client entrypoint runs before {@code Options} exists, so vanilla's mappings are
-     * still created after us.
-     *
-     * <h4>Why reflection instead of a {@code @Accessor} mixin</h4>
-     * The two fields are read reflectively because they are not the same on both loaders. NeoForge
-     * replaces {@code KeyMapping#MAP}'s {@code Map<Key, KeyMapping>} with its own
-     * {@code KeyMappingLookup}, which already allows several mappings per physical key - so the whole
-     * repair is a no-op there, while a shared mixin declaring {@code Map} for that field aborts the
-     * whole NeoForge client with
-     * {@code InvalidAccessorException: No candidates were found matching MAP:Ljava/util/Map;}.
-     */
-    public static void restoreVanillaBindings() {
-        Object map = readStaticMap(BINDING_MAP);
-        Object all = readStaticMap(ALL_BINDINGS);
-        if (map == null || all == null) {
-            // Expected on NeoForge; on Fabric it means the field layout changed again.
-            com.alrex.parcool.ParCool.LOGGER.debug("[parcool] KeyMapping has no single-mapping-per-key table on this loader; shared keys need no repair");
-            return;
-        }
-        @SuppressWarnings("unchecked")
-        Map<InputConstants.Key, KeyMapping> bindingMap = (Map<InputConstants.Key, KeyMapping>) map;
-        @SuppressWarnings("unchecked")
-        Map<String, KeyMapping> everyMapping = (Map<String, KeyMapping>) all;
-
-        int restored = 0;
-        for (KeyMapping mapping : ALL) {
-            InputConstants.Key key = keyOf(mapping);
-            KeyMapping owner = bindingMap.get(key);
-            if (owner != null && !isParCool(owner)) continue;
-
-            for (KeyMapping candidate : everyMapping.values()) {
-                if (isParCool(candidate)) continue;
-                if (keyOf(candidate).equals(key)) {
-                    bindingMap.put(key, candidate);
-                    restored++;
-                    break;
-                }
-            }
-        }
-        com.alrex.parcool.ParCool.LOGGER.debug("[parcool] vanilla bindings restored on {} shared keys", restored);
-    }
-
-    /** {@code KeyMapping.MAP} — which single {@link KeyMapping} currently receives events for a key. */
-    private static final Field BINDING_MAP = findStaticField("MAP");
-    /** {@code KeyMapping.ALL} — every registered mapping, by name. */
-    private static final Field ALL_BINDINGS = findStaticField("ALL");
-
-    private static Field findStaticField(String name) {
-        try {
-            Field field = KeyMapping.class.getDeclaredField(name);
-            field.setAccessible(true);
-            return field;
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            return null;
-        }
-    }
-
-    private static Object readStaticMap(Field field) {
-        if (field == null) return null;
-        try {
-            Object value = field.get(null);
-            return value instanceof Map<?, ?> ? value : null;
-        } catch (ReflectiveOperationException | RuntimeException e) {
-            return null;
-        }
-    }
-
-    private static boolean isParCool(KeyMapping mapping) {
-        return mapping.getName().startsWith("key.parcool.");
-    }
 }

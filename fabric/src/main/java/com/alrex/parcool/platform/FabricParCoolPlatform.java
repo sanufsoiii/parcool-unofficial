@@ -137,4 +137,9 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
                 com.alrex.parcool.ParCool.MOD_ID + ":" + name, factory, blocks.get());
         return () -> type;
     }
+
+    @Override
+    public void restoreVanillaBindings() {
+        FabricClientKeyBindingHelper.restoreVanillaBindings();
+    }
 }
