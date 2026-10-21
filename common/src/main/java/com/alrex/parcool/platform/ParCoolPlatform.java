@@ -148,4 +148,13 @@ public interface ParCoolPlatform {
      */
     default void initClientIntegrations() {
     }
+
+    /**
+     * Hands keys that ParCool shares with vanilla (or other mods) back to non-ParCool mappings.
+     * On loaders where {@code KeyMapping.MAP} only holds one mapping per key (Fabric), ParCool's
+     * bindings can overwrite vanilla's {@code key.use}, {@code key.jump}, etc.
+     * No-op on NeoForge/Forge which uses {@code KeyMappingLookup}.
+     */
+    default void restoreVanillaBindings() {
+    }
 }
