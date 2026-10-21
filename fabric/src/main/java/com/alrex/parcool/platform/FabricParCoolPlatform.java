@@ -92,4 +92,9 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
     public Dodge.DodgeDirection handleDodgeCameraRotation(Dodge.DodgeDirection direction) {
         return direction;
     }
+
+    @Override
+    public void restoreVanillaBindings() {
+        FabricClientKeyBindingHelper.restoreVanillaBindings();
+    }
 }
