@@ -110,4 +110,9 @@ public class FabricParCoolPlatform implements ParCoolPlatform {
         return direction;
     }
 
+
+    @Override
+    public void restoreVanillaBindings() {
+        FabricClientKeyBindingHelper.restoreVanillaBindings();
+    }
 }
