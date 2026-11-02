@@ -11,6 +11,9 @@ import net.minecraft.network.codec.StreamCodec;
 import java.util.HashSet;
 import java.util.Set;
 
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+
 /**
  * Fabric network plumbing, built on {@link NetworkChannel}.
  *
@@ -22,8 +25,10 @@ import java.util.Set;
  */
 public class FabricParCoolNetwork implements ParCoolNetwork {
 
+    private static final ResourceLocation CHANNEL_ID =
+            ResourceLocation.fromNamespaceAndPath("parcool", "main");
     private static final NetworkChannel CHANNEL =
-            NetworkChannel.create(ResourceLocation.fromNamespaceAndPath("parcool", "main"));
+            NetworkChannel.create(CHANNEL_ID);
 
     /**
      * {@code common} asks for a registration per direction, but a Fabric payload type is registered
@@ -48,6 +53,9 @@ public class FabricParCoolNetwork implements ParCoolNetwork {
                 buffer -> typed.decode((FriendlyByteBuf) buffer),
                 (payload, context) -> context.get().queue(() -> handler.accept(payload, context.get()))
         );
+        String hash = UUID.nameUUIDFromBytes(payloadClass.getName().getBytes(StandardCharsets.UTF_8)).toString().replace("-", "");
+        ResourceLocation packetId = ResourceLocation.parse(CHANNEL_ID + "/" + hash);
+        NetworkManager.registerS2CPayloadType(packetId);
     }
 
     @Override
