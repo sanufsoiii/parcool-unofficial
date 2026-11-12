@@ -4,6 +4,11 @@ A multiloader port of the Minecraft mod **ParCool** by **alRex_U** (LGPL-3.0), o
 NeoForge, reworked onto the [Architectury API](https://github.com/architectury/architectury-api) so
 that one codebase ships both a **Fabric** and a **NeoForge** artifact.
 
+## Download
+
+- [CurseForge](https://www.curseforge.com/minecraft/mc-mods/parcool-unofficial)
+- [Modrinth](https://modrinth.com/mod/parcool-unofficial)
+
 Minecraft **1.21.11**, Java **21**, Gradle **9.4.1**.
 
 Ported from Minecraft 1.21.1, which is the baseline the loader versions below were moved from. The
